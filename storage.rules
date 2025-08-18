@@ -1,0 +1,33 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions using custom claims
+    function isSupplier() {
+      return request.auth.token.role == 'supplier';
+    }
+
+    function isAdmin() {
+      return request.auth.token.role == 'admin';
+    }
+
+    function isApprovedUser() {
+      return request.auth.token.approved == true;
+    }
+
+    match /product_images/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /product_videos/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /users/{userId}/uploads/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId &&
+        request.resource.size < 5 * 1024 * 1024; // 5MB limit
+    }
+  }
+}

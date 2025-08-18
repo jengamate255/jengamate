@@ -1,0 +1,56 @@
+type Organization @table {
+  name: String!
+  createdAt: Timestamp!
+  planType: String
+  subscriptionEndDate: Date
+}
+
+type User @table {
+  displayName: String!
+  email: String!
+  createdAt: Timestamp!
+  organization: Organization!
+  role: String
+  photoUrl: String
+}
+
+type Project @table {
+  name: String!
+  createdAt: Timestamp!
+  organization: Organization!
+  description: String
+  status: String
+  startDate: Date
+  endDate: Date
+  projectLead: User
+}
+
+type Task @table {
+  title: String!
+  status: String!
+  createdAt: Timestamp!
+  project: Project!
+  description: String
+  priority: String
+  dueDate: Date
+  assignedTo: User
+}
+
+type Issue @table {
+  title: String!
+  status: String!
+  createdAt: Timestamp!
+  project: Project!
+  reportedBy: User!
+  description: String
+  severity: String
+  assignedTo: User
+}
+
+type Comment @table {
+  content: String!
+  createdAt: Timestamp!
+  user: User!
+  task: Task
+  issue: Issue
+}

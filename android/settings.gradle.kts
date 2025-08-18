@@ -20,6 +20,10 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.7.3" apply false
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    // Google Services Gradle plugin for Firebase (applied in :app)
+    id("com.google.gms.google-services") version "4.4.2" apply false
+    // Firebase Crashlytics Gradle plugin (applied in :app for mapping file upload)
+    id("com.google.firebase.crashlytics") version "3.0.2" apply false
 }
 
 include(":app")

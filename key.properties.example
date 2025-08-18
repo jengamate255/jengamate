@@ -1,0 +1,5 @@
+# Example signing config (do NOT commit real credentials)
+storeFile=/absolute/path/to/your/keystore.jks
+storePassword=your-store-password
+keyAlias=your-key-alias
+keyPassword=your-key-password

@@ -35,3 +35,5 @@ COPY . .
 
 # Run the build command
 RUN flutter build web
+
+CMD ["flutter", "run", "--web"]

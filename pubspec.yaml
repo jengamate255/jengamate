@@ -1,30 +1,9 @@
-name: jengamate
-description: A new Flutter project.
+# This pubspec.yaml has been intentionally neutralized by Cascade to resolve
+# a nested project issue that was causing Flutter tooling and analysis errors.
+# The active project is located in the 'jengamate_new' subdirectory.
 
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-
-version: 1.0.0+1
-
-environment:
-  sdk: '>=2.19.0 <3.0.0'
-
-dependencies:
-  flutter:
-    sdk: flutter
-
-  google_fonts: ^6.2.1
-  firebase_core: ^3.1.1
-  firebase_auth: ^5.1.1
-  provider: ^6.1.2
-  cloud_firestore: ^5.1.0
-  cupertino_icons: ^1.0.2
-  image_picker: ^1.1.2
-  image_picker_for_web: ^3.0.4
-  firebase_storage: ^12.1.0
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+name: jengamate_parent_disabled
+description: This is not the active project.
 
 flutter:
   fonts:
@@ -59,3 +38,11 @@ flutter:
           style: italic
           weight: 900
   uses-material-design: true
+
+  assets:
+    - assets/images/
+
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/default_avatar.png"

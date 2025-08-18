@@ -1,0 +1,432 @@
+Analyzing jengamate_new...                                      
+
+   info - Invalid use of a private type in a public API - lib\auth\engineer_registration_screen.dart:21:3 - library_private_types_in_public_api
+   info - Don't use 'BuildContext's across async gaps - lib\auth\engineer_registration_screen.dart:77:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\auth\engineer_registration_screen.dart:81:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\auth\engineer_registration_screen.dart:83:28 - use_build_context_synchronously
+   info - Invalid use of a private type in a public API - lib\auth\login_screen.dart:15:3 - library_private_types_in_public_api
+  error - The named parameter 'textInputAction' isn't defined - lib\auth\login_screen.dart:140:23 - undefined_named_parameter
+  error - The named parameter 'autofillHints' isn't defined - lib\auth\login_screen.dart:141:23 - undefined_named_parameter
+  error - The named parameter 'textInputAction' isn't defined - lib\auth\login_screen.dart:155:23 - undefined_named_parameter
+  error - The named parameter 'autofillHints' isn't defined - lib\auth\login_screen.dart:156:23 - undefined_named_parameter
+  error - The named parameter 'onSubmitted' isn't defined - lib\auth\login_screen.dart:157:23 - undefined_named_parameter
+  error - The named parameter 'child' is required, but there's no corresponding argument - lib\auth\login_screen.dart:177:36 - missing_required_argument
+  error - The named parameter 'child' is required, but there's no corresponding argument - lib\auth\login_screen.dart:203:28 - missing_required_argument
+warning - The value of the local variable 'phoneNumber' isn't used - lib\auth\otp_verification_screen.dart:39:11 - unused_local_variable
+warning - The value of the local variable 'name' isn't used - lib\auth\otp_verification_screen.dart:40:11 - unused_local_variable
+warning - The value of the local variable 'company' isn't used - lib\auth\otp_verification_screen.dart:41:11 - unused_local_variable
+warning - The value of the local variable 'role' isn't used - lib\auth\otp_verification_screen.dart:42:11 - unused_local_variable
+   info - Don't use 'BuildContext's across async gaps - lib\auth\otp_verification_screen.dart:58:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\auth\otp_verification_screen.dart:61:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\auth\otp_verification_screen.dart:67:28 - use_build_context_synchronously
+  error - The argument type 'IconData' can't be assigned to the parameter type 'Widget?'.  - lib\auth\otp_verification_screen.dart:121:35 - argument_type_not_assignable
+  error - The named parameter 'maxLength' isn't defined - lib\auth\otp_verification_screen.dart:123:23 - undefined_named_parameter
+   info - Parameter 'key' could be a super parameter - lib\auth\password_reset_screen.dart:10:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps - lib\auth\password_reset_screen.dart:44:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\auth\phone_registration_screen.dart:73:28 - use_build_context_synchronously
+  error - The argument type 'IconData' can't be assigned to the parameter type 'Widget?'.  - lib\auth\phone_registration_screen.dart:141:35 - argument_type_not_assignable
+  error - Undefined name '_validatePhone' - lib\auth\phone_registration_screen.dart:176:36 - undefined_identifier
+  error - The getter 'register' isn't defined for the type 'AppRoutes' - lib\config\animated_router.dart:34:27 - undefined_getter
+warning - Unused import: 'package:flutter/material.dart' - lib\config\app_router.dart:1:8 - unused_import
+warning - The value of the local variable 'extra' isn't used - lib\config\app_router.dart:45:17 - unused_local_variable
+warning - Unused import: 'package:jengamate/screens/rfq/rfq_submission_screen.dart' - lib\config\app_routes.dart:27:8 - unused_import
+warning - Unused import: 'package:jengamate/screens/admin/rfq_management_screen.dart' - lib\config\app_routes.dart:29:8 - unused_import
+   info - The type of the right operand ('RouteSettings') isn't a subtype or a supertype of the left operand ('String?') - lib\config\app_routes.dart:77:30 - unrelated_type_equality_checks
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\config\app_theme.dart:77:46 - deprecated_member_use
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\main.dart:6:8 - unused_import
+warning - Unused import: 'package:firebase_storage/firebase_storage.dart' - lib\main.dart:8:8 - unused_import
+warning - Unused import: 'package:image_picker/image_picker.dart' - lib\models\product_model.dart:2:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\add_edit_category_screen.dart:97:20 - use_build_context_synchronously
+warning - Unused import: 'package:jengamate/utils/responsive.dart' - lib\screens\admin\add_edit_product_screen.dart:15:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\screens\admin\add_edit_product_screen.dart:129:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\screens\admin\add_edit_product_screen.dart:152:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\screens\admin\add_edit_product_screen.dart:166:9 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\add_edit_product_screen.dart:167:30 - use_build_context_synchronously
+   info - Don't invoke 'print' in production code - lib\screens\admin\add_edit_product_screen.dart:172:7 - avoid_print
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\add_edit_product_screen.dart:173:28 - use_build_context_synchronously
+   info - The local variable '_variantFormKey' starts with an underscore - lib\screens\admin\add_edit_product_screen.dart:544:11 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_thicknessController' starts with an underscore - lib\screens\admin\add_edit_product_screen.dart:545:11 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_colorController' starts with an underscore - lib\screens\admin\add_edit_product_screen.dart:546:11 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_dimensionsController' starts with an underscore - lib\screens\admin\add_edit_product_screen.dart:547:11 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_priceController' starts with an underscore - lib\screens\admin\add_edit_product_screen.dart:548:11 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_stockController' starts with an underscore - lib\screens\admin\add_edit_product_screen.dart:549:11 - no_leading_underscores_for_local_identifiers
+warning - The '!' will have no effect because the receiver can't be null - lib\screens\admin\add_edit_product_screen.dart:636:31 - unnecessary_non_null_assertion
+warning - Unused import: 'package:jengamate/screens/admin/commission_rules_screen.dart' - lib\screens\admin\admin_tools_screen.dart:10:8 - unused_import
+warning - Unused import: 'package:jengamate/screens/admin/commission_tracking_screen.dart' - lib\screens\admin\admin_tools_screen.dart:11:8 - unused_import
+warning - The value of the field '_reportingService' isn't used - lib\screens\admin\advanced_reporting_screen.dart:14:9 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\advanced_reporting_screen.dart:143:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\analytics_screen.dart:111:62 - deprecated_member_use
+warning - Dead code - lib\screens\admin\analytics_screen.dart:149:55 - dead_code
+warning - Dead code - lib\screens\admin\analytics_screen.dart:150:53 - dead_code
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\analytics_screen.dart:281:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\commission_list_screen.dart:263:63 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\commission_rules_screen.dart:61:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\commission_rules_screen.dart:65:30 - use_build_context_synchronously
+warning - Unused import: 'package:intl/intl.dart' - lib\screens\admin\commission_settings_screen.dart:4:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\commission_settings_screen.dart:76:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\commission_settings_screen.dart:114:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\commission_settings_screen.dart:118:30 - use_build_context_synchronously
+warning - Unused import: 'package:jengamate/models/order_model.dart' - lib\screens\admin\enhanced_analytics_dashboard.dart:5:8 - unused_import
+warning - Unused import: 'package:jengamate/models/product_model.dart' - lib\screens\admin\enhanced_analytics_dashboard.dart:6:8 - unused_import
+warning - Unused import: 'package:jengamate/models/withdrawal_model.dart' - lib\screens\admin\enhanced_analytics_dashboard.dart:7:8 - unused_import
+   info - The imported package 'collection' isn't a dependency of the importing package - lib\screens\admin\enhanced_analytics_dashboard.dart:10:8 - depend_on_referenced_packages
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_analytics_dashboard.dart:66:28 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\enhanced_analytics_dashboard.dart:343:46 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\screens\admin\enhanced_analytics_dashboard.dart:611:36 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\enhanced_user_management_screen.dart:160:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\enhanced_user_management_screen.dart:299:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\enhanced_user_management_screen.dart:411:22 - deprecated_member_use
+warning - The declaration '_showDocumentViewer' isn't referenced - lib\screens\admin\enhanced_user_management_screen.dart:552:8 - unused_element
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\screens\admin\enhanced_user_management_screen.dart:556:16 - sized_box_for_whitespace
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:686:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:687:38 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:691:38 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:763:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:764:38 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:768:38 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:791:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:795:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:810:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:814:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:829:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:833:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:854:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:855:38 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:859:38 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:905:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:910:38 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\enhanced_user_management_screen.dart:914:38 - use_build_context_synchronously
+warning - The value of the local variable 'currentUser' isn't used - lib\screens\admin\order_and_inquiry_management_screen.dart:18:11 - unused_local_variable
+   info - Unnecessary use of multiple underscores - lib\screens\admin\order_and_inquiry_management_screen.dart:53:43 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\admin\order_and_inquiry_management_screen.dart:102:43 - unnecessary_underscores
+warning - Unused import: 'package:intl/intl.dart' - lib\screens\admin\rank_management_screen.dart:4:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\rank_management_screen.dart:60:32 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\rank_management_screen.dart:65:32 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\rank_management_screen.dart:71:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\rank_management_screen.dart:81:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\rank_management_screen.dart:85:28 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\referral_management_screen.dart:230:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\referral_management_screen.dart:301:65 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\rfq_management_dashboard.dart:65:68 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\rfq_management_dashboard.dart:119:68 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\system_configuration_screen.dart:54:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\system_configuration_screen.dart:58:30 - use_build_context_synchronously
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\screens\admin\user_analytics_dashboard.dart:2:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\screens\admin\user_management_screen.dart:6:9 - use_super_parameters
+   info - Invalid use of a private type in a public API - lib\screens\admin\user_management_screen.dart:9:3 - library_private_types_in_public_api
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\user_management_screen.dart:319:31 - use_build_context_synchronously
+warning - Unused import: 'package:jengamate/screens/admin/add_edit_product_screen.dart' - lib\screens\admin\widgets\product_card.dart:3:8 - unused_import
+   info - Unnecessary escape in string literal - lib\screens\admin\widgets\product_card.dart:52:27 - unnecessary_string_escapes
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\withdrawal_management_screen.dart:30:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\withdrawal_management_screen.dart:34:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\withdrawal_management_screen.dart:106:29 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\admin\withdrawal_management_screen.dart:107:36 - use_build_context_synchronously
+warning - The left operand can't be null, so the right operand is never executed - lib\screens\admin\withdrawal_management_screen.dart:269:63 - dead_null_aware_expression
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\withdrawal_management_screen.dart:280:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\admin\withdrawal_management_screen.dart:366:67 - deprecated_member_use
+   info - Parameter 'key' could be a super parameter - lib\screens\analytics\analytics_screen.dart:4:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\screens\auth\change_password_screen.dart:9:9 - use_super_parameters
+  error - The named parameter 'labelText' isn't defined - lib\screens\auth\change_password_screen.dart:87:17 - undefined_named_parameter
+  error - The named parameter 'hintText' isn't defined - lib\screens\auth\change_password_screen.dart:88:17 - undefined_named_parameter
+  error - The named parameter 'labelText' isn't defined - lib\screens\auth\change_password_screen.dart:101:17 - undefined_named_parameter
+  error - The named parameter 'hintText' isn't defined - lib\screens\auth\change_password_screen.dart:102:17 - undefined_named_parameter
+  error - The named parameter 'labelText' isn't defined - lib\screens\auth\change_password_screen.dart:118:17 - undefined_named_parameter
+  error - The named parameter 'hintText' isn't defined - lib\screens\auth\change_password_screen.dart:119:17 - undefined_named_parameter
+  error - The named parameter 'child' is required, but there's no corresponding argument - lib\screens\auth\change_password_screen.dart:133:15 - missing_required_argument
+  error - The argument type 'SizedBox?' can't be assigned to the parameter type 'IconData?'.  - lib\screens\auth\change_password_screen.dart:136:23 - argument_type_not_assignable
+   info - Unnecessary use of multiple underscores - lib\screens\categories\categories_screen.dart:35:39 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\categories\categories_screen.dart:63:37 - unnecessary_underscores
+warning - Unused import: 'package:cloud_firestore/cloud_firestore.dart' - lib\screens\chat\chat_conversation_screen.dart:2:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\screens\chat\chat_conversation_screen.dart:16:9 - use_super_parameters
+   info - Unnecessary use of multiple underscores - lib\screens\chat\chat_list_screen.dart:45:39 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\chat\chat_list_screen.dart:86:37 - unnecessary_underscores
+   info - Parameter 'key' could be a super parameter - lib\screens\chat\chat_screen.dart:13:9 - use_super_parameters
+   info - Invalid use of a private type in a public API - lib\screens\chat\chat_screen.dart:21:3 - library_private_types_in_public_api
+  error - The named parameter 'chatId' is required, but there's no corresponding argument - lib\screens\chat\chat_screen.dart:38:21 - missing_required_argument
+  error - The named parameter 'inquiryId' isn't defined - lib\screens\chat\chat_screen.dart:44:7 - undefined_named_parameter
+  error - The named parameter 'orderId' isn't defined - lib\screens\chat\chat_screen.dart:45:7 - undefined_named_parameter
+   info - Don't use 'BuildContext's across async gaps - lib\screens\chat\chat_screen.dart:57:28 - use_build_context_synchronously
+  error - The method 'streamUserCommissions' isn't defined for the type 'DatabaseService' - lib\screens\commission\my_commission_screen.dart:21:27 - undefined_method
+warning - Unused import: 'package:jengamate/services/navigation_service.dart' - lib\screens\dashboard\dashboard_tab_screen.dart:13:8 - unused_import
+warning - Unused import: 'package:jengamate/config/app_routes.dart' - lib\screens\dashboard\dashboard_tab_screen.dart:14:8 - unused_import
+warning - Unused import: 'package:go_router/go_router.dart' - lib\screens\dashboard\dashboard_tab_screen.dart:15:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard\widgets\balance_card.dart:22:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\dashboard\widgets\balance_card.dart:84:52 - deprecated_member_use
+warning - Unused import: 'package:jengamate/screens/admin/add_edit_category_screen.dart' - lib\screens\dashboard_screen.dart:13:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\screens\dashboard_screen.dart:37:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\screens\dashboard_screen.dart:41:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\screens\dashboard_screen.dart:48:5 - avoid_print
+   info - The local variable '_screens' starts with an underscore - lib\screens\dashboard_screen.dart:94:24 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_navItems' starts with an underscore - lib\screens\dashboard_screen.dart:96:41 - no_leading_underscores_for_local_identifiers
+   info - Don't invoke 'print' in production code - lib\screens\dashboard_screen.dart:109:5 - avoid_print
+  error - The getter 'createOrder' isn't defined for the type 'AppRoutes' - lib\screens\dashboard_screen.dart:314:34 - undefined_getter
+warning - The declaration '_showQuickActionsMenu' isn't referenced - lib\screens\dashboard_screen.dart:344:8 - unused_element
+   info - Parameter 'key' could be a super parameter - lib\screens\help\help_screen.dart:4:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\screens\help\help_screen.dart:193:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\screens\help\help_screen.dart:210:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\screens\help\help_screen.dart:227:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps - lib\screens\help_screen.dart:20:28 - use_build_context_synchronously
+  error - 'AdaptivePadding' isn't a function - lib\screens\help_screen.dart:34:13 - invocation_of_non_function
+  error - The name 'AdaptivePadding' is defined in the libraries 'package:jengamate/ui/design_system/components/responsive_wrapper.dart' and 'package:jengamate/ui/design_system/layout/adaptive_padding.dart' - lib\screens\help_screen.dart:34:13 - ambiguous_import
+  error - The named parameter 'child' is required, but there's no corresponding argument - lib\screens\help_screen.dart:62:22 - missing_required_argument
+  error - Expected to find ')' - lib\screens\help_screen.dart:71:6 - expected_token
+   info - Parameter 'key' could be a super parameter - lib\screens\inquiry\inquiry_detail_screen.dart:9:9 - use_super_parameters
+   info - Unnecessary use of 'toList' in a spread - lib\screens\inquiry\inquiry_details_screen.dart:77:12 - unnecessary_to_list_in_spreads
+   info - Unnecessary use of multiple underscores - lib\screens\inquiry\inquiry_list_screen.dart:31:39 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\inquiry\inquiry_list_screen.dart:57:37 - unnecessary_underscores
+  error - 'AdaptivePadding' isn't a function - lib\screens\inquiry\inquiry_screen.dart:47:13 - invocation_of_non_function
+  error - The name 'AdaptivePadding' is defined in the libraries 'package:jengamate/ui/design_system/components/responsive_wrapper.dart' and 'package:jengamate/ui/design_system/layout/adaptive_padding.dart' - lib\screens\inquiry\inquiry_screen.dart:47:13 - ambiguous_import
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\screens\inquiry\inquiry_screen.dart:65:58 - deprecated_member_use
+   info - The private field _products could be 'final' - lib\screens\inquiry\inquiry_submission_screen.dart:25:30 - prefer_final_fields
+   info - The private field _attachments could be 'final' - lib\screens\inquiry\inquiry_submission_screen.dart:26:16 - prefer_final_fields
+   info - Don't use 'BuildContext's across async gaps - lib\screens\inquiry\inquiry_submission_screen.dart:71:20 - use_build_context_synchronously
+   info - The private field _products could be 'final' - lib\screens\inquiry\new_inquiry_screen.dart:27:17 - prefer_final_fields
+   info - Don't use 'BuildContext's across async gaps - lib\screens\inquiry\new_inquiry_screen.dart:88:22 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\inquiry\new_inquiry_screen.dart:91:22 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\inquiry\new_inquiry_screen.dart:93:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\inquiry\new_inquiry_screen.dart:98:22 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\inquiry\new_inquiry_screen.dart:100:30 - use_build_context_synchronously
+   info - Parameter 'key' could be a super parameter - lib\screens\inquiry\widgets\inquiry_filter_dialog.dart:7:9 - use_super_parameters
+  error - The named parameter 'rfqId' is required, but there's no corresponding argument - lib\screens\inquiry\widgets\submit_quote_dialog.dart:86:32 - missing_required_argument
+  error - The named parameter 'inquiryId' isn't defined - lib\screens\inquiry\widgets\submit_quote_dialog.dart:88:17 - undefined_named_parameter
+  error - The named parameter 'supplierName' isn't defined - lib\screens\inquiry\widgets\submit_quote_dialog.dart:90:17 - undefined_named_parameter
+  error - The named parameter 'description' isn't defined - lib\screens\inquiry\widgets\submit_quote_dialog.dart:92:17 - undefined_named_parameter
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\inquiry\widgets\submit_quote_dialog.dart:101:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\inquiry\widgets\submit_quote_dialog.dart:102:38 - use_build_context_synchronously
+   info - Parameter 'key' could be a super parameter - lib\screens\notifications\notifications_screen.dart:4:9 - use_super_parameters
+warning - Unused import: '../../models/user_model.dart' - lib\screens\order\order_detail_screen.dart:9:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\screens\order\order_detail_screen.dart:18:9 - use_super_parameters
+   info - Invalid use of a private type in a public API - lib\screens\order\order_detail_screen.dart:21:3 - library_private_types_in_public_api
+  error - The name 'Timestamp' isn't a type, so it can't be used in an 'as' expression - lib\screens\order\order_detail_screen.dart:143:64 - cast_to_non_type
+   info - Unnecessary use of 'toList' in a spread - lib\screens\order\order_detail_screen.dart:169:24 - unnecessary_to_list_in_spreads
+   info - Parameter 'key' could be a super parameter - lib\screens\order\order_details_screen.dart:14:9 - use_super_parameters
+   info - Invalid use of a private type in a public API - lib\screens\order\order_details_screen.dart:17:3 - library_private_types_in_public_api
+  error - The method 'streamOrderPayments' isn't defined for the type 'DatabaseService' - lib\screens\order\order_details_screen.dart:29:40 - undefined_method
+  error - The argument type 'Timestamp' can't be assigned to the parameter type 'DateTime'.  - lib\screens\order\order_details_screen.dart:110:67 - argument_type_not_assignable
+  error - Undefined class 'OrderStatus' - lib\screens\order\order_details_screen.dart:133:27 - undefined_class
+  error - Undefined name 'OrderStatus' - lib\screens\order\order_details_screen.dart:136:12 - undefined_identifier
+  error - Undefined name 'OrderStatus' - lib\screens\order\order_details_screen.dart:139:12 - undefined_identifier
+  error - Undefined name 'OrderStatus' - lib\screens\order\order_details_screen.dart:142:12 - undefined_identifier
+  error - Undefined name 'OrderStatus' - lib\screens\order\order_details_screen.dart:145:12 - undefined_identifier
+  error - Undefined name 'OrderStatus' - lib\screens\order\order_details_screen.dart:148:12 - undefined_identifier
+  error - Undefined name 'OrderStatus' - lib\screens\order\order_details_screen.dart:151:12 - undefined_identifier
+  error - Undefined name 'OrderStatus' - lib\screens\order\order_details_screen.dart:154:12 - undefined_identifier
+  error - The non-nullable local variable 'color' must be assigned before it can be used - lib\screens\order\order_details_screen.dart:164:24 - not_assigned_potentially_non_nullable_local_variable
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:202:39 - undefined_identifier
+  error - The getter 'displayName' isn't defined for the type 'PaymentStatus' - lib\screens\order\order_details_screen.dart:316:42 - undefined_getter
+  error - The argument type 'Timestamp' can't be assigned to the parameter type 'DateTime'.  - lib\screens\order\order_details_screen.dart:318:62 - argument_type_not_assignable
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:324:35 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:326:31 - undefined_identifier
+  error - The body might complete normally, causing 'null' to be returned, but the return type, 'Color', is a potentially non-nullable type - lib\screens\order\order_details_screen.dart:332:9 - body_might_complete_normally
+  error - Undefined class 'PaymentStatus' - lib\screens\order\order_details_screen.dart:332:32 - undefined_class
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:334:12 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:336:12 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:338:12 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:340:12 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:342:12 - undefined_identifier
+  error - The body might complete normally, causing 'null' to be returned, but the return type, 'IconData', is a potentially non-nullable type - lib\screens\order\order_details_screen.dart:347:12 - body_might_complete_normally
+  error - Undefined class 'PaymentStatus' - lib\screens\order\order_details_screen.dart:347:34 - undefined_class
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:349:12 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:351:12 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:353:12 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:355:12 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:357:12 - undefined_identifier
+  error - Undefined name 'PaymentStatus' - lib\screens\order\order_details_screen.dart:368:39 - undefined_identifier
+  error - Undefined name 'OrderStatus' - lib\screens\order\order_details_screen.dart:393:33 - undefined_identifier
+  error - Undefined name 'OrderStatus' - lib\screens\order\order_details_screen.dart:433:27 - undefined_identifier
+   info - Don't use 'BuildContext's across async gaps - lib\screens\order\order_details_screen.dart:436:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\order\order_details_screen.dart:439:38 - use_build_context_synchronously
+warning - Unused import: 'dart:io' - lib\screens\order\order_payment_screen.dart:8:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\screens\order\order_payment_screen.dart:16:9 - use_super_parameters
+   info - Invalid use of a private type in a public API - lib\screens\order\order_payment_screen.dart:19:3 - library_private_types_in_public_api
+   info - Don't use 'BuildContext's across async gaps - lib\screens\order\order_payment_screen.dart:76:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\order\order_payment_screen.dart:81:28 - use_build_context_synchronously
+  error - The name 'Timestamp' isn't a type, so it can't be used in an 'as' expression - lib\screens\order\order_payment_screen.dart:144:64 - cast_to_non_type
+   info - Unnecessary use of 'toList' in a spread - lib\screens\order\order_payment_screen.dart:170:24 - unnecessary_to_list_in_spreads
+warning - Unused import: 'package:jengamate/models/order_model.dart' - lib\screens\order\order_screen.dart:2:8 - unused_import
+  error - The name 'Order' isn't a type, so it can't be used as a type argument - lib\screens\order\order_screen.dart:67:32 - non_type_as_type_argument
+   info - Unnecessary use of multiple underscores - lib\screens\order\order_screen.dart:74:39 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\screens\order\order_screen.dart:100:37 - unnecessary_underscores
+  error - Undefined class 'Order' - lib\screens\order\payment_history_screen.dart:6:9 - undefined_class
+   info - Parameter 'key' could be a super parameter - lib\screens\order\payment_screen.dart:11:9 - use_super_parameters
+   info - Invalid use of a private type in a public API - lib\screens\order\payment_screen.dart:14:3 - library_private_types_in_public_api
+  error - Undefined class 'PaymentMethod' - lib\screens\order\payment_screen.dart:24:3 - undefined_class
+  error - Undefined name 'PaymentMethod' - lib\screens\order\payment_screen.dart:24:35 - undefined_identifier
+  error - The method 'uploadPaymentProof' isn't defined for the type 'DatabaseService' - lib\screens\order\payment_screen.dart:74:47 - undefined_method
+  error - The named parameter 'userId' is required, but there's no corresponding argument - lib\screens\order\payment_screen.dart:80:23 - missing_required_argument
+  error - Undefined name 'PaymentStatus' - lib\screens\order\payment_screen.dart:86:17 - undefined_identifier
+  error - The argument type 'DateTime' can't be assigned to the parameter type 'Timestamp'.  - lib\screens\order\payment_screen.dart:88:20 - argument_type_not_assignable
+  error - The argument type 'DateTime' can't be assigned to the parameter type 'Timestamp'.  - lib\screens\order\payment_screen.dart:89:20 - argument_type_not_assignable
+  error - Methods can't be invoked in constant expressions - lib\screens\order\payment_screen.dart:168:37 - const_eval_method_invocation
+  error - The name 'PaymentMethod' isn't a type, so it can't be used as a type argument - lib\screens\order\payment_screen.dart:210:37 - non_type_as_type_argument
+  error - Undefined name 'PaymentMethod' - lib\screens\order\payment_screen.dart:216:22 - undefined_identifier
+  error - Undefined class 'Order' - lib\screens\order\widgets\order_card.dart:9:9 - undefined_class
+  error - The named parameter 'orderId' is required, but there's no corresponding argument - lib\screens\order\widgets\order_card.dart:25:37 - missing_required_argument
+  error - The named parameter 'order' isn't defined - lib\screens\order\widgets\order_card.dart:25:56 - undefined_named_parameter
+   info - Parameter 'key' could be a super parameter - lib\screens\order\widgets\order_filter_dialog.dart:7:9 - use_super_parameters
+warning - Unused import: 'package:jengamate/models/order_model.dart' - lib\screens\order\widgets\payment_dialog.dart:4:8 - unused_import
+  error - The name 'Order' isn't a type, so it can't be used as a type argument - lib\screens\order\widgets\payment_dialog.dart:53:27 - non_type_as_type_argument
+  error - The method 'getOrderByID' isn't defined for the type 'DatabaseService' - lib\screens\order\widgets\payment_dialog.dart:54:34 - undefined_method
+  error - The method 'uploadFile' isn't defined for the type 'DatabaseService' - lib\screens\order\widgets\payment_dialog.dart:102:52 - undefined_method
+  error - The method 'getOrderByID' isn't defined for the type 'DatabaseService' - lib\screens\order\widgets\payment_dialog.dart:106:51 - undefined_method
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\order\widgets\payment_dialog.dart:117:28 - use_build_context_synchronously
+  error - Undefined class 'Order' - lib\screens\order\widgets\tracking_update_dialog.dart:6:9 - undefined_class
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\order\widgets\tracking_update_dialog.dart:78:28 - use_build_context_synchronously
+warning - Unused import: 'package:jengamate/models/review_model.dart' - lib\screens\products\product_details_screen.dart:4:8 - unused_import
+warning - Unused import: 'package:intl/intl.dart' - lib\screens\products\product_details_screen.dart:8:8 - unused_import
+warning - Unused import: 'package:jengamate/screens/products/widgets/submit_review_dialog.dart' - lib\screens\products\product_details_screen.dart:9:8 - unused_import
+warning - Unused import: 'package:jengamate/screens/admin/add_edit_product_screen.dart' - lib\screens\products\product_details_screen.dart:12:8 - unused_import
+warning - The value of the local variable 'crossAxisCount' isn't used - lib\screens\products\products_screen.dart:137:23 - unused_local_variable
+warning - The left operand can't be null, so the right operand is never executed - lib\screens\products\products_screen.dart:190:71 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\screens\products\widgets\submit_review_dialog.dart:54:44 - dead_null_aware_expression
+   info - Parameter 'key' could be a super parameter - lib\screens\profile\change_password_screen.dart:7:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps - lib\screens\profile\change_password_screen.dart:78:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\profile\change_password_screen.dart:86:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\profile\edit_profile_screen.dart:116:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\profile\edit_profile_screen.dart:123:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\profile\identity_verification_screen.dart:46:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\profile\identity_verification_screen.dart:89:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\profile\identity_verification_screen.dart:97:21 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\profile\identity_verification_screen.dart:100:28 - use_build_context_synchronously
+warning - Unused import: 'package:jengamate/services/auth_service.dart' - lib\screens\profile\priority_support_screen.dart:4:8 - unused_import
+warning - Unused import: 'package:firebase_auth/firebase_auth.dart' - lib\screens\profile\security_screen.dart:2:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\screens\profile\security_screen.dart:6:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps - lib\screens\profile\security_screen.dart:230:28 - use_build_context_synchronously
+  error - The method 'updateRFQStatus' isn't defined for the type 'DatabaseService' - lib\screens\quotes\create_quote_screen.dart:40:19 - undefined_method
+   info - Don't use 'BuildContext's across async gaps - lib\screens\quotes\create_quote_screen.dart:41:22 - use_build_context_synchronously
+   info - Parameter 'key' could be a super parameter - lib\screens\quotes\quotation_review_screen.dart:11:9 - use_super_parameters
+   info - Invalid use of a private type in a public API - lib\screens\quotes\quotation_review_screen.dart:14:3 - library_private_types_in_public_api
+   info - Unnecessary use of 'toList' in a spread - lib\screens\quotes\quotation_review_screen.dart:62:20 - unnecessary_to_list_in_spreads
+   info - Don't use 'BuildContext's across async gaps - lib\screens\quotes\quotation_review_screen.dart:75:50 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\quotes\quotation_review_screen.dart:80:50 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\quotes\quotation_review_screen.dart:91:48 - use_build_context_synchronously
+  error - The named parameter 'customerEmail' is required, but there's no corresponding argument - lib\screens\rfq\advanced_rfq_submission_screen.dart:34:22 - missing_required_argument
+  error - The named parameter 'customerName' is required, but there's no corresponding argument - lib\screens\rfq\advanced_rfq_submission_screen.dart:34:22 - missing_required_argument
+  error - The named parameter 'customerPhone' is required, but there's no corresponding argument - lib\screens\rfq\advanced_rfq_submission_screen.dart:34:22 - missing_required_argument
+  error - The named parameter 'deliveryAddress' is required, but there's no corresponding argument - lib\screens\rfq\advanced_rfq_submission_screen.dart:34:22 - missing_required_argument
+  error - The named parameter 'productId' is required, but there's no corresponding argument - lib\screens\rfq\advanced_rfq_submission_screen.dart:34:22 - missing_required_argument
+  error - The named parameter 'productName' is required, but there's no corresponding argument - lib\screens\rfq\advanced_rfq_submission_screen.dart:34:22 - missing_required_argument
+  error - The named parameter 'title' isn't defined - lib\screens\rfq\advanced_rfq_submission_screen.dart:37:9 - undefined_named_parameter
+  error - The named parameter 'description' isn't defined - lib\screens\rfq\advanced_rfq_submission_screen.dart:38:9 - undefined_named_parameter
+  error - The named parameter 'categoryIds' isn't defined - lib\screens\rfq\advanced_rfq_submission_screen.dart:39:9 - undefined_named_parameter
+  error - The named parameter 'products' isn't defined - lib\screens\rfq\advanced_rfq_submission_screen.dart:40:9 - undefined_named_parameter
+  error - The named parameter 'unit' isn't defined - lib\screens\rfq\advanced_rfq_submission_screen.dart:42:9 - undefined_named_parameter
+  error - The named parameter 'deadline' isn't defined - lib\screens\rfq\advanced_rfq_submission_screen.dart:43:9 - undefined_named_parameter
+  error - The method 'createRFQ' isn't defined for the type 'DatabaseService' - lib\screens\rfq\advanced_rfq_submission_screen.dart:47:18 - undefined_method
+warning - Unused import: 'package:jengamate/screens/quotes/quote_details_screen.dart' - lib\screens\rfq\rfq_details_screen.dart:6:8 - unused_import
+warning - Unused import: 'package:firebase_auth/firebase_auth.dart' - lib\screens\rfq\rfq_submission_screen.dart:3:8 - unused_import
+   info - The private field _attachments could be 'final' - lib\screens\rfq\rfq_submission_screen.dart:33:16 - prefer_final_fields
+   info - The private field _deliveryDate could be 'final' - lib\screens\rfq\widgets\quote_submission_form.dart:19:12 - prefer_final_fields
+   info - Don't use 'BuildContext's across async gaps - lib\screens\rfq\widgets\quote_submission_form.dart:36:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\rfq\widgets\quote_submission_form.dart:39:23 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\screens\rfq\widgets\quote_submission_form.dart:41:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\rfq\widgets\submit_quote_dialog.dart:103:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\screens\rfq\widgets\submit_quote_dialog.dart:104:38 - use_build_context_synchronously
+warning - Unused import: 'package:jengamate/utils/responsive.dart' - lib\screens\settings_screen.dart:7:8 - unused_import
+warning - Unused import: 'package:jengamate/ui/design_system/components/jm_button.dart' - lib\screens\settings_screen.dart:11:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\screens\settings_screen.dart:14:9 - use_super_parameters
+  error - Expected an identifier - lib\screens\settings_screen.dart:165:15 - missing_identifier
+  error - Expected to find ')' - lib\screens\settings_screen.dart:165:15 - expected_token
+  error - Expected to find ')' - lib\screens\settings_screen.dart:167:6 - expected_token
+warning - Unused import: 'dart:typed_data' - lib\screens\test\image_upload_test_screen.dart:2:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\screens\test\image_upload_test_screen.dart:9:9 - use_super_parameters
+   info - The 'child' argument should be last in widget constructor invocations - lib\screens\test\test_navigation_helper.dart:20:7 - sort_child_properties_last
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:22:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:36:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:50:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:59:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:72:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:82:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:91:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:100:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:109:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:118:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:132:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:146:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:157:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:168:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:179:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:190:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:201:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:215:7 - avoid_print
+warning - The value of the field '_authService' isn't used - lib\services\database_service.dart:32:21 - unused_field
+   info - Don't invoke 'print' in production code - lib\services\database_service.dart:62:7 - avoid_print
+warning - The declaration '_retryOrderOperation' isn't referenced - lib\services\database_service.dart:67:23 - unused_element
+warning - The '!' will have no effect because the receiver can't be null - lib\services\database_service.dart:147:54 - unnecessary_non_null_assertion
+   info - The parameter name 'sum' matches a visible type name - lib\services\database_service.dart:296:23 - avoid_types_as_parameter_names
+   info - Unnecessary 'this.' qualifier - lib\services\database_service.dart:299:15 - unnecessary_this
+   info - Unnecessary 'this.' qualifier - lib\services\database_service.dart:301:39 - unnecessary_this
+   info - Unnecessary 'this.' qualifier - lib\services\database_service.dart:317:17 - unnecessary_this
+   info - Don't invoke 'print' in production code - lib\services\database_service.dart:318:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\database_service.dart:322:7 - avoid_print
+warning - The declaration '_updateOrderFinancialSummary' isn't referenced - lib\services\database_service.dart:327:16 - unused_element
+   info - The parameter name 'sum' matches a visible type name - lib\services\database_service.dart:344:23 - avoid_types_as_parameter_names
+   info - The parameter name 'sum' matches a visible type name - lib\services\database_service.dart:348:23 - avoid_types_as_parameter_names
+   info - Don't invoke 'print' in production code - lib\services\database_service.dart:350:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\database_service.dart:353:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\database_service.dart:728:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\database_service.dart:829:5 - avoid_print
+   info - The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart' - lib\services\storage_service.dart:2:8 - unnecessary_import
+   info - Don't invoke 'print' in production code - lib\services\storage_service.dart:39:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\storage_service.dart:43:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\storage_service.dart:85:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\storage_service.dart:88:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\storage_service.dart:107:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\storage_service.dart:118:7 - avoid_print
+warning - The value of the field '_dbService' isn't used - lib\services\supplier_matching_service.dart:6:9 - unused_field
+  error - Undefined name 'HapticFeedback' - lib\ui\design_system\animations\page_transitions.dart:129:25 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\design_system\animations\page_transitions.dart:153:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\design_system\animations\page_transitions.dart:157:35 - deprecated_member_use
+  error - Undefined name 'HapticFeedback' - lib\ui\design_system\animations\page_transitions.dart:286:11 - undefined_identifier
+warning - Unused import: 'package:jengamate/ui/design_system/tokens/colors.dart' - lib\ui\design_system\components\jm_button.dart:3:8 - unused_import
+warning - The value of the field '_scaleAnimation' isn't used - lib\ui\design_system\components\jm_button.dart:37:26 - unused_field
+   info - The private field _isHovered could be 'final' - lib\ui\design_system\components\jm_button.dart:38:8 - prefer_final_fields
+warning - The value of the field '_isHovered' isn't used - lib\ui\design_system\components\jm_button.dart:38:8 - unused_field
+warning - The declaration '_handleTap' isn't referenced - lib\ui\design_system\components\jm_button.dart:62:8 - unused_element
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\ui\design_system\components\jm_skeleton.dart:26:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\design_system\components\jm_skeleton.dart:26:68 - deprecated_member_use
+   info - 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre - lib\ui\design_system\components\jm_skeleton.dart:27:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\design_system\components\jm_skeleton.dart:27:73 - deprecated_member_use
+  error - Target of URI doesn't exist: 'package:jengamate/ui/design_system/spacing/jm_spacing.dart' - lib\ui\design_system\components\loading_states.dart:4:8 - uri_does_not_exist
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:17:34 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:17:34 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:23:37 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:23:37 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:27:34 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:27:34 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:31:34 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:31:34 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:77:68 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:77:68 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:83:35 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:83:35 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:90:40 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:90:40 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:92:40 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:92:40 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\design_system\components\loading_states.dart:128:62 - deprecated_member_use
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:130:36 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:130:36 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:136:36 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:136:36 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\design_system\components\loading_states.dart:140:64 - deprecated_member_use
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:145:38 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:145:38 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:184:36 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:184:36 - undefined_identifier
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:190:36 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:190:36 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\ui\design_system\components\loading_states.dart:194:64 - deprecated_member_use
+  error - Invalid constant value - lib\ui\design_system\components\loading_states.dart:198:36 - invalid_constant
+  error - Undefined name 'JMSpace' - lib\ui\design_system\components\loading_states.dart:198:36 - undefined_identifier
+  error - The named parameter 'child' is required, but there's no corresponding argument - lib\ui\design_system\components\responsive_wrapper.dart:208:12 - missing_required_argument
+warning - The value of the field '_initialized' isn't used - lib\utils\logger.dart:9:15 - unused_field
+   info - Don't invoke 'print' in production code - lib\utils\logger.dart:46:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\utils\logger.dart:48:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\utils\logger.dart:242:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\utils\logger.dart:254:7 - avoid_print
+   info - Unnecessary braces in a string interpolation - lib\utils\validators.dart:219:51 - unnecessary_brace_in_string_interps
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\widgets\app_drawer.dart:67:41 - deprecated_member_use
+   info - Parameter 'key' could be a super parameter - lib\widgets\error_display.dart:6:9 - use_super_parameters
+   info - Parameter 'key' could be a super parameter - lib\widgets\loading_indicator.dart:4:9 - use_super_parameters
+

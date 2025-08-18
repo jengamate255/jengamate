@@ -1,0 +1,72 @@
+rules_version = '2';
+
+// Helper function to check for admin role
+function isAdmin() {
+  return request.auth.token.role == 'admin';
+}
+
+// Helper function to check if the user is authenticated
+function isAuthenticated() {
+  return request.auth != null;
+}
+
+// Helper function to check if the user is the owner of a document
+function isOwner(userId) {
+  return isAuthenticated() && request.auth.uid == userId;
+}
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read/write their own data.
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Products can be read by anyone. Only admins or the product owner (supplier) can manage them.
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isAuthenticated(); // Assuming suppliers are authenticated users
+      allow update, delete: if isAdmin() || isOwner(resource.data.supplierId);
+    }
+
+    // Categories are public. Only admins can write.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // RFQs can be created by any authenticated user, but only read/updated by participants.
+    match /rfqs/{rfqId} {
+      allow create: if isAuthenticated() && isOwner(request.resource.data.customerId);
+      allow read, update: if isAuthenticated() && (isOwner(resource.data.customerId) || isOwner(resource.data.supplierId));
+    }
+
+    // Quotes can only be accessed by the RFQ participants.
+    match /quotes/{quoteId} {
+      allow create: if isAuthenticated() && isOwner(request.resource.data.supplierId);
+      allow read, update: if isAuthenticated() && (isOwner(resource.data.customerId) || isOwner(resource.data.supplierId));
+    }
+
+    // Orders can be created by the buyer and accessed only by participants.
+    match /orders/{orderId} {
+      allow create: if isAuthenticated() && isOwner(request.resource.data.buyerId);
+      allow read, update: if isAuthenticated() && (isOwner(resource.data.buyerId) || isOwner(resource.data.sellerId));
+      // No delete rule to preserve order history.
+    }
+
+    // Notifications can only be read/updated by the assigned user.
+    match /notifications/{notificationId} {
+      allow read, update: if isOwner(resource.data.userId);
+      // Create is typically handled by backend services/functions, so no direct client creation.
+      allow create: if false; 
+      allow delete: if false;
+    }
+
+    // Inquiries are private to participants.
+    match /inquiries/{inquiryId} {
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow read, update: if isAuthenticated() && (isOwner(resource.data.userId) || isOwner(resource.data.engineerId));
+    }
+  }
+}

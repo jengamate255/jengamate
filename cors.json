@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["http://localhost:8080", "http://localhost:8088", "http://localhost:8089", "https://jengamate.web.app", "https://jengamate.firebaseapp.com", "*"],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": ["*"],
+    "maxAgeSeconds": 3600
+  }
+]
