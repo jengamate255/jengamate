@@ -74,6 +74,11 @@ class AdminToolsScreen extends StatelessWidget {
             'route': '/rfq-management-dashboard',
           },
           {
+            'title': 'RFQ Analytics',
+            'icon': Icons.analytics,
+            'route': '/rfq-analytics-dashboard',
+          },
+          {
             'title': 'Commission Tiers',
             'icon': Icons.stacked_bar_chart,
             'routeName': 'adminCommissionTiers',

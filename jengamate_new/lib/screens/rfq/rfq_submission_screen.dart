@@ -11,7 +11,9 @@ import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/utils/logger.dart';
 import 'package:jengamate/services/notification_service.dart';
 import 'package:jengamate/services/supplier_matching_service.dart';
+import 'package:jengamate/services/product_interaction_service.dart';
 import 'package:jengamate/models/user_model.dart';
+import 'package:jengamate/models/product_model.dart';
 
 class RFQSubmissionScreen extends StatefulWidget {
   final String productId;
@@ -38,6 +40,7 @@ class _RFQSubmissionScreenState extends State<RFQSubmissionScreen> {
   List<String> _attachments = [];
 
   final DatabaseService _databaseService = DatabaseService();
+  final ProductInteractionService _interactionService = ProductInteractionService();
 
   @override
   void initState() {
@@ -95,6 +98,33 @@ class _RFQSubmissionScreenState extends State<RFQSubmissionScreen> {
       );
 
       await _databaseService.addRFQ(rfq);
+
+      // Track RFQ creation with detailed information
+      if (currentUser != null) {
+        try {
+          // Get product details for tracking
+          final product = await _databaseService.getProduct(widget.productId);
+          if (product != null) {
+            await _interactionService.trackRFQCreation(
+              rfqId: rfq.id,
+              product: product,
+              engineer: currentUser,
+              rfqDetails: {
+                'customerName': rfq.customerName,
+                'customerEmail': rfq.customerEmail,
+                'customerPhone': rfq.customerPhone,
+                'deliveryAddress': rfq.deliveryAddress,
+                'additionalNotes': rfq.additionalNotes,
+                'attachments': rfq.attachments,
+              },
+              quantity: rfq.quantity,
+              budgetRange: null, // Add budget range field if needed
+            );
+          }
+        } catch (e) {
+          Logger.logError('Error tracking RFQ creation', e, StackTrace.current);
+        }
+      }
 
       // After submitting RFQ, find matching suppliers and notify them (for now, just log)
       final supplierMatchingService = SupplierMatchingService();

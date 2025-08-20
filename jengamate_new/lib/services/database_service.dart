@@ -935,6 +935,18 @@ class DatabaseService {
     }
   }
 
+  Future<ProductModel?> getProduct(String productId) async {
+    try {
+      final doc = await _firestore.collection(_productsCollection).doc(productId).get();
+      if (doc.exists) {
+        return ProductModel.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get product: $e');
+    }
+  }
+
   // Category Management
   Future<void> addCategory(CategoryModel category) async {
     try {

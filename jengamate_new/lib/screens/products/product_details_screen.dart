@@ -10,6 +10,7 @@ import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
+import 'package:jengamate/services/product_interaction_service.dart';
 import 'package:video_player/video_player.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
@@ -26,6 +27,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   int _currentPage = 0;
   VideoPlayerController? _videoController;
   List<(String, String)> _mediaItems = [];
+  final ProductInteractionService _interactionService = ProductInteractionService();
 
   @override
   void initState() {
@@ -33,6 +35,25 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     _pageController = PageController();
     _buildMediaList();
     _initializeVideo();
+    _trackProductView();
+  }
+
+  /// Track product view when screen loads
+  void _trackProductView() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = Provider.of<UserModel?>(context, listen: false);
+      if (user != null) {
+        _interactionService.trackProductInteraction(
+          product: widget.product,
+          user: user,
+          interactionType: 'view',
+          additionalContext: {
+            'screen': 'product_details',
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        );
+      }
+    });
   }
 
   @override
@@ -384,6 +405,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   children: [
                     ElevatedButton(
                       onPressed: () {
+                        _trackInquiryClick();
                         context.go(AppRoutes.inquirySubmission,
                             extra: {'productId': widget.product.id});
                       },
@@ -391,6 +413,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ),
                     ElevatedButton(
                       onPressed: () {
+                        _trackRFQClick();
                         final path = AppRouteBuilders.rfqSubmissionPath(
                           productId: widget.product.id,
                           productName: widget.product.name,
@@ -683,5 +706,39 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         ],
       ),
     );
+  }
+
+  /// Track inquiry button click
+  void _trackInquiryClick() {
+    final user = Provider.of<UserModel?>(context, listen: false);
+    if (user != null) {
+      _interactionService.trackProductInteraction(
+        product: widget.product,
+        user: user,
+        interactionType: 'inquiry_click',
+        additionalContext: {
+          'screen': 'product_details',
+          'action': 'make_inquiry',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+    }
+  }
+
+  /// Track RFQ button click
+  void _trackRFQClick() {
+    final user = Provider.of<UserModel?>(context, listen: false);
+    if (user != null) {
+      _interactionService.trackProductInteraction(
+        product: widget.product,
+        user: user,
+        interactionType: 'rfq_click',
+        additionalContext: {
+          'screen': 'product_details',
+          'action': 'request_quotation',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+    }
   }
 }

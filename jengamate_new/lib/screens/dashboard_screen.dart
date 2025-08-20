@@ -11,6 +11,7 @@ import 'package:jengamate/screens/inquiry/inquiry_screen.dart';
 import 'package:jengamate/screens/products/products_screen.dart';
 import 'package:jengamate/screens/profile/profile_screen.dart';
 import 'package:jengamate/screens/admin/admin_tools_screen.dart';
+import 'package:jengamate/screens/supplier/supplier_rfq_dashboard.dart';
 import 'package:jengamate/screens/admin/add_edit_product_screen.dart';
 import 'package:jengamate/screens/admin/add_edit_category_screen.dart';
 import 'package:jengamate/screens/admin/product_management_screen.dart';
@@ -55,6 +56,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'Categories': const CategoriesScreen(),
       'Products': const ProductsScreen(),
       'Inquiries': const InquiryScreen(),
+      'RFQs': const SupplierRFQDashboard(),
       'Profile': const ProfileScreen(),
       'Admin Tools': const AdminToolsScreen(),
     };
@@ -64,6 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'Categories': Icons.category_outlined,
       'Products': Icons.shopping_bag_outlined,
       'Inquiries': Icons.receipt_long_outlined,
+      'RFQs': Icons.request_quote_outlined,
       'Profile': Icons.person_outline,
       'Admin Tools': Icons.admin_panel_settings_outlined,
     };
@@ -73,6 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'Categories': Icons.category,
       'Products': Icons.shopping_bag,
       'Inquiries': Icons.receipt_long,
+      'RFQs': Icons.request_quote,
       'Profile': Icons.person,
       'Admin Tools': Icons.admin_panel_settings,
     };
@@ -88,7 +92,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'Admin Tools'
       ];
     } else if (user.role == UserRole.supplier) {
-      allowedScreenKeys = ['Dashboard', 'Products', 'Categories', 'Profile'];
+      allowedScreenKeys = ['Dashboard', 'Products', 'Categories', 'RFQs', 'Profile'];
     } else {
       // engineer
       allowedScreenKeys = ['Dashboard', 'Products', 'Inquiries', 'Profile'];

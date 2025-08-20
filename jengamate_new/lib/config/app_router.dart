@@ -60,6 +60,8 @@ import 'package:jengamate/screens/support/support_dashboard_screen.dart';
 import 'package:jengamate/screens/admin/send_commission_screen.dart';
 import 'package:jengamate/screens/admin/commission_tiers_screen.dart';
 import 'package:jengamate/screens/admin/rfq_management_dashboard.dart';
+import 'package:jengamate/screens/admin/rfq_analytics_dashboard.dart';
+import 'package:jengamate/screens/supplier/supplier_rfq_dashboard.dart';
 import 'package:jengamate/screens/admin/rfq_management_test.dart';
 
 class AppRouter {
@@ -372,6 +374,14 @@ class AppRouter {
       GoRoute(
         path: '/rfq-management-dashboard',
         builder: (context, state) => const RfqManagementDashboard(),
+      ),
+      GoRoute(
+        path: '/rfq-analytics-dashboard',
+        builder: (context, state) => const RFQAnalyticsDashboard(),
+      ),
+      GoRoute(
+        path: '/supplier-rfq-dashboard',
+        builder: (context, state) => const SupplierRFQDashboard(),
       ),
       GoRoute(
         path: '/rfq-test',
