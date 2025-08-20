@@ -22,10 +22,12 @@ import 'package:jengamate/models/notification_model.dart';
 import 'package:jengamate/models/referral_model.dart';
 import 'package:jengamate/models/review_model.dart';
 import 'package:jengamate/models/rfq_model.dart';
+import 'package:jengamate/models/support_ticket_model.dart';
 import 'package:jengamate/models/system_config_model.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/withdrawal_model.dart';
+import 'package:jengamate/services/notification_service.dart';
 import 'package:jengamate/utils/logger.dart';
 
 
@@ -49,6 +51,7 @@ class DatabaseService {
   final String _withdrawalsCollection = 'withdrawals';
   final String _reviewsCollection = 'reviews';
   final String _userCommissionsCollection = 'user_commissions';
+  final String _commissionsCollection = 'commissions';
   final String _ranksCollection = 'ranks';
   final String _referralsCollection = 'referrals';
   final String _notificationsCollection = 'notifications';
@@ -96,7 +99,31 @@ class DatabaseService {
       operation: () async {
         final docRef =
             await _firestore.collection(_ordersCollection).add(order.toMap());
-        return order.copyWith(id: docRef.id);
+        final createdOrder = order.copyWith(id: docRef.id);
+
+        // Create audit log for order creation
+        try {
+          await createAuditLog(
+            actorId: order.buyerId,
+            actorName: 'User', // This could be enhanced to get actual user name
+            targetUserId: order.buyerId,
+            targetUserName: 'User',
+            action: 'create',
+            details: {
+              'resource': 'order',
+              'resourceId': docRef.id,
+              'message': 'Created new order for \$${order.totalAmount.toStringAsFixed(2)}',
+              'orderNumber': order.orderNumber,
+              'supplierId': order.supplierId,
+              'totalAmount': order.totalAmount,
+            },
+          );
+        } catch (e) {
+          // Don't fail order creation if audit logging fails
+          Logger.logError('Failed to create order audit log', e, StackTrace.current);
+        }
+
+        return createdOrder;
       },
       validation: () async {
         if (order.totalAmount <= 0) {
@@ -229,7 +256,32 @@ class DatabaseService {
         final docRef = await _firestore
             .collection(_paymentsCollection)
             .add(payment.toMap());
-        return payment.copyWith(id: docRef.id);
+        final createdPayment = payment.copyWith(id: docRef.id);
+
+        // Create audit log for payment creation
+        try {
+          await createAuditLog(
+            actorId: payment.userId,
+            actorName: 'User', // This could be enhanced to get actual user name
+            targetUserId: payment.userId,
+            targetUserName: 'User',
+            action: 'payment',
+            details: {
+              'resource': 'payment',
+              'resourceId': docRef.id,
+              'message': 'Payment of \$${payment.amount.toStringAsFixed(2)} processed via ${payment.method.toString().split('.').last}',
+              'orderId': payment.orderId,
+              'amount': payment.amount,
+              'method': payment.method.toString().split('.').last,
+              'status': payment.status.toString().split('.').last,
+            },
+          );
+        } catch (e) {
+          // Don't fail payment creation if audit logging fails
+          Logger.logError('Failed to create payment audit log', e, StackTrace.current);
+        }
+
+        return createdPayment;
       },
       validation: () => validatePaymentIntegrity(payment),
     );
@@ -499,9 +551,68 @@ class DatabaseService {
   }
 
   Stream<List<EnhancedUser>> streamEnhancedUsers() {
-    // Placeholder implementation that returns an empty stream.
-    // TODO: Replace with actual implementation to stream users from Firestore.
-    return Stream.value([]);
+    try {
+      return _firestore
+          .collection(_usersCollection)
+          .snapshots()
+          .asyncMap((snapshot) async {
+        final List<EnhancedUser> enhancedUsers = [];
+
+        for (var doc in snapshot.docs) {
+          try {
+            final data = doc.data() as Map<String, dynamic>? ?? {};
+
+            // Get additional user statistics for metadata
+            final ordersCount = await _firestore
+                .collection(_ordersCollection)
+                .where('buyerId', isEqualTo: doc.id)
+                .count()
+                .get();
+
+            final commissionsSnapshot = await _firestore
+                .collection(_commissionsCollection)
+                .where('userId', isEqualTo: doc.id)
+                .get();
+
+            double totalCommissions = 0.0;
+            for (var commissionDoc in commissionsSnapshot.docs) {
+              final commission = CommissionModel.fromFirestore(commissionDoc);
+              totalCommissions += commission.total;
+            }
+
+            // Add statistics to metadata
+            final enhancedMetadata = Map<String, dynamic>.from(data['metadata'] ?? {});
+            enhancedMetadata['ordersCount'] = ordersCount.count ?? 0;
+            enhancedMetadata['totalCommissions'] = totalCommissions;
+
+            enhancedUsers.add(EnhancedUser(
+              uid: doc.id,
+              email: data['email'] ?? '',
+              displayName: data['displayName'] ?? '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim(),
+              phoneNumber: data['phoneNumber'],
+              photoURL: data['photoUrl'],
+              emailVerified: data['emailVerified'] ?? false,
+              phoneVerified: data['phoneVerified'] ?? false,
+              roles: List<String>.from(data['roles'] ?? [data['role'] ?? 'user']),
+              permissions: Map<String, dynamic>.from(data['permissions'] ?? {}),
+              metadata: enhancedMetadata,
+              createdAt: data['createdAt']?.toDate() ?? DateTime.now(),
+              updatedAt: data['updatedAt']?.toDate() ?? DateTime.now(),
+              lastLoginAt: data['lastLogin']?.toDate(),
+              isActive: data['isApproved'] ?? false,
+              address: data['address'],
+            ));
+          } catch (e) {
+            Logger.logError('Error processing enhanced user', e, StackTrace.current);
+          }
+        }
+
+        return enhancedUsers;
+      });
+    } catch (e, s) {
+      Logger.logError('Error streaming enhanced users', e, s);
+      return Stream.value([]);
+    }
   }
 
   Future<void> updateEnhancedUser(EnhancedUser user) async {
@@ -613,50 +724,199 @@ class DatabaseService {
 
   // Category Management
   Stream<List<CategoryModel>> getCategories() {
-    // This is a placeholder. A real implementation would fetch from Firestore.
-    // Returning an empty stream to resolve compilation errors.
-    return Stream.value([]);
+    try {
+      return _firestore
+          .collection(_categoriesCollection)
+          .orderBy('name')
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => CategoryModel.fromFirestore(doc))
+              .toList());
+    } catch (e, s) {
+      Logger.logError('Error getting categories', e, s);
+      return Stream.value([]);
+    }
   }
 
   Stream<List<CategoryModel>> getSubCategories(String parentId) {
-    // This is a placeholder. A real implementation would fetch from Firestore.
-    // Returning an empty stream to resolve compilation errors.
-    return Stream.value([]);
+    try {
+      return _firestore
+          .collection(_categoriesCollection)
+          .where('parentId', isEqualTo: parentId)
+          .orderBy('name')
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => CategoryModel.fromFirestore(doc))
+              .toList());
+    } catch (e, s) {
+      Logger.logError('Error getting subcategories', e, s);
+      return Stream.value([]);
+    }
   }
 
   // Commission Management
   Stream<List<CommissionModel>> getAllCommissions() {
-    // This is a placeholder. A real implementation would fetch from Firestore.
-    // Returning an empty stream to resolve compilation errors.
-    return Stream.value([]);
+    try {
+      return _firestore
+          .collection(_commissionsCollection)
+          .orderBy('updatedAt', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => CommissionModel.fromFirestore(doc))
+              .toList());
+    } catch (e, s) {
+      Logger.logError('Error getting all commissions', e, s);
+      return Stream.value([]);
+    }
   }
 
-  Future<void> updateCommissionRules(CommissionModel commission) async {
-    // This is a placeholder. A real implementation would save to Firestore.
-    // No-op to resolve compilation errors.
-    await Future.delayed(const Duration(milliseconds: 100));
+  Future<void> updateCommissionRulesModel(CommissionModel commission) async {
+    try {
+      await _firestore
+          .collection('commission_rules')
+          .doc('global')
+          .set(commission.toMap(), SetOptions(merge: true));
+      Logger.log('Commission rules updated successfully');
+    } catch (e, s) {
+      Logger.logError('Error updating commission rules', e, s);
+      throw Exception('Failed to update commission rules: $e');
+    }
+  }
+
+  Future<void> updateCommissionRules({
+    required double commissionRate,
+    required double minPayoutThreshold,
+  }) async {
+    try {
+      await _firestore
+          .collection('commission_rules')
+          .doc('global')
+          .set({
+        'commissionRate': commissionRate,
+        'minPayoutThreshold': minPayoutThreshold,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      Logger.log('Commission settings updated successfully');
+    } catch (e, s) {
+      Logger.logError('Error updating commission settings', e, s);
+      throw Exception('Failed to update commission settings: $e');
+    }
   }
 
   // Analytics
   Future<Map<DateTime, double>> getSalesOverTime() async {
-    // This is a placeholder. A real implementation would fetch from Firestore.
-    // Returning an empty map to resolve compilation errors.
-    await Future.delayed(const Duration(milliseconds: 100)); // Simulate network delay
-    return {};
+    try {
+      final now = DateTime.now();
+      final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(thirtyDaysAgo))
+          .where('status', isEqualTo: 'completed')
+          .get();
+
+      final salesData = <DateTime, double>{};
+
+      for (var doc in snapshot.docs) {
+        final order = OrderModel.fromFirestore(doc);
+        final date = DateTime(
+          order.createdAt.year,
+          order.createdAt.month,
+          order.createdAt.day,
+        );
+        salesData[date] = (salesData[date] ?? 0.0) + order.totalAmount;
+      }
+
+      return salesData;
+    } catch (e, s) {
+      Logger.logError('Error getting sales over time', e, s);
+      return {};
+    }
   }
 
   Future<Map<String, int>> getOrderCountsByStatus() async {
-    // This is a placeholder. A real implementation would fetch from Firestore.
-    // Returning an empty map to resolve compilation errors.
-    await Future.delayed(const Duration(milliseconds: 100)); // Simulate network delay
-    return {};
+    try {
+      final snapshot = await _firestore.collection(_ordersCollection).get();
+      final statusCounts = <String, int>{};
+
+      for (var doc in snapshot.docs) {
+        final order = OrderModel.fromFirestore(doc);
+        final status = order.status.toString().split('.').last;
+        statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+      }
+
+      return statusCounts;
+    } catch (e, s) {
+      Logger.logError('Error getting order counts by status', e, s);
+      return {};
+    }
   }
 
   Future<List<Map<String, dynamic>>> getTopSellingProducts(int limit) async {
-    // This is a placeholder. A real implementation would fetch from Firestore.
-    // Returning an empty list to resolve compilation errors.
-    await Future.delayed(const Duration(milliseconds: 100)); // Simulate network delay
-    return [];
+    try {
+      final snapshot = await _firestore
+          .collection(_ordersCollection)
+          .where('status', isEqualTo: 'completed')
+          .get();
+
+      final productSales = <String, Map<String, dynamic>>{};
+
+      for (var doc in snapshot.docs) {
+        final order = OrderModel.fromFirestore(doc);
+        // Use rfqId as product identifier since OrderModel doesn't have productId
+        final productId = order.rfqId ?? 'unknown';
+
+        if (productSales.containsKey(productId)) {
+          productSales[productId]!['quantity'] += 1;
+          productSales[productId]!['totalSales'] += order.totalAmount;
+        } else {
+          productSales[productId] = {
+            'productId': productId,
+            'quantity': 1,
+            'totalSales': order.totalAmount,
+          };
+        }
+      }
+
+      // Sort by quantity and return top products
+      final sortedProducts = productSales.values.toList()
+        ..sort((a, b) => (b['quantity'] as int).compareTo(a['quantity'] as int));
+
+      return sortedProducts.take(limit).toList();
+    } catch (e, s) {
+      Logger.logError('Error getting top selling products', e, s);
+      return [];
+    }
+  }
+
+  Future<Map<DateTime, int>> getUserGrowthOverTime() async {
+    try {
+      final now = DateTime.now();
+      final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+
+      final snapshot = await _firestore
+          .collection(_usersCollection)
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(thirtyDaysAgo))
+          .get();
+
+      final userGrowthData = <DateTime, int>{};
+
+      for (var doc in snapshot.docs) {
+        final user = UserModel.fromFirestore(doc);
+        final createdAt = user.createdAt ?? DateTime.now();
+        final date = DateTime(
+          createdAt.year,
+          createdAt.month,
+          createdAt.day,
+        );
+        userGrowthData[date] = (userGrowthData[date] ?? 0) + 1;
+      }
+
+      return userGrowthData;
+    } catch (e, s) {
+      Logger.logError('Error getting user growth over time', e, s);
+      return {};
+    }
   }
 
   // Product Management
@@ -949,11 +1209,28 @@ class DatabaseService {
         inquiriesFuture,
       ]);
 
+      // Calculate total revenue from completed orders
+      double totalRevenue = 0.0;
+      try {
+        final completedOrdersSnapshot = await _firestore
+            .collection(_ordersCollection)
+            .where('status', isEqualTo: 'completed')
+            .get();
+
+        for (var doc in completedOrdersSnapshot.docs) {
+          final order = OrderModel.fromFirestore(doc);
+          totalRevenue += order.totalAmount;
+        }
+      } catch (e) {
+        Logger.logError('Error calculating total revenue', e, StackTrace.current);
+      }
+
       return {
         'totalUsers': results[0].count ?? 0,
         'totalOrders': results[1].count ?? 0,
         'totalProducts': results[2].count ?? 0,
         'totalInquiries': results[3].count ?? 0,
+        'totalRevenue': totalRevenue,
       };
     } catch (e, s) {
       Logger.logError('Failed to get admin analytics', e, s);
@@ -1015,28 +1292,308 @@ class DatabaseService {
   }
 
     Future<void> updateSystemConfig(SystemConfig newConfig) async {
-    // Placeholder
-    return Future.value();
+    try {
+      await _firestore
+          .collection('config')
+          .doc('system')
+          .set(newConfig.toMap(), SetOptions(merge: true));
+      Logger.log('System config updated successfully');
+    } catch (e, s) {
+      Logger.logError('Error updating system config', e, s);
+      throw Exception('Failed to update system config: $e');
+    }
   }
 
   Future<void> rejectWithdrawal(String withdrawalId, String reason) async {
-    // Placeholder
-    return Future.value();
+    try {
+      await _firestore
+          .collection(_withdrawalsCollection)
+          .doc(withdrawalId)
+          .update({
+        'status': 'rejected',
+        'rejectionReason': reason,
+        'rejectedAt': FieldValue.serverTimestamp(),
+      });
+      Logger.log('Withdrawal $withdrawalId rejected');
+    } catch (e, s) {
+      Logger.logError('Error rejecting withdrawal', e, s);
+      throw Exception('Failed to reject withdrawal: $e');
+    }
   }
 
   Stream<List<CommissionModel>> streamTrashedCommissions() {
-    // Placeholder
-    return Stream.value([]);
+    try {
+      return _firestore
+          .collection(_userCommissionsCollection)
+          .where('isDeleted', isEqualTo: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => CommissionModel.fromFirestore(doc))
+              .toList());
+    } catch (e, s) {
+      Logger.logError('Error streaming trashed commissions', e, s);
+      return Stream.value([]);
+    }
   }
 
     Future<void> createQuote(QuoteModel newQuote) async {
-    // Placeholder
-    return Future.value();
+    try {
+      await _firestore
+          .collection('quotes')
+          .add(newQuote.toMap());
+      Logger.log('Quote created successfully');
+    } catch (e, s) {
+      Logger.logError('Error creating quote', e, s);
+      throw Exception('Failed to create quote: $e');
+    }
   }
 
   Future<void> sendQuoteSubmissionNotification(QuoteModel quote) async {
-    // This is a placeholder. A real implementation would handle sending a notification.
-    return Future.value();
+    try {
+      // Get the RFQ to find the customer
+      final rfq = await getRFQ(quote.rfqId);
+      if (rfq == null) return;
+
+      // Create notification for the customer
+      final notification = NotificationModel(
+        id: _firestore.collection(_notificationsCollection).doc().id,
+        userId: rfq.userId,
+        title: 'New Quote Received',
+        message: 'You have received a new quote for your RFQ: ${rfq.productName}',
+        type: 'quote',
+        relatedId: quote.id,
+        createdAt: DateTime.now(),
+        timestamp: DateTime.now(),
+      );
+
+      await createNotification(notification);
+
+      // Send push notification if available
+      final notificationService = NotificationService();
+      await notificationService.showNotification(
+        title: notification.title,
+        body: notification.message,
+        payload: 'quote/${quote.id}',
+      );
+    } catch (e, s) {
+      Logger.logError('Error sending quote submission notification', e, s);
+    }
+  }
+
+  // Content Moderation
+  Future<List<Map<String, dynamic>>> getContentReports({String? status}) async {
+    try {
+      Query query = _firestore.collection('content_reports');
+
+      if (status != null) {
+        query = query.where('status', isEqualTo: status);
+      }
+
+      final snapshot = await query.orderBy('createdAt', descending: true).get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e, s) {
+      Logger.logError('Error getting content reports', e, s);
+      return [];
+    }
+  }
+
+  Future<void> updateContentReportStatus(String reportId, String status, {String? moderatorNotes}) async {
+    try {
+      final updateData = {
+        'status': status,
+        'reviewedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (moderatorNotes != null) {
+        updateData['moderatorNotes'] = moderatorNotes;
+      }
+
+      await _firestore
+          .collection('content_reports')
+          .doc(reportId)
+          .update(updateData);
+
+      Logger.log('Content report $reportId status updated to $status');
+    } catch (e, s) {
+      Logger.logError('Error updating content report status', e, s);
+      throw Exception('Failed to update content report: $e');
+    }
+  }
+
+  // Commission Tiers
+  Future<List<Map<String, dynamic>>> getCommissionTiers() async {
+    try {
+      final snapshot = await _firestore
+          .collection('commission_tiers')
+          .orderBy('level')
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e, s) {
+      Logger.logError('Error getting commission tiers', e, s);
+      return [];
+    }
+  }
+
+  Future<List<UserModel>> getUsersWithTierInfo() async {
+    try {
+      final snapshot = await _firestore
+          .collection(_usersCollection)
+          .where('isApproved', isEqualTo: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => UserModel.fromFirestore(doc))
+          .toList();
+    } catch (e, s) {
+      Logger.logError('Error getting users with tier info', e, s);
+      return [];
+    }
+  }
+
+  Future<void> createCommissionTier(Map<String, dynamic> tierData) async {
+    try {
+      await _firestore.collection('commission_tiers').add(tierData);
+      Logger.log('Commission tier created successfully');
+    } catch (e, s) {
+      Logger.logError('Error creating commission tier', e, s);
+      throw Exception('Failed to create commission tier: $e');
+    }
+  }
+
+  Future<void> updateCommissionTier(String tierId, Map<String, dynamic> tierData) async {
+    try {
+      await _firestore
+          .collection('commission_tiers')
+          .doc(tierId)
+          .update(tierData);
+      Logger.log('Commission tier $tierId updated successfully');
+    } catch (e, s) {
+      Logger.logError('Error updating commission tier', e, s);
+      throw Exception('Failed to update commission tier: $e');
+    }
+  }
+
+  // Referral Management
+  Future<List<Map<String, dynamic>>> getUserReferrals(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('referrals')
+          .where('referrerId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e, s) {
+      Logger.logError('Error getting user referrals', e, s);
+      return [];
+    }
+  }
+
+  Future<List<UserModel>> getUsersByIds(List<String> userIds) async {
+    try {
+      if (userIds.isEmpty) return [];
+
+      final users = <UserModel>[];
+
+      // Firestore 'in' queries are limited to 10 items, so we batch them
+      for (int i = 0; i < userIds.length; i += 10) {
+        final batch = userIds.skip(i).take(10).toList();
+        final snapshot = await _firestore
+            .collection(_usersCollection)
+            .where(FieldPath.documentId, whereIn: batch)
+            .get();
+
+        users.addAll(snapshot.docs.map((doc) => UserModel.fromFirestore(doc)));
+      }
+
+      return users;
+    } catch (e, s) {
+      Logger.logError('Error getting users by IDs', e, s);
+      return [];
+    }
+  }
+
+  Future<void> createReferral({
+    required String referrerId,
+    required String referredUserId,
+    required String referredUserName,
+    required String referredUserEmail,
+    double bonusAmount = 0.0,
+  }) async {
+    try {
+      await _firestore.collection('referrals').add({
+        'referrerId': referrerId,
+        'referredUserId': referredUserId,
+        'referredUserName': referredUserName,
+        'referredUserEmail': referredUserEmail,
+        'status': 'pending',
+        'bonusAmount': bonusAmount,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      Logger.log('Referral created successfully');
+    } catch (e, s) {
+      Logger.logError('Error creating referral', e, s);
+      throw Exception('Failed to create referral: $e');
+    }
+  }
+
+  // Audit Logs
+  Future<List<Map<String, dynamic>>> getAuditLogs({int limit = 100}) async {
+    try {
+      final snapshot = await _firestore
+          .collection('audit_logs')
+          .orderBy('timestamp', descending: true)
+          .limit(limit)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e, s) {
+      Logger.logError('Error getting audit logs', e, s);
+      return [];
+    }
+  }
+
+  Future<void> createAuditLog({
+    required String actorId,
+    required String actorName,
+    required String targetUserId,
+    required String targetUserName,
+    required String action,
+    Map<String, dynamic>? details,
+  }) async {
+    try {
+      await _firestore.collection('audit_logs').add({
+        'actorId': actorId,
+        'actorName': actorName,
+        'targetUserId': targetUserId,
+        'targetUserName': targetUserName,
+        'action': action,
+        'details': details ?? {},
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      Logger.log('Audit log created for action: $action');
+    } catch (e, s) {
+      Logger.logError('Error creating audit log', e, s);
+      // Don't throw exception for audit logs to avoid breaking main functionality
+    }
   }
 
   Stream<List<ProductModel>> streamProducts({String? categoryId}) {
@@ -1206,6 +1763,120 @@ class DatabaseService {
         .map((snapshot) => snapshot.docs
             .map((doc) => NotificationModel.fromMap(doc.data(), doc.id))
             .toList());
+  }
+
+  // Support Ticket Management
+  Future<List<SupportTicket>> getAllSupportTickets() async {
+    try {
+      final snapshot = await _firestore
+          .collection('support_tickets')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return SupportTicket.fromMap(data, doc.id);
+      }).toList();
+    } catch (e, s) {
+      Logger.logError('Error getting all support tickets', e, s);
+      return [];
+    }
+  }
+
+  Future<List<SupportTicket>> getUserSupportTickets(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('support_tickets')
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return SupportTicket.fromMap(data, doc.id);
+      }).toList();
+    } catch (e, s) {
+      Logger.logError('Error getting user support tickets', e, s);
+      return [];
+    }
+  }
+
+  Future<void> createSupportTicket(SupportTicket ticket) async {
+    try {
+      await _firestore.collection('support_tickets').add(ticket.toMap());
+      Logger.log('Support ticket created successfully');
+    } catch (e, s) {
+      Logger.logError('Error creating support ticket', e, s);
+      throw Exception('Failed to create support ticket: $e');
+    }
+  }
+
+  Future<void> updateSupportTicketStatus(String ticketId, String status) async {
+    try {
+      await _firestore
+          .collection('support_tickets')
+          .doc(ticketId)
+          .update({
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      Logger.log('Support ticket $ticketId status updated to $status');
+    } catch (e, s) {
+      Logger.logError('Error updating support ticket status', e, s);
+      throw Exception('Failed to update support ticket: $e');
+    }
+  }
+
+  // FAQ Management
+  Future<List<FAQItem>> getFAQs() async {
+    try {
+      final snapshot = await _firestore
+          .collection('faqs')
+          .orderBy('isPopular', descending: true)
+          .orderBy('question')
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return FAQItem.fromMap(data, doc.id);
+      }).toList();
+    } catch (e, s) {
+      Logger.logError('Error getting FAQs', e, s);
+      return [];
+    }
+  }
+
+  Future<void> createFAQ(FAQItem faq) async {
+    try {
+      await _firestore.collection('faqs').add(faq.toMap());
+      Logger.log('FAQ created successfully');
+    } catch (e, s) {
+      Logger.logError('Error creating FAQ', e, s);
+      throw Exception('Failed to create FAQ: $e');
+    }
+  }
+
+  Future<void> updateFAQ(FAQItem faq) async {
+    try {
+      await _firestore
+          .collection('faqs')
+          .doc(faq.id)
+          .update(faq.toMap());
+      Logger.log('FAQ ${faq.id} updated successfully');
+    } catch (e, s) {
+      Logger.logError('Error updating FAQ', e, s);
+      throw Exception('Failed to update FAQ: $e');
+    }
+  }
+
+  Future<void> deleteFAQ(String faqId) async {
+    try {
+      await _firestore.collection('faqs').doc(faqId).delete();
+      Logger.log('FAQ $faqId deleted successfully');
+    } catch (e, s) {
+      Logger.logError('Error deleting FAQ', e, s);
+      throw Exception('Failed to delete FAQ: $e');
+    }
   }
 
 }

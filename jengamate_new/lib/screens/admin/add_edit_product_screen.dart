@@ -110,29 +110,48 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
           // Initialize selection for edit mode
           final prod = widget.product;
           if (prod != null) {
+            // Reset selections first
+            _selectedCategoryId = null;
+            _selectedSubCategoryId = null;
+            _subCategories = [];
+
             // If subCategoryId is set, prefer deriving from it
             if (prod.subCategoryId != null && prod.subCategoryId!.isNotEmpty) {
-              final sub = _categories.firstWhere(
+              final sub = _categories.cast<CategoryModel?>().firstWhere(
                 (c) => c?.id == prod.subCategoryId,
                 orElse: () => null,
               );
               if (sub != null && sub.parentId != null) {
-                _selectedCategoryId = sub.parentId; // root category
-                _fetchSubCategories(_selectedCategoryId!, initialSubCategoryId: sub.id);
+                // Verify parent exists and is a root category
+                final parent = _categories.cast<CategoryModel?>().firstWhere(
+                  (c) => c?.id == sub.parentId && c?.parentId == null,
+                  orElse: () => null,
+                );
+                if (parent != null) {
+                  _selectedCategoryId = parent.id;
+                  _fetchSubCategories(_selectedCategoryId!, initialSubCategoryId: sub.id);
+                }
               }
             } else if (prod.categoryId.isNotEmpty) {
               // Ensure we select a root if categoryId points to a child
-              final found = _categories.firstWhere(
+              final found = _categories.cast<CategoryModel?>().firstWhere(
                 (c) => c?.id == prod.categoryId,
                 orElse: () => null,
               );
               if (found != null) {
                 if (found.parentId != null) {
-                  _selectedCategoryId = found.parentId; // categoryId was actually a child
-                  _fetchSubCategories(_selectedCategoryId!);
+                  // This is a subcategory, find its parent
+                  final parent = _categories.cast<CategoryModel?>().firstWhere(
+                    (c) => c?.id == found.parentId && c?.parentId == null,
+                    orElse: () => null,
+                  );
+                  if (parent != null) {
+                    _selectedCategoryId = parent.id;
+                    _fetchSubCategories(_selectedCategoryId!);
+                  }
                 } else {
+                  // This is already a root category
                   _selectedCategoryId = found.id;
-                  // Optionally fetch subs for UI readiness
                   _fetchSubCategories(_selectedCategoryId!);
                 }
               }
@@ -142,6 +161,15 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
       }
     } catch (e) {
       print("Error fetching categories: $e");
+      // Reset state on error
+      if (mounted) {
+        setState(() {
+          _categories = [];
+          _selectedCategoryId = null;
+          _selectedSubCategoryId = null;
+          _subCategories = [];
+        });
+      }
     }
   }
 
@@ -604,15 +632,27 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
   }
 
   Widget _buildCategoryDropdown() {
+    // Get root categories only
+    final rootCategories = _categories
+        .where((c) => c != null && c!.parentId == null)
+        .toList();
+
+    // Validate that selected category exists in root categories
+    String? validatedSelectedCategoryId = _selectedCategoryId;
+    if (_selectedCategoryId != null) {
+      final exists = rootCategories.any((c) => c?.id == _selectedCategoryId);
+      if (!exists) {
+        validatedSelectedCategoryId = null;
+      }
+    }
+
     return DropdownButtonFormField<String>(
-      value: _selectedCategoryId,
+      value: validatedSelectedCategoryId,
       decoration: const InputDecoration(
         labelText: 'Category',
         border: OutlineInputBorder(),
       ),
-      items: _categories
-          .where((c) => c != null && c!.parentId == null) // only root categories
-          .map((CategoryModel? category) {
+      items: rootCategories.map((CategoryModel? category) {
         return DropdownMenuItem(
           value: category!.id,
           child: Text(category.name),
@@ -633,8 +673,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
   }
 
   Widget _buildSubCategoryDropdown() {
+    // Validate that selected subcategory exists in current subcategories
+    String? validatedSelectedSubCategoryId = _selectedSubCategoryId;
+    if (_selectedSubCategoryId != null) {
+      final exists = _subCategories.any((c) => c?.id == _selectedSubCategoryId);
+      if (!exists) {
+        validatedSelectedSubCategoryId = null;
+      }
+    }
+
     return DropdownButtonFormField<String>(
-      value: _selectedSubCategoryId,
+      value: validatedSelectedSubCategoryId,
       decoration: const InputDecoration(
         labelText: 'Sub Category',
         border: OutlineInputBorder(),

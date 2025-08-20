@@ -22,7 +22,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
   
-  File? _paymentProof;
+  List<File> _paymentProofs = [];
   PaymentMethod _selectedMethod = PaymentMethod.bankTransfer;
   bool _isLoading = false;
 
@@ -36,10 +36,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    
+
     if (pickedFile != null) {
       setState(() {
-        _paymentProof = File(pickedFile.path);
+        _paymentProofs.add(File(pickedFile.path));
       });
     }
   }
@@ -47,12 +47,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<void> _takePhoto() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
-    
+
     if (pickedFile != null) {
       setState(() {
-        _paymentProof = File(pickedFile.path);
+        _paymentProofs.add(File(pickedFile.path));
       });
     }
+  }
+
+  void _removePaymentProof(int index) {
+    setState(() {
+      _paymentProofs.removeAt(index);
+    });
   }
 
   Future<void> _submitPayment() async {
@@ -205,7 +211,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               controller: _amountController,
               decoration: const InputDecoration(
                 labelText: 'Amount',
-                prefixText: '\$',
+                prefixText: 'TSh ',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,

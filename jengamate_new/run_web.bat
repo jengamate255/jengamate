@@ -1,4 +1,8 @@
 @echo off
-REM This script launches the JengaMate Flutter web app with the necessary Firebase configuration.
+REM This script launches the JengaMate Flutter web app with Supabase configuration.
 
-flutter run -d chrome --dart-define=FIREBASE_API_KEY=AIzaSyCZku_umeY0AXt_IyG6Y898RKHfpL2rw7E --dart-define=FIREBASE_AUTH_DOMAIN=jengamate.firebaseapp.com --dart-define=FIREBASE_PROJECT_ID=jengamate --dart-define=FIREBASE_STORAGE_BUCKET=jengamate.firebasestorage.app --dart-define=FIREBASE_MESSAGING_SENDER_ID=546254001513 --dart-define=FIREBASE_APP_ID=1:546254001513:web:c9b63734564a66474899f8 --dart-define=FIREBASE_MEASUREMENT_ID=G-F1FP84T3E7
+echo Starting JengaMate Flutter Web App with Supabase...
+echo Supabase URL: https://ednovyqzrbaiyzlegbmy.supabase.co
+echo.
+
+flutter run -d chrome --target lib/main.dart --dart-define=SUPABASE_URL=https://ednovyqzrbaiyzlegbmy.supabase.co --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkbm92eXF6cmJhaXl6bGVnYm15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNTQ4NzQsImV4cCI6MjA3MDczMDg3NH0.G8kfMHO5mRCpgjAQXNV2tdJ8zzTn3zF9la80n3RODu8

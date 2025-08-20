@@ -1,4 +1,5 @@
 
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/auth/login_screen.dart';
 import 'package:jengamate/screens/dashboard_screen.dart';
@@ -58,6 +59,8 @@ import 'package:jengamate/screens/admin/content_moderation_dashboard.dart';
 import 'package:jengamate/screens/support/support_dashboard_screen.dart';
 import 'package:jengamate/screens/admin/send_commission_screen.dart';
 import 'package:jengamate/screens/admin/commission_tiers_screen.dart';
+import 'package:jengamate/screens/admin/rfq_management_dashboard.dart';
+import 'package:jengamate/screens/admin/rfq_management_test.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -295,11 +298,20 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.chatConversation,
         builder: (context, state) {
-          final chatRoomId = state.pathParameters['chatId']!;
-          final extra = state.extra as Map<String, String?>;
-          final otherUserName = extra['otherUserName'] ?? 'Chat';
-          final otherUserId = extra['otherUserId'] ?? '';
-          final currentUserId = extra['currentUserId'] ?? '';
+          final chatRoomId = state.pathParameters['chatId'];
+          if (chatRoomId == null) {
+            // Handle missing chatId parameter
+            return const Scaffold(
+              body: Center(
+                child: Text('Invalid chat room ID'),
+              ),
+            );
+          }
+
+          final extra = state.extra as Map<String, String?>?;
+          final otherUserName = extra?['otherUserName'] ?? 'Chat';
+          final otherUserId = extra?['otherUserId'] ?? '';
+          final currentUserId = extra?['currentUserId'] ?? '';
 
           return ChatConversationScreen(
             chatRoomId: chatRoomId,
@@ -312,6 +324,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.commission,
         builder: (context, state) => const CommissionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.commissionTiers,
+        builder: (context, state) => const CommissionTiersScreen(),
       ),
       GoRoute(
         path: AppRoutes.withdrawals,
@@ -352,6 +368,14 @@ class AppRouter {
       GoRoute(
         path: '/support-dashboard',
         builder: (context, state) => const SupportDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/rfq-management-dashboard',
+        builder: (context, state) => const RfqManagementDashboard(),
+      ),
+      GoRoute(
+        path: '/rfq-test',
+        builder: (context, state) => const RfqManagementTest(),
       ),
       GoRoute(
         path: '/admin-support',

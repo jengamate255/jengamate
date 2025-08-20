@@ -4,6 +4,7 @@ import 'package:jengamate/models/enums/order_enums.dart';
 
 class OrderModel {
   final String id;
+  final String orderNumber; // Added orderNumber field
   final String buyerId;
   final String supplierId;
   final double totalAmount;
@@ -27,12 +28,13 @@ class OrderModel {
 
   OrderModel({
     required this.id,
+    required this.orderNumber, // Added orderNumber to constructor
     required this.buyerId,
     required this.supplierId,
     required this.totalAmount,
     required this.status,
     required this.type,
-    this.currency = 'USD',
+    this.currency = 'TSH',
     this.quotationId,
     this.rfqId,
     this.isLocked = false,
@@ -67,12 +69,13 @@ class OrderModel {
 
     return OrderModel(
       id: doc.id,
+      orderNumber: data['orderNumber'] ?? '', // Added orderNumber from Firestore
       buyerId: data['buyerId'] ?? '',
       supplierId: data['supplierId'] ?? '',
       totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0.0,
       status: orderStatus,
       type: orderType,
-      currency: data['currency'] ?? 'USD',
+      currency: data['currency'] ?? 'TSH',
       quotationId: data['quotationId'],
       rfqId: data['rfqId'],
       isLocked: data['isLocked'] ?? false,
@@ -115,6 +118,7 @@ class OrderModel {
 
   OrderModel copyWith({
     String? id,
+    String? orderNumber, // Added orderNumber to copyWith
     String? buyerId,
     String? supplierId,
     double? totalAmount,
@@ -138,6 +142,7 @@ class OrderModel {
   }) {
     return OrderModel(
       id: id ?? this.id,
+      orderNumber: orderNumber ?? this.orderNumber, // Added orderNumber to copyWith
       buyerId: buyerId ?? this.buyerId,
       supplierId: supplierId ?? this.supplierId,
       totalAmount: totalAmount ?? this.totalAmount,

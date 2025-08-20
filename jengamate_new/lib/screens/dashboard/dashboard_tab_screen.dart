@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/stat_item.dart';
+import 'package:jengamate/utils/sentry_test.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/screens/dashboard/widgets/balance_card.dart';
@@ -298,6 +300,12 @@ class DashboardTabScreen extends StatelessWidget {
               else // Default or other roles
                 Text(
                     'Welcome! Your role: ${currentUser.role.toString().split('.').last}'),
+
+              // Sentry Test Widget (Debug Mode Only)
+              if (kDebugMode) ...[
+                const SizedBox(height: JMSpacing.xl),
+                const SentryTestWidget(),
+              ],
             ],
           ),
           ),

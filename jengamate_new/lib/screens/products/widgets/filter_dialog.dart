@@ -93,8 +93,18 @@ class _FilterDialogState extends State<FilterDialog> {
               }
 
               final categories = snapshot.data!;
+
+              // Validate selected category exists in current categories
+              String? validatedSelectedCategory = _selectedCategory;
+              if (_selectedCategory != null) {
+                final exists = categories.any((c) => c.id == _selectedCategory);
+                if (!exists) {
+                  validatedSelectedCategory = null;
+                }
+              }
+
               return DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                value: validatedSelectedCategory,
                 hint: const Text('Select Category'),
                 items: categories.map((category) {
                   return DropdownMenuItem<String>(

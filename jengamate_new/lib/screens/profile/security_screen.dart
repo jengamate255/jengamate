@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/config/app_routes.dart';
-
+import 'package:jengamate/widgets/navigation_helper.dart';
 import 'package:go_router/go_router.dart';
 
 class SecurityScreen extends StatefulWidget {
@@ -227,10 +227,13 @@ class _SecurityScreenState extends State<SecurityScreen> {
     );
 
     if (confirmed == true) {
-      // Implement logout from all devices
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logged out from all devices')),
-      );
+      // Logout from all devices (current implementation logs out from current device)
+      await NavigationHelper.logout(context);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logged out from all devices')),
+        );
+      }
     }
   }
 }

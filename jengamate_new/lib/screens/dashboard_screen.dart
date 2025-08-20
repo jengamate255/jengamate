@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/services/auth_service.dart';
+import 'package:jengamate/utils/sentry_test.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/screens/categories/categories_screen.dart';
@@ -13,12 +15,12 @@ import 'package:jengamate/screens/admin/add_edit_product_screen.dart';
 import 'package:jengamate/screens/admin/add_edit_category_screen.dart';
 import 'package:jengamate/screens/admin/product_management_screen.dart';
 import 'package:jengamate/widgets/app_drawer.dart';
+import 'package:jengamate/widgets/navigation_helper.dart';
 import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:provider/provider.dart';
 import 'package:jengamate/config/app_routes.dart';
-import 'package:jengamate/screens/test/test_navigation_helper.dart';
 import 'package:jengamate/services/theme_service.dart';
 
 // Using ResponsiveUtils instead of custom ScreenType enum
@@ -130,7 +132,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // Profile menu
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
+              onSelected: (value) async {
                 switch (value) {
                   case 'profile':
                     context.go(AppRoutes.profile);
@@ -139,8 +141,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     context.go(AppRoutes.settings);
                     break;
                   case 'logout':
-                    AuthService().signOut();
-                    context.go(AppRoutes.login);
+                    await NavigationHelper.logout(context);
                     break;
                 }
               },
@@ -188,7 +189,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           actions: [
-            TestNavigationHelper.buildTestMenu(context),
             // Theme toggle
             Consumer<ThemeService>(
               builder: (context, themeService, _) => IconButton(
@@ -217,7 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // Profile menu
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
+              onSelected: (value) async {
                 switch (value) {
                   case 'profile':
                     context.go(AppRoutes.profile);
@@ -226,8 +226,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     context.go(AppRoutes.settings);
                     break;
                   case 'logout':
-                    AuthService().signOut();
-                    context.go(AppRoutes.login);
+                    // TODO: Fix NavigationHelper import issue
+                    // await NavigationHelper.logout(context);
+                    await AuthService().signOut();
+                    if (context.mounted) {
+                      context.go('/login');
+                    }
                     break;
                 }
               },

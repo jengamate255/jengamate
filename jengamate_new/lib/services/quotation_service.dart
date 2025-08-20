@@ -50,15 +50,14 @@ class QuotationService {
       }
 
       // Generate unique order number (e.g., SO2025-xxxx)
-      // This is a simplified example, a more robust solution might involve Cloud Functions
-      // to ensure true uniqueness and sequential numbering.
-      // final String orderNumber = 'SO${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+      final now = DateTime.now();
+      final orderNumber = 'SO${now.year}-${now.millisecondsSinceEpoch.toString().substring(8)}';
 
       final newOrder = OrderModel(
         id: orderRef.doc().id, // Firestore will generate a unique ID
+        orderNumber: orderNumber, // Add the generated order number
         buyerId: quotation.engineerId, // Assuming engineer is the user placing the order
         supplierId: quotation.supplierId,
-        // products: quotation.products, // OrderModel does not have a 'products' field directly
         totalAmount: quotation.totalAmount,
         status: OrderStatus.pending, // Use the enum
         type: OrderType.product, // Default to product type for now

@@ -37,14 +37,42 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
   Future<void> _loadSupportData() async {
     setState(() => _isLoading = true);
     try {
-      _tickets = _generateSampleTickets();
-      _faqs = _generateSampleFAQs();
+      // Load real support tickets from database
+      final currentUser = _authService.currentUser;
+      if (currentUser != null) {
+        if (widget.isAdminView) {
+          // Admin can see all tickets
+          _tickets = await _databaseService.getAllSupportTickets();
+        } else {
+          // Regular users see only their tickets
+          _tickets = await _databaseService.getUserSupportTickets(currentUser.uid);
+        }
+      } else {
+        _tickets = [];
+      }
+
+      // Load FAQs from database
+      _faqs = await _databaseService.getFAQs();
+
+      // If no FAQs exist, create default ones
+      if (_faqs.isEmpty) {
+        await _createDefaultFAQs();
+        _faqs = await _databaseService.getFAQs();
+      }
+
       Logger.log('Loaded ${_tickets.length} support tickets and ${_faqs.length} FAQs');
     } catch (e) {
       Logger.logError('Error loading support data', e, StackTrace.current);
+      // Fallback to empty lists instead of sample data
+      _tickets = [];
+      _faqs = [];
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading support data: $e')),
+          SnackBar(
+            content: Text('Error loading support data: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -52,133 +80,63 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
     }
   }
 
-  List<SupportTicket> _generateSampleTickets() {
-    final now = DateTime.now();
-    final currentUserId = _authService.currentUser?.uid ?? 'current_user';
-    
-    return [
-      SupportTicket(
-        id: '1',
-        userId: currentUserId,
-        userName: 'John Doe',
-        userEmail: 'john.doe@example.com',
-        subject: 'Payment not processed',
-        description: 'I made a payment 2 hours ago but it\'s still showing as pending. Can you please check?',
-        category: 'payment',
-        priority: 'high',
-        status: 'open',
-        createdAt: now.subtract(const Duration(hours: 2)),
-        messages: [
-          TicketMessage(
-            id: '1',
-            senderId: currentUserId,
-            senderName: 'John Doe',
-            message: 'I made a payment 2 hours ago but it\'s still showing as pending. Can you please check?',
-            timestamp: now.subtract(const Duration(hours: 2)),
-            isFromUser: true,
-          ),
-        ],
-      ),
-      SupportTicket(
-        id: '2',
-        userId: 'user2',
-        userName: 'Jane Smith',
-        userEmail: 'jane.smith@example.com',
-        subject: 'How to update my profile?',
-        description: 'I need help updating my business profile information.',
-        category: 'account',
-        priority: 'medium',
-        status: 'in_progress',
-        createdAt: now.subtract(const Duration(days: 1)),
-        assignedTo: 'support1',
-        assignedToName: 'Support Agent',
-        messages: [
-          TicketMessage(
-            id: '2',
-            senderId: 'user2',
-            senderName: 'Jane Smith',
-            message: 'I need help updating my business profile information.',
-            timestamp: now.subtract(const Duration(days: 1)),
-            isFromUser: true,
-          ),
-          TicketMessage(
-            id: '3',
-            senderId: 'support1',
-            senderName: 'Support Agent',
-            message: 'Hi Jane, I can help you with that. Please go to Settings > Profile and you can edit your information there.',
-            timestamp: now.subtract(const Duration(hours: 20)),
-            isFromUser: false,
-          ),
-        ],
-      ),
-      SupportTicket(
-        id: '3',
-        userId: 'user3',
-        userName: 'Bob Wilson',
-        userEmail: 'bob.wilson@example.com',
-        subject: 'Commission calculation question',
-        description: 'I have a question about how my commission is calculated.',
-        category: 'commission',
-        priority: 'low',
-        status: 'resolved',
-        createdAt: now.subtract(const Duration(days: 3)),
-        resolvedAt: now.subtract(const Duration(days: 2)),
-        assignedTo: 'support2',
-        assignedToName: 'Senior Support',
-        messages: [
-          TicketMessage(
-            id: '4',
-            senderId: 'user3',
-            senderName: 'Bob Wilson',
-            message: 'I have a question about how my commission is calculated.',
-            timestamp: now.subtract(const Duration(days: 3)),
-            isFromUser: true,
-          ),
-          TicketMessage(
-            id: '5',
-            senderId: 'support2',
-            senderName: 'Senior Support',
-            message: 'Commission is calculated based on your tier level and total sales. You can view the breakdown in your dashboard.',
-            timestamp: now.subtract(const Duration(days: 2, hours: 12)),
-            isFromUser: false,
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<FAQItem> _generateSampleFAQs() {
-    return [
+  Future<void> _createDefaultFAQs() async {
+    final defaultFAQs = [
       FAQItem(
-        id: '1',
+        id: '',
         question: 'How do I reset my password?',
         answer: 'You can reset your password by clicking "Forgot Password" on the login screen and following the instructions sent to your email.',
         category: 'account',
         isPopular: true,
       ),
       FAQItem(
-        id: '2',
+        id: '',
         question: 'How are commissions calculated?',
         answer: 'Commissions are calculated based on your tier level and the total value of sales you generate. Higher tiers receive higher commission rates.',
         category: 'commission',
         isPopular: true,
       ),
       FAQItem(
-        id: '3',
+        id: '',
         question: 'How long does it take to process withdrawals?',
         answer: 'Withdrawal requests are typically processed within 3-5 business days. You will receive an email confirmation once processed.',
         category: 'payment',
         isPopular: false,
       ),
       FAQItem(
-        id: '4',
+        id: '',
         question: 'How do I refer new users?',
         answer: 'You can refer new users by sharing your unique referral code found in the Referral Dashboard. You earn bonuses for successful referrals.',
         category: 'referral',
         isPopular: true,
       ),
+      FAQItem(
+        id: '',
+        question: 'How do I submit an RFQ (Request for Quote)?',
+        answer: 'Navigate to the product you\'re interested in and click "Request Quote". Fill in your requirements and contact details, and suppliers will respond with quotes.',
+        category: 'rfq',
+        isPopular: true,
+      ),
+      FAQItem(
+        id: '',
+        question: 'What payment methods are accepted?',
+        answer: 'We accept M-Pesa, bank transfers, and credit/debit cards. All payments are processed securely through our payment partners.',
+        category: 'payment',
+        isPopular: true,
+      ),
     ];
+
+    try {
+      for (final faq in defaultFAQs) {
+        await _databaseService.createFAQ(faq);
+      }
+      Logger.log('Created ${defaultFAQs.length} default FAQs');
+    } catch (e) {
+      Logger.logError('Error creating default FAQs', e, StackTrace.current);
+    }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -833,74 +791,7 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
   }
 }
 
-// Supporting models and classes
-class SupportTicket {
-  final String id;
-  final String userId;
-  final String userName;
-  final String userEmail;
-  final String subject;
-  final String description;
-  final String category;
-  final String priority;
-  final String status;
-  final DateTime createdAt;
-  final DateTime? resolvedAt;
-  final String? assignedTo;
-  final String? assignedToName;
-  final List<TicketMessage> messages;
-
-  SupportTicket({
-    required this.id,
-    required this.userId,
-    required this.userName,
-    required this.userEmail,
-    required this.subject,
-    required this.description,
-    required this.category,
-    required this.priority,
-    required this.status,
-    required this.createdAt,
-    this.resolvedAt,
-    this.assignedTo,
-    this.assignedToName,
-    required this.messages,
-  });
-}
-
-class TicketMessage {
-  final String id;
-  final String senderId;
-  final String senderName;
-  final String message;
-  final DateTime timestamp;
-  final bool isFromUser;
-
-  TicketMessage({
-    required this.id,
-    required this.senderId,
-    required this.senderName,
-    required this.message,
-    required this.timestamp,
-    required this.isFromUser,
-  });
-}
-
-class FAQItem {
-  final String id;
-  final String question;
-  final String answer;
-  final String category;
-  final bool isPopular;
-
-  FAQItem({
-    required this.id,
-    required this.question,
-    required this.answer,
-    required this.category,
-    required this.isPopular,
-  });
-}
+// Models are now imported from support_ticket_model.dart
 
 // Placeholder for ticket details screen
 class TicketDetailsScreen extends StatelessWidget {

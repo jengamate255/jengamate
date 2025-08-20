@@ -6,6 +6,7 @@ import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/services/auth_service.dart';
+import 'package:jengamate/widgets/navigation_helper.dart';
 
 class AppDrawer extends StatelessWidget {
   final UserModel? user;
@@ -233,10 +234,8 @@ class AppDrawer extends StatelessWidget {
             icon: Icons.logout,
             title: 'Logout',
             onTap: () async {
-              await AuthService().signOut();
-              if (context.mounted) {
-                context.go(AppRoutes.login);
-              }
+              Navigator.pop(context); // Close drawer first
+              await NavigationHelper.logout(context);
             },
           ),
         ],

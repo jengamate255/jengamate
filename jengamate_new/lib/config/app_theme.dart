@@ -74,7 +74,7 @@ class AppTheme {
         ),
       ),
       chipTheme: base.chipTheme.copyWith(
-        color: WidgetStatePropertyAll(scheme.surfaceVariant),
+        color: WidgetStatePropertyAll(scheme.surfaceContainerHighest),
         labelStyle: TextStyle(color: scheme.onSurfaceVariant),
       ),
       dividerTheme: DividerThemeData(

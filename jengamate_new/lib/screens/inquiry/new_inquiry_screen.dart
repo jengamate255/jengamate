@@ -23,8 +23,10 @@ class _NewInquiryScreenState extends State<NewInquiryScreen> {
   final _projectNameController = TextEditingController();
   final _deliveryAddressController = TextEditingController();
   final _timelineController = TextEditingController();
+  final _expectedDeliveryDateController = TextEditingController();
 
   List<Product> _products = [Product()]; // Start with one product form
+  bool _transportNeeded = false;
 
   void _addProduct() {
     setState(() {
@@ -74,6 +76,8 @@ class _NewInquiryScreenState extends State<NewInquiryScreen> {
             'projectName': _projectNameController.text,
             'deliveryAddress': _deliveryAddressController.text,
             'timeline': _timelineController.text,
+            'expectedDeliveryDate': _expectedDeliveryDateController.text,
+            'transportNeeded': _transportNeeded,
           },
           attachments: [],
           status: 'Pending',
@@ -139,6 +143,24 @@ class _NewInquiryScreenState extends State<NewInquiryScreen> {
                   controller: _timelineController,
                   labelText: 'Required Timeline (e.g., 2 weeks)',
                   validator: (value) => value!.isEmpty ? 'Please enter a timeline' : null,
+                ),
+                const SizedBox(height: JMSpacing.md),
+                CustomTextField(
+                  controller: _expectedDeliveryDateController,
+                  labelText: 'Expected Delivery Date (e.g., 2025-02-15)',
+                  validator: (value) => value!.isEmpty ? 'Please enter expected delivery date' : null,
+                ),
+                const SizedBox(height: JMSpacing.md),
+                CheckboxListTile(
+                  title: const Text('Transport Needed'),
+                  subtitle: const Text('Check if you need transportation services'),
+                  value: _transportNeeded,
+                  onChanged: (value) {
+                    setState(() {
+                      _transportNeeded = value ?? false;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
                 ),
                 const SizedBox(height: JMSpacing.lg),
 

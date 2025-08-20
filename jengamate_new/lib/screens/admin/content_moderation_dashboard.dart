@@ -37,15 +37,54 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
   Future<void> _loadModerationData() async {
     setState(() => _isLoading = true);
     try {
-      // Generate sample data for demonstration
-      _pendingContent = _generateSamplePendingContent();
-      _reviewedContent = _generateSampleReviewedContent();
+      // Load real moderation data from database
+      final dbService = DatabaseService();
+
+      // Get pending content reports
+      final pendingReports = await dbService.getContentReports(status: 'pending');
+      _pendingContent = pendingReports.map((report) => ContentModerationModel(
+        id: report['id'] ?? '',
+        contentType: report['contentType'] ?? 'unknown',
+        contentId: report['contentId'] ?? '',
+        reportedBy: report['reportedBy'] ?? '',
+        reporterName: report['reporterName'] ?? 'Unknown User',
+        reason: report['reason'] ?? 'No reason provided',
+        description: report['description'] ?? '',
+        severity: report['severity'] ?? 'low',
+        status: report['status'] ?? 'pending',
+        createdAt: report['createdAt'] ?? DateTime.now(),
+        content: report['content'] ?? {},
+      )).toList();
+
+      // Get reviewed content reports
+      final reviewedReports = await dbService.getContentReports(status: 'reviewed');
+      _reviewedContent = reviewedReports.map((report) => ContentModerationModel(
+        id: report['id'] ?? '',
+        contentType: report['contentType'] ?? 'unknown',
+        contentId: report['contentId'] ?? '',
+        reportedBy: report['reportedBy'] ?? '',
+        reporterName: report['reporterName'] ?? 'Unknown User',
+        reason: report['reason'] ?? 'No reason provided',
+        description: report['description'] ?? '',
+        severity: report['severity'] ?? 'low',
+        status: report['status'] ?? 'reviewed',
+        createdAt: report['createdAt'] ?? DateTime.now(),
+        content: report['content'] ?? {},
+      )).toList();
+
       Logger.log('Loaded ${_pendingContent.length} pending and ${_reviewedContent.length} reviewed items');
     } catch (e) {
       Logger.logError('Error loading moderation data', e, StackTrace.current);
+      // Set empty lists instead of fallback sample data
+      _pendingContent = [];
+      _reviewedContent = [];
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading moderation data: $e')),
+          SnackBar(
+            content: Text('Failed to load content moderation data: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -53,110 +92,9 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
     }
   }
 
-  List<ContentModerationModel> _generateSamplePendingContent() {
-    final now = DateTime.now();
-    return [
-      ContentModerationModel(
-        id: '1',
-        contentType: 'product',
-        contentId: 'prod_123',
-        reportedBy: 'user456',
-        reporterName: 'Jane Smith',
-        reason: 'Inappropriate product description',
-        description: 'Product contains misleading information about specifications',
-        severity: 'medium',
-        status: 'pending',
-        createdAt: now.subtract(const Duration(hours: 2)),
-        content: {
-          'title': 'Super Fast Laptop',
-          'description': 'This laptop can run any game at 4K 120fps guaranteed!',
-          'price': 299.99,
-        },
-      ),
-      ContentModerationModel(
-        id: '2',
-        contentType: 'review',
-        contentId: 'review_456',
-        reportedBy: 'user789',
-        reporterName: 'Bob Wilson',
-        reason: 'Spam/Fake review',
-        description: 'This review appears to be fake and promotional',
-        severity: 'high',
-        status: 'pending',
-        createdAt: now.subtract(const Duration(hours: 4)),
-        content: {
-          'rating': 5,
-          'comment': 'Amazing product! Best purchase ever! Everyone should buy this!',
-          'reviewer': 'FakeUser123',
-        },
-      ),
-      ContentModerationModel(
-        id: '3',
-        contentType: 'message',
-        contentId: 'msg_789',
-        reportedBy: 'user123',
-        reporterName: 'John Doe',
-        reason: 'Harassment',
-        description: 'User sent threatening messages',
-        severity: 'critical',
-        status: 'pending',
-        createdAt: now.subtract(const Duration(minutes: 30)),
-        content: {
-          'message': 'You better watch out or else...',
-          'sender': 'BadUser456',
-          'timestamp': now.subtract(const Duration(minutes: 45)).toIso8601String(),
-        },
-      ),
-    ];
-  }
 
-  List<ContentModerationModel> _generateSampleReviewedContent() {
-    final now = DateTime.now();
-    return [
-      ContentModerationModel(
-        id: '4',
-        contentType: 'product',
-        contentId: 'prod_456',
-        reportedBy: 'user111',
-        reporterName: 'Alice Johnson',
-        reason: 'Copyright violation',
-        description: 'Product images appear to be stolen from another website',
-        severity: 'high',
-        status: 'approved',
-        createdAt: now.subtract(const Duration(days: 1)),
-        reviewedAt: now.subtract(const Duration(hours: 12)),
-        reviewedBy: 'admin1',
-        reviewerName: 'Admin User',
-        reviewNotes: 'Verified with original source. Images are properly licensed.',
-        content: {
-          'title': 'Professional Camera',
-          'description': 'High-quality DSLR camera for professionals',
-          'images': ['image1.jpg', 'image2.jpg'],
-        },
-      ),
-      ContentModerationModel(
-        id: '5',
-        contentType: 'review',
-        contentId: 'review_789',
-        reportedBy: 'user222',
-        reporterName: 'Charlie Brown',
-        reason: 'Offensive language',
-        description: 'Review contains inappropriate language',
-        severity: 'medium',
-        status: 'rejected',
-        createdAt: now.subtract(const Duration(days: 2)),
-        reviewedAt: now.subtract(const Duration(days: 1)),
-        reviewedBy: 'admin2',
-        reviewerName: 'Moderator Jane',
-        reviewNotes: 'Content removed due to violation of community guidelines.',
-        content: {
-          'rating': 1,
-          'comment': 'This product is terrible and the seller is...',
-          'reviewer': 'AngryCustomer',
-        },
-      ),
-    ];
-  }
+
+
 
   @override
   Widget build(BuildContext context) {

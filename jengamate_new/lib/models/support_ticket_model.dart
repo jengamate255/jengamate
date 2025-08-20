@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class SupportTicket {
   final String id;
   final String userId;
@@ -52,6 +54,45 @@ class SupportTicket {
     );
   }
 
+  factory SupportTicket.fromMap(Map<String, dynamic> data, String id) {
+    return SupportTicket(
+      id: id,
+      userId: data['userId'] ?? '',
+      userName: data['userName'] ?? '',
+      userEmail: data['userEmail'] ?? '',
+      subject: data['subject'] ?? '',
+      description: data['description'] ?? '',
+      category: data['category'] ?? '',
+      priority: data['priority'] ?? '',
+      status: data['status'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      resolvedAt: (data['resolvedAt'] as Timestamp?)?.toDate(),
+      assignedTo: data['assignedTo'],
+      assignedToName: data['assignedToName'],
+      messages: (data['messages'] as List<dynamic>?)
+          ?.map((m) => TicketMessage.fromMap(m))
+          .toList() ?? [],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'userName': userName,
+      'userEmail': userEmail,
+      'subject': subject,
+      'description': description,
+      'category': category,
+      'priority': priority,
+      'status': status,
+      'createdAt': createdAt,
+      'resolvedAt': resolvedAt,
+      'assignedTo': assignedTo,
+      'assignedToName': assignedToName,
+      'messages': messages.map((m) => m.toMap()).toList(),
+    };
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -88,6 +129,28 @@ class TicketMessage {
     required this.timestamp,
     required this.isFromUser,
   });
+
+  factory TicketMessage.fromMap(Map<String, dynamic> data) {
+    return TicketMessage(
+      id: data['id'] ?? '',
+      senderId: data['senderId'] ?? '',
+      senderName: data['senderName'] ?? '',
+      message: data['message'] ?? '',
+      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isFromUser: data['isFromUser'] ?? true,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'senderId': senderId,
+      'senderName': senderName,
+      'message': message,
+      'timestamp': timestamp,
+      'isFromUser': isFromUser,
+    };
+  }
 
   factory TicketMessage.fromJson(Map<String, dynamic> json) {
     return TicketMessage(
@@ -126,6 +189,25 @@ class FAQItem {
     required this.category,
     required this.isPopular,
   });
+
+  factory FAQItem.fromMap(Map<String, dynamic> data, String id) {
+    return FAQItem(
+      id: id,
+      question: data['question'] ?? '',
+      answer: data['answer'] ?? '',
+      category: data['category'] ?? '',
+      isPopular: data['isPopular'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'question': question,
+      'answer': answer,
+      'category': category,
+      'isPopular': isPopular,
+    };
+  }
 
   factory FAQItem.fromJson(Map<String, dynamic> json) {
     return FAQItem(

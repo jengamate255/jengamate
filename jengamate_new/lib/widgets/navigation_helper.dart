@@ -4,8 +4,31 @@ import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 class NavigationHelper {
+  // Centralized logout functionality
+  static Future<void> logout(BuildContext context) async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      await authService.signOut();
+
+      if (context.mounted) {
+        // Clear all routes and navigate to login
+        context.go(AppRoutes.login);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Logout failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   // App Bar Actions for consistent navigation
   static List<Widget> buildAppBarActions(
       BuildContext context, UserModel? user) {
@@ -38,10 +61,7 @@ class NavigationHelper {
               context.go(AppRoutes.settings);
               break;
             case 'logout':
-              await AuthService().signOut();
-              if (context.mounted) {
-                context.go(AppRoutes.login);
-              }
+              await logout(context);
               break;
           }
         },

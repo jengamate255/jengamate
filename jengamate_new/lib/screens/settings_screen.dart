@@ -5,6 +5,7 @@ import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/services/theme_service.dart';
 import 'package:jengamate/services/notification_service.dart';
+import 'package:jengamate/widgets/navigation_helper.dart';
 
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
@@ -44,18 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      await authService.signOut();
-
-      if (mounted) {
-        context.go(AppRoutes.login);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Logout failed: ${e.toString()}')),
-        );
-      }
+      await NavigationHelper.logout(context);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

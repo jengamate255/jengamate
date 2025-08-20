@@ -33,15 +33,40 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
   Future<void> _loadTierData() async {
     setState(() => _isLoading = true);
     try {
-      // Generate sample tier data
-      _tiers = _generateSampleTiers();
-      _usersInTiers = _generateSampleUsersInTiers();
-      Logger.log('Loaded ${_tiers.length} commission tiers');
+      final dbService = DatabaseService();
+
+      // Load real commission tiers from database
+      final tierData = await dbService.getCommissionTiers();
+      _tiers = tierData.map((data) => CommissionTier(
+        id: data['id'] ?? '',
+        name: data['name'] ?? 'Unknown Tier',
+        level: data['level'] ?? 1,
+        minSales: (data['minSales'] ?? 0).toDouble(),
+        maxSales: (data['maxSales'] ?? 0).toDouble(),
+        commissionRate: (data['commissionRate'] ?? 0.0).toDouble(),
+        bonusAmount: (data['bonusAmount'] ?? 0).toDouble(),
+        requirements: List<String>.from(data['requirements'] ?? []),
+        benefits: List<String>.from(data['benefits'] ?? []),
+        color: data['color'] ?? '#CD7F32',
+        isActive: data['isActive'] ?? true,
+      )).toList();
+
+      // Load users with their tier information
+      _usersInTiers = await dbService.getUsersWithTierInfo();
+
+      Logger.log('Loaded ${_tiers.length} commission tiers and ${_usersInTiers.length} users');
     } catch (e) {
       Logger.logError('Error loading tier data', e, StackTrace.current);
+      // Set empty lists instead of fallback sample data
+      _tiers = [];
+      _usersInTiers = [];
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading tier data: $e')),
+          SnackBar(
+            content: Text('Failed to load commission tier data: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -49,102 +74,7 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
     }
   }
 
-  List<CommissionTier> _generateSampleTiers() {
-    return [
-      CommissionTier(
-        id: '1',
-        name: 'Bronze',
-        level: 1,
-        minSales: 0,
-        maxSales: 5000,
-        commissionRate: 0.05,
-        bonusAmount: 0,
-        requirements: ['Complete profile', 'First sale'],
-        benefits: ['5% commission', 'Basic support'],
-        color: '#CD7F32',
-        isActive: true,
-      ),
-      CommissionTier(
-        id: '2',
-        name: 'Silver',
-        level: 2,
-        minSales: 5000,
-        maxSales: 15000,
-        commissionRate: 0.08,
-        bonusAmount: 100,
-        requirements: ['5+ sales', '\$5,000+ total sales'],
-        benefits: ['8% commission', 'Priority support', '\$100 bonus'],
-        color: '#C0C0C0',
-        isActive: true,
-      ),
-      CommissionTier(
-        id: '3',
-        name: 'Gold',
-        level: 3,
-        minSales: 15000,
-        maxSales: 50000,
-        commissionRate: 0.12,
-        bonusAmount: 300,
-        requirements: ['15+ sales', '\$15,000+ total sales', '4.5+ rating'],
-        benefits: ['12% commission', 'Premium support', '\$300 bonus', 'Monthly rewards'],
-        color: '#FFD700',
-        isActive: true,
-      ),
-      CommissionTier(
-        id: '4',
-        name: 'Platinum',
-        level: 4,
-        minSales: 50000,
-        maxSales: 100000,
-        commissionRate: 0.15,
-        bonusAmount: 500,
-        requirements: ['50+ sales', '\$50,000+ total sales', '4.8+ rating'],
-        benefits: ['15% commission', 'VIP support', '\$500 bonus', 'Exclusive events'],
-        color: '#E5E4E2',
-        isActive: true,
-      ),
-      CommissionTier(
-        id: '5',
-        name: 'Diamond',
-        level: 5,
-        minSales: 100000,
-        maxSales: double.infinity,
-        commissionRate: 0.20,
-        bonusAmount: 1000,
-        requirements: ['100+ sales', '\$100,000+ total sales', '4.9+ rating'],
-        benefits: ['20% commission', 'Dedicated manager', '\$1,000 bonus', 'Annual retreat'],
-        color: '#B9F2FF',
-        isActive: true,
-      ),
-    ];
-  }
 
-  List<UserModel> _generateSampleUsersInTiers() {
-    return [
-      UserModel(
-        uid: 'user1',
-        email: 'john.doe@example.com',
-        firstName: 'John',
-        lastName: 'Doe',
-        phoneNumber: '+1234567890',
-        isApproved: true,
-        // currentTier: 'Silver',
-        // totalSales: 8500.0,
-        // salesCount: 12,
-      ),
-      UserModel(
-        uid: 'user2',
-        email: 'jane.smith@example.com',
-        firstName: 'Jane',
-        lastName: 'Smith',
-        phoneNumber: '+1234567891',
-        isApproved: true,
-        // currentTier: 'Gold',
-        // totalSales: 25000.0,
-        // salesCount: 35,
-      ),
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {

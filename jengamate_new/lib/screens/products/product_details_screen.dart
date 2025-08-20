@@ -10,6 +10,7 @@ import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
+import 'package:video_player/video_player.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final ProductModel product;
@@ -23,29 +24,114 @@ class ProductDetailsScreen extends StatefulWidget {
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   late PageController _pageController;
   int _currentPage = 0;
+  VideoPlayerController? _videoController;
+  List<(String, String)> _mediaItems = [];
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _buildMediaList();
+    _initializeVideo();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _videoController?.dispose();
     super.dispose();
+  }
+
+  void _buildMediaList() {
+    final List<String> allImages = [];
+
+    // Add product images
+    if (widget.product.imageUrls.isNotEmpty) {
+      allImages.addAll(widget.product.imageUrls);
+    } else if (widget.product.imageUrl.isNotEmpty) {
+      allImages.add(widget.product.imageUrl);
+    }
+
+    // Add variant images
+    for (final variant in widget.product.variants) {
+      allImages.addAll(variant.imageUrls);
+    }
+
+    // Remove duplicates
+    final uniqueImages = allImages.toSet().toList();
+
+    _mediaItems = [];
+
+    // Add video first if available (as requested)
+    if (widget.product.videoUrl != null && widget.product.videoUrl!.isNotEmpty) {
+      _mediaItems.add(('video', widget.product.videoUrl!));
+    }
+
+    // Add images
+    for (final imageUrl in uniqueImages) {
+      _mediaItems.add(('image', imageUrl));
+    }
+  }
+
+  void _initializeVideo() {
+    if (widget.product.videoUrl != null && widget.product.videoUrl!.isNotEmpty) {
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.product.videoUrl!))
+        ..initialize().then((_) {
+          if (mounted) {
+            setState(() {});
+            // Auto-play if video is the first item and currently visible
+            if (_currentPage == 0 && _mediaItems.isNotEmpty && _mediaItems[0].$1 == 'video') {
+              _videoController?.play();
+            }
+          }
+        })
+        ..setLooping(true) // Loop video as requested
+        ..setVolume(0.0); // Mute by default as requested
+    }
+  }
+
+  void _onPageChanged(int index) {
+    // For multi-panel carousel, index represents the selected media item
+    if (_mediaItems.length <= 1) return;
+
+    setState(() {
+      _currentPage = index;
+    });
+
+    // Handle video autoplay when visible
+    if (_mediaItems.isNotEmpty && index < _mediaItems.length) {
+      final (type, _) = _mediaItems[index];
+      if (type == 'video' && _videoController != null) {
+        if (_videoController!.value.isInitialized) {
+          _videoController!.play();
+        }
+      } else {
+        // Pause video when not visible
+        _videoController?.pause();
+      }
+    }
+
+    // Auto-scroll to the correct page in the carousel if needed
+    if (_mediaItems.length > 3) {
+      final targetPage = (index / 3).floor();
+      final currentCarouselPage = _pageController.hasClients
+          ? (_pageController.page ?? 0).round()
+          : 0;
+
+      if (targetPage != currentCarouselPage) {
+        _pageController.animateToPage(
+          targetPage,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final currentUser = Provider.of<UserModel?>(context);
     final dbService = DatabaseService();
-
-    // Determine which image URLs to use
-    final List<String> imageUrls =
-        widget.product.variants.isNotEmpty && widget.product.variants.first.imageUrls.isNotEmpty
-            ? widget.product.variants.first.imageUrls
-            : [widget.product.imageUrl];
 
     return Scaffold(
       appBar: AppBar(
@@ -110,58 +196,38 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (imageUrls.isNotEmpty)
+            if (_mediaItems.isNotEmpty)
               JMCard(
                 child: Column(
                   children: [
+                    // Multi-panel carousel view
                     SizedBox(
-                      height: 240,
-                      child: PageView.builder(
-                        controller: _pageController,
-                        itemCount: imageUrls.length,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentPage = index;
-                          });
-                        },
-                        itemBuilder: (context, index) {
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0),
-                            child: Image.network(
-                              imageUrls[index],
-                              width: double.infinity,
-                              height: 240,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                      width: double.infinity,
-                                      height: 240,
-                                      color: Colors.grey,
-                                      child: const Icon(Icons.broken_image)),
-                            ),
-                          );
-                        },
-                      ),
+                      height: 200, // Reduced height for multi-panel view
+                      child: _mediaItems.length == 1
+                          ? _buildSingleMediaPanel()
+                          : _buildMultiPanelCarousel(),
                     ),
                     const SizedBox(height: JMSpacing.sm),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(
-                        imageUrls.length,
-                        (index) => AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                          height: 8.0,
-                          width: _currentPage == index ? 24.0 : 8.0,
-                          decoration: BoxDecoration(
-                            color: _currentPage == index
-                                ? AppTheme.primaryColor
-                                : Colors.grey,
-                            borderRadius: BorderRadius.circular(4.0),
+                    // Page indicators
+                    if (_mediaItems.length > 1)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          _mediaItems.length,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                            height: 8.0,
+                            width: _currentPage == index ? 24.0 : 8.0,
+                            decoration: BoxDecoration(
+                              color: _currentPage == index
+                                  ? AppTheme.primaryColor
+                                  : Colors.grey,
+                              borderRadius: BorderRadius.circular(4.0),
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -338,6 +404,261 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
           ],
         ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSingleMediaPanel() {
+    final (type, url) = _mediaItems[0];
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8.0),
+      child: type == 'video'
+          ? _buildVideoPanel(url)
+          : _buildImagePanel(url),
+    );
+  }
+
+  Widget _buildMultiPanelCarousel() {
+    return PageView.builder(
+      controller: _pageController,
+      onPageChanged: _onPageChanged,
+      itemCount: (_mediaItems.length / 3).ceil(), // Show 3 panels per page
+      itemBuilder: (context, pageIndex) {
+        return _buildMediaPanelPage(pageIndex);
+      },
+    );
+  }
+
+  Widget _buildMediaPanelPage(int pageIndex) {
+    final startIndex = pageIndex * 3;
+    final endIndex = (startIndex + 3).clamp(0, _mediaItems.length);
+    final pageItems = _mediaItems.sublist(startIndex, endIndex);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Row(
+        children: [
+          for (int i = 0; i < pageItems.length; i++)
+            Expanded(
+              child: Container(
+                margin: EdgeInsets.only(
+                  left: i > 0 ? 4.0 : 0,
+                  right: i < pageItems.length - 1 ? 4.0 : 0,
+                ),
+                child: _buildMediaPanelItem(pageItems[i], startIndex + i),
+              ),
+            ),
+          // Fill remaining space if less than 3 items
+          for (int i = pageItems.length; i < 3; i++)
+            Expanded(
+              child: Container(
+                margin: EdgeInsets.only(left: i > 0 ? 4.0 : 0),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.add_photo_alternate_outlined,
+                    color: Colors.grey.shade400,
+                    size: 32,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMediaPanelItem((String, String) mediaItem, int globalIndex) {
+    final (type, url) = mediaItem;
+    final isSelected = globalIndex == _currentPage;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentPage = globalIndex;
+        });
+        _onPageChanged(globalIndex);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(
+            color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
+            width: isSelected ? 2.0 : 1.0,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(6.0),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              type == 'video'
+                  ? Container(
+                      color: Colors.black,
+                      child: _videoController != null && _videoController!.value.isInitialized
+                          ? VideoPlayer(_videoController!)
+                          : const Center(
+                              child: Icon(Icons.video_library, color: Colors.white, size: 32),
+                            ),
+                    )
+                  : Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey.shade200,
+                        child: const Center(
+                          child: Icon(Icons.broken_image, size: 32),
+                        ),
+                      ),
+                    ),
+              // Media type indicator
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        type == 'video' ? Icons.play_circle_filled : Icons.image,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        type == 'video' ? 'VIDEO' : 'IMAGE',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Selection overlay
+              if (isSelected)
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6.0),
+                    color: AppTheme.primaryColor.withOpacity(0.2),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.check_circle,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoPanel(String url) {
+    if (_videoController == null || !_videoController!.value.isInitialized) {
+      return Container(
+        width: double.infinity,
+        height: 300,
+        color: Colors.black,
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () {
+        // Toggle play/pause on tap
+        if (_videoController!.value.isPlaying) {
+          _videoController!.pause();
+        } else {
+          _videoController!.play();
+        }
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          VideoPlayer(_videoController!),
+          // Play/pause overlay
+          Center(
+            child: AnimatedOpacity(
+              opacity: _videoController!.value.isPlaying ? 0.0 : 0.8,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _videoController!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+            ),
+          ),
+          // Mute/unmute button in top right
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: () {
+                final currentVolume = _videoController!.value.volume;
+                _videoController!.setVolume(currentVolume > 0 ? 0.0 : 1.0);
+                setState(() {});
+              },
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _videoController!.value.volume > 0 ? Icons.volume_up : Icons.volume_off,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImagePanel(String url) {
+    return Image.network(
+      url,
+      width: double.infinity,
+      height: 300,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => Container(
+        width: double.infinity,
+        height: 300,
+        color: Colors.grey.shade200,
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.broken_image, size: 48, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('Failed to load image', style: TextStyle(color: Colors.grey)),
+          ],
         ),
       ),
     );

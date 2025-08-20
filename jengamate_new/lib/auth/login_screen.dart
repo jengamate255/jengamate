@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/services/auth_service.dart';
+import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:jengamate/config/app_routes.dart';
@@ -47,6 +48,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Check if login was successful
       if (result.user != null) {
+        // Log the login action for audit trail
+        try {
+          final databaseService = DatabaseService();
+          await databaseService.createAuditLog(
+            actorId: result.user!.uid,
+            actorName: result.user!.displayName ?? result.user!.email ?? 'Unknown User',
+            targetUserId: result.user!.uid,
+            targetUserName: result.user!.displayName ?? result.user!.email ?? 'Unknown User',
+            action: 'login',
+            details: {
+              'message': 'User logged into the system',
+              'email': result.user!.email,
+              'timestamp': DateTime.now().toIso8601String(),
+            },
+          );
+        } catch (e) {
+          // Don't fail login if audit logging fails
+          print('Failed to create login audit log: $e');
+        }
+
         // Successful login - navigate to dashboard. The StreamProvider will handle the user data.
         context.go(AppRoutes.dashboard);
       } else {

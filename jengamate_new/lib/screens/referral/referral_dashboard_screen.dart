@@ -61,81 +61,44 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
     if (_currentUserId == null) return;
 
     try {
-      // TODO: Implement actual referral data loading
-      // For now, generating sample data
-      _referrals = _generateSampleReferrals();
-      _referredUsers = _generateSampleReferredUsers();
-      
+      final dbService = DatabaseService();
+
+      // Load real referral data from database
+      final referralData = await dbService.getUserReferrals(_currentUserId!);
+      _referrals = referralData.map((data) => ReferralModel(
+        id: data['id'] ?? '',
+        referrerId: data['referrerId'] ?? '',
+        referredUserId: data['referredUserId'] ?? '',
+        bonusAmount: (data['bonusAmount'] ?? 0.0).toDouble(),
+        createdAt: data['createdAt'] ?? DateTime.now(),
+        status: data['status'] ?? 'pending',
+      )).toList();
+
+      // Load referred users details
+      final referredUserIds = _referrals.map((r) => r.referredUserId).toList();
+      _referredUsers = await dbService.getUsersByIds(referredUserIds);
+
       _calculateStats();
       Logger.log('Loaded ${_referrals.length} referrals');
     } catch (e) {
       Logger.logError('Error loading referral data', e, StackTrace.current);
+      // Set empty lists instead of fallback sample data
+      _referrals = [];
+      _referredUsers = [];
+      _calculateStats();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading referral data: $e')),
+          SnackBar(
+            content: Text('Failed to load referral data: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
-  List<ReferralModel> _generateSampleReferrals() {
-    final now = DateTime.now();
-    return [
-      ReferralModel(
-        id: '1',
-        referrerId: _currentUserId!,
-        referredUserId: 'user1',
-        bonusAmount: 25.0,
-        status: 'completed',
-        createdAt: now.subtract(const Duration(days: 5)),
-      ),
-      ReferralModel(
-        id: '2',
-        referrerId: _currentUserId!,
-        referredUserId: 'user2',
-        bonusAmount: 25.0,
-        status: 'pending',
-        createdAt: now.subtract(const Duration(days: 2)),
-      ),
-      ReferralModel(
-        id: '3',
-        referrerId: _currentUserId!,
-        referredUserId: 'user3',
-        bonusAmount: 25.0,
-        status: 'completed',
-        createdAt: now.subtract(const Duration(days: 10)),
-      ),
-    ];
-  }
 
-  List<UserModel> _generateSampleReferredUsers() {
-    return [
-      UserModel(
-        uid: 'user1',
-        email: 'john.doe@example.com',
-        phoneNumber: '+1234567890',
-        firstName: 'John',
-        lastName: 'Doe',
-        isApproved: true,
-      ),
-      UserModel(
-        uid: 'user2',
-        email: 'jane.smith@example.com',
-        phoneNumber: '+1234567891',
-        firstName: 'Jane',
-        lastName: 'Smith',
-        isApproved: false,
-      ),
-      UserModel(
-        uid: 'user3',
-        email: 'bob.wilson@example.com',
-        phoneNumber: '+1234567892',
-        firstName: 'Bob',
-        lastName: 'Wilson',
-        isApproved: true,
-      ),
-    ];
-  }
 
   void _calculateStats() {
     _totalReferrals = _referrals.length;

@@ -15,7 +15,7 @@ class AdvancedAnalyticsScreen extends StatefulWidget {
 class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with TickerProviderStateMixin {
   final DatabaseService _databaseService = DatabaseService();
   late TabController _tabController;
-  
+
   bool _isLoading = true;
   Map<String, dynamic> _analyticsData = {};
   List<FlSpot> _salesData = [];
@@ -36,23 +36,35 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
       final analytics = await _databaseService.getAdminAnalytics();
       final salesOverTime = await _databaseService.getSalesOverTime();
       final topProducts = await _databaseService.getTopSellingProducts(5);
-      
+      final userGrowthData = await _databaseService.getUserGrowthOverTime();
+
       setState(() {
         _analyticsData = {
           ...analytics,
           'topProducts': topProducts,
         };
-        _salesData = _generateSalesData();
-        _userGrowthData = _generateUserGrowthData();
+        _salesData = _generateSalesData(salesOverTime);
+        _userGrowthData = _generateUserGrowthData(userGrowthData);
         _categoryData = _generateCategoryData();
       });
-      
+
       Logger.log('Analytics data loaded successfully');
     } catch (e) {
       Logger.logError('Error loading analytics data', e, StackTrace.current);
+      // Set empty data - no fallback sample data
+      setState(() {
+        _analyticsData = {};
+        _salesData = _generateSalesData({});
+        _userGrowthData = _generateUserGrowthData({});
+        _categoryData = _generateCategoryData();
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading analytics: $e')),
+          SnackBar(
+            content: Text('Failed to load analytics data: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -60,63 +72,78 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
     }
   }
 
-  List<FlSpot> _generateSalesData() {
-    // Generate sample sales data for the last 30 days
-    final now = DateTime.now();
+  List<FlSpot> _generateSalesData(Map<DateTime, double> salesMap) {
     final data = <FlSpot>[];
-    
-    for (int i = 29; i >= 0; i--) {
-      final date = now.subtract(Duration(days: i));
-      final value = 1000 + (i * 50) + (i % 7 * 200); // Sample data with some variation
-      data.add(FlSpot(i.toDouble(), value.toDouble()));
+    if (salesMap.isNotEmpty) {
+      final sortedDates = salesMap.keys.toList()..sort();
+      for (int i = 0; i < sortedDates.length; i++) {
+        final date = sortedDates[i];
+        final value = salesMap[date] ?? 0.0;
+        data.add(FlSpot(i.toDouble(), value));
+      }
+    } else {
+      // Show empty chart with zero values for last 30 days
+      for (int i = 29; i >= 0; i--) {
+        data.add(FlSpot(i.toDouble(), 0.0));
+      }
     }
-    
     return data;
   }
 
-  List<FlSpot> _generateUserGrowthData() {
-    // Generate sample user growth data
+  List<FlSpot> _generateUserGrowthData(Map<DateTime, int> userGrowthMap) {
     final data = <FlSpot>[];
-    
-    for (int i = 0; i < 30; i++) {
-      final value = 100 + (i * 5) + (i % 3 * 10); // Sample growth data
-      data.add(FlSpot(i.toDouble(), value.toDouble()));
+    if (userGrowthMap.isNotEmpty) {
+      final sortedDates = userGrowthMap.keys.toList()..sort();
+      for (int i = 0; i < sortedDates.length; i++) {
+        final date = sortedDates[i];
+        final value = userGrowthMap[date] ?? 0;
+        data.add(FlSpot(i.toDouble(), value.toDouble()));
+      }
+    } else {
+      // Show empty chart with zero values for last 30 days
+      for (int i = 0; i < 30; i++) {
+        data.add(FlSpot(i.toDouble(), 0.0));
+      }
     }
-    
+
     return data;
   }
 
   List<PieChartSectionData> _generateCategoryData() {
-    return [
-      PieChartSectionData(
-        color: Colors.blue,
-        value: 35,
-        title: 'Electronics\n35%',
+    // Get category data from analytics or show "No Data" message
+    final categoryData = _analyticsData['categoryData'] as List<Map<String, dynamic>>? ?? [];
+
+    if (categoryData.isEmpty) {
+      // Show single section indicating no data
+      return [
+        PieChartSectionData(
+          color: Colors.grey.shade300,
+          value: 100,
+          title: 'No Data\nAvailable',
+          radius: 60,
+          titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54),
+        ),
+      ];
+    }
+
+    final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.red, Colors.teal];
+
+    return categoryData.asMap().entries.map((entry) {
+      final index = entry.key;
+      final category = entry.value;
+      final color = colors[index % colors.length];
+      final value = (category['value'] as num?)?.toDouble() ?? 0.0;
+      final name = category['name'] as String? ?? 'Unknown';
+      final percentage = category['percentage'] as num? ?? 0;
+
+      return PieChartSectionData(
+        color: color,
+        value: value,
+        title: '$name\n${percentage.toStringAsFixed(1)}%',
         radius: 60,
         titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      PieChartSectionData(
-        color: Colors.green,
-        value: 25,
-        title: 'Clothing\n25%',
-        radius: 60,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      PieChartSectionData(
-        color: Colors.orange,
-        value: 20,
-        title: 'Home\n20%',
-        radius: 60,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      PieChartSectionData(
-        color: Colors.red,
-        value: 20,
-        title: 'Other\n20%',
-        radius: 60,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-    ];
+      );
+    }).toList();
   }
 
   @override
@@ -247,7 +274,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
   }
 
   Widget _buildKPICards() {
-    final totalRevenue = 125000.0;
+    final totalRevenue = _analyticsData['totalRevenue']?.toDouble() ?? 0.0;
     final totalOrders = _analyticsData['totalOrders'] ?? 0;
     final totalUsers = _analyticsData['totalUsers'] ?? 0;
     final avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
@@ -265,10 +292,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
 
   List<Widget> _buildKPICardsList(double revenue, int orders, int users, double avgOrder) {
     return [
-      _buildKPICard('Total Revenue', '\$${NumberFormat('#,##0.00').format(revenue)}', Icons.attach_money, Colors.green),
+      _buildKPICard('Total Revenue', 'TSh ${NumberFormat('#,##0.00').format(revenue)}', Icons.attach_money, Colors.green),
       _buildKPICard('Total Orders', NumberFormat('#,##0').format(orders), Icons.shopping_cart, Colors.blue),
       _buildKPICard('Total Users', NumberFormat('#,##0').format(users), Icons.people, Colors.purple),
-      _buildKPICard('Avg Order Value', '\$${avgOrder.toStringAsFixed(2)}', Icons.trending_up, Colors.orange),
+      _buildKPICard('Avg Order Value', 'TSh ${avgOrder.toStringAsFixed(2)}', Icons.trending_up, Colors.orange),
     ];
   }
 
@@ -331,7 +358,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
                     showTitles: true,
                     reservedSize: 60,
                     getTitlesWidget: (value, meta) {
-                      return Text('\$${(value / 1000).toStringAsFixed(0)}K');
+                      return Text('TSh ${(value / 1000).toStringAsFixed(0)}K');
                     },
                   ),
                 ),
@@ -438,37 +465,49 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
   }
 
   Widget _buildSalesMetrics() {
+    final todaySales = _analyticsData['todaySales']?.toDouble() ?? 0.0;
+    final weekSales = _analyticsData['weekSales']?.toDouble() ?? 0.0;
+    final monthSales = _analyticsData['monthSales']?.toDouble() ?? 0.0;
+
     return Row(
       children: [
-        Expanded(child: _buildMetricCard('Today\'s Sales', '\$2,450', '+12%', Colors.green)),
+        Expanded(child: _buildMetricCard('Today\'s Sales', 'TSh ${todaySales.toStringAsFixed(2)}', '', Colors.green)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('This Week', '\$18,200', '+8%', Colors.blue)),
+        Expanded(child: _buildMetricCard('This Week', 'TSh ${weekSales.toStringAsFixed(2)}', '', Colors.blue)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('This Month', '\$75,600', '+15%', Colors.purple)),
+        Expanded(child: _buildMetricCard('This Month', 'TSh ${monthSales.toStringAsFixed(2)}', '', Colors.purple)),
       ],
     );
   }
 
   Widget _buildUserMetrics() {
+    final newUsers = _analyticsData['newUsers'] ?? 0;
+    final activeUsers = _analyticsData['activeUsers'] ?? 0;
+    final retentionRate = _analyticsData['retentionRate']?.toDouble() ?? 0.0;
+
     return Row(
       children: [
-        Expanded(child: _buildMetricCard('New Users', '45', '+20%', Colors.green)),
+        Expanded(child: _buildMetricCard('New Users', '$newUsers', '', Colors.green)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('Active Users', '1,234', '+5%', Colors.blue)),
+        Expanded(child: _buildMetricCard('Active Users', '$activeUsers', '', Colors.blue)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('Retention Rate', '78%', '+2%', Colors.orange)),
+        Expanded(child: _buildMetricCard('Retention Rate', '${retentionRate.toStringAsFixed(1)}%', '', Colors.orange)),
       ],
     );
   }
 
   Widget _buildProductMetrics() {
+    final totalProducts = _analyticsData['totalProducts'] ?? 0;
+    final outOfStock = _analyticsData['outOfStock'] ?? 0;
+    final lowStock = _analyticsData['lowStock'] ?? 0;
+
     return Row(
       children: [
-        Expanded(child: _buildMetricCard('Total Products', '456', '+12', Colors.blue)),
+        Expanded(child: _buildMetricCard('Total Products', '$totalProducts', '', Colors.blue)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('Out of Stock', '23', '-5', Colors.red)),
+        Expanded(child: _buildMetricCard('Out of Stock', '$outOfStock', '', Colors.red)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('Low Stock', '67', '+3', Colors.orange)),
+        Expanded(child: _buildMetricCard('Low Stock', '$lowStock', '', Colors.orange)),
       ],
     );
   }
@@ -500,13 +539,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
   }
 
   Widget _buildTopProductsList() {
-    final products = [
-      {'name': 'Wireless Headphones', 'sales': 245, 'revenue': 12250.0},
-      {'name': 'Smart Watch', 'sales': 189, 'revenue': 37800.0},
-      {'name': 'Laptop Stand', 'sales': 156, 'revenue': 4680.0},
-      {'name': 'USB-C Cable', 'sales': 134, 'revenue': 2010.0},
-      {'name': 'Phone Case', 'sales': 98, 'revenue': 1960.0},
-    ];
+    final products = _analyticsData['topProducts'] as List<Map<String, dynamic>>? ?? [];
 
     return Card(
       child: Padding(
@@ -521,14 +554,28 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
               ),
             ),
             const SizedBox(height: 16),
-            ...products.map((product) => ListTile(
-              title: Text(product['name'] as String),
-              subtitle: Text('${product['sales']} units sold'),
-              trailing: Text(
-                '\$${NumberFormat('#,##0.00').format(product['revenue'])}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            )),
+            if (products.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(
+                  child: Text(
+                    'No product sales data available',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ...products.map((product) => ListTile(
+                title: Text(product['name'] as String? ?? 'Unknown Product'),
+                subtitle: Text('${product['quantity'] ?? 0} units sold'),
+                trailing: Text(
+                  'TSh ${NumberFormat('#,##0.00').format((product['totalSales'] as num?)?.toDouble() ?? 0.0)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              )),
           ],
         ),
       ),

@@ -6,6 +6,7 @@ import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:jengamate/ui/design_system/components/jm_skeleton.dart';
+import 'package:jengamate/screens/order/widgets/order_filter_dialog.dart';
 
 import '../../models/user_model.dart';
 
@@ -19,7 +20,7 @@ class OrderScreen extends StatefulWidget { // Changed to StatefulWidget
 class _OrderScreenState extends State<OrderScreen> {
   final DatabaseService dbService = DatabaseService();
   String _searchQuery = '';
-  String? _selectedStatusFilter;
+  Map<String, dynamic> _activeFilters = {};
 
   @override
   Widget build(BuildContext context) {
@@ -30,13 +31,26 @@ class _OrderScreenState extends State<OrderScreen> {
         title: const Text('Orders'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
+            icon: Icon(
+              Icons.filter_list,
+              color: _activeFilters.isNotEmpty ? Theme.of(context).primaryColor : null,
+            ),
             onPressed: () async {
-              // TODO: Implement OrderFilterDialog (similar to FilterDialog for products)
-              setState(() {
-                // Example: toggle a status filter
-                _selectedStatusFilter = _selectedStatusFilter == null ? 'Pending' : null;
-              });
+              final result = await showDialog<Map<String, dynamic>>(
+                context: context,
+                builder: (context) => OrderFilterDialog(
+                  onApplyFilters: (filters) {
+                    Navigator.of(context).pop(filters);
+                  },
+                  initialFilters: _activeFilters,
+                ),
+              );
+
+              if (result != null) {
+                setState(() {
+                  _activeFilters = result;
+                });
+              }
             },
           ),
         ],
@@ -104,7 +118,7 @@ class _OrderScreenState extends State<OrderScreen> {
                   child: ListTile(
                     title: Text('Order #${order.id}'),
                     subtitle: Text('Status: ${order.statusDisplayName}'),
-                    trailing: Text('\$${order.totalAmount.toStringAsFixed(2)}'),
+                    trailing: Text('TSh ${order.totalAmount.toStringAsFixed(2)}'),
                   ),
                 );
               },

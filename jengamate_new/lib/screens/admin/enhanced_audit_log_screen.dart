@@ -3,6 +3,7 @@ import 'package:jengamate/models/audit_log_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/utils/logger.dart';
+// Removed populate_audit_logs import - using real data only
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -38,15 +39,35 @@ class _EnhancedAuditLogScreenState extends State<EnhancedAuditLogScreen> {
   Future<void> _loadAuditLogs() async {
     setState(() => _isLoading = true);
     try {
-      // Generate sample data for demonstration
-      _auditLogs = _generateSampleAuditLogs();
+      final dbService = DatabaseService();
+
+      // Load real audit logs from database
+      final auditData = await dbService.getAuditLogs();
+      _auditLogs = auditData.map((data) => AuditLogModel(
+        id: data['id'] ?? '',
+        actorId: data['actorId'] ?? '',
+        actorName: data['actorName'] ?? 'Unknown User',
+        targetUserId: data['targetUserId'] ?? '',
+        targetUserName: data['targetUserName'] ?? 'Unknown User',
+        action: data['action'] ?? 'unknown',
+        details: Map<String, dynamic>.from(data['details'] ?? {}),
+        timestamp: data['timestamp'] ?? Timestamp.now(),
+      )).toList();
+
       _applyFilters();
       Logger.log('Loaded ${_auditLogs.length} audit log entries');
     } catch (e) {
       Logger.logError('Error loading audit logs', e, StackTrace.current);
+      // Set empty list instead of fallback sample data
+      _auditLogs = [];
+      _applyFilters();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading audit logs: $e')),
+          SnackBar(
+            content: Text('Failed to load audit logs: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -54,61 +75,7 @@ class _EnhancedAuditLogScreenState extends State<EnhancedAuditLogScreen> {
     }
   }
 
-  List<AuditLogModel> _generateSampleAuditLogs() {
-    final now = DateTime.now();
-    return [
-      AuditLogModel(
-        id: '1',
-        actorId: 'admin1',
-        actorName: 'Admin User',
-        targetUserId: 'admin1',
-        targetUserName: 'Admin User',
-        action: 'login',
-        details: {'message': 'Admin logged into the system from IP 192.168.1.100'},
-        timestamp: Timestamp.fromDate(now.subtract(const Duration(minutes: 5))),
-      ),
-      AuditLogModel(
-        id: '2',
-        actorId: 'user123',
-        actorName: 'John Doe',
-        targetUserId: 'user123',
-        targetUserName: 'John Doe',
-        action: 'create',
-        details: {'resource': 'order', 'resourceId': 'order_456', 'message': 'Created new order for \$150.00 with 3 items'},
-        timestamp: Timestamp.fromDate(now.subtract(const Duration(hours: 1))),
-      ),
-      AuditLogModel(
-        id: '3',
-        actorId: 'admin1',
-        actorName: 'Admin User',
-        targetUserId: 'user_789',
-        targetUserName: 'Jane Smith',
-        action: 'approve',
-        details: {'resource': 'user', 'message': 'Approved user registration for Jane Smith (jane@example.com)'},
-        timestamp: Timestamp.fromDate(now.subtract(const Duration(hours: 2))),
-      ),
-      AuditLogModel(
-        id: '4',
-        actorId: 'user456',
-        actorName: 'Jane Smith',
-        targetUserId: 'user456',
-        targetUserName: 'Jane Smith',
-        action: 'payment',
-        details: {'resource': 'transaction', 'resourceId': 'txn_123', 'message': 'Payment of \$75.50 processed successfully via credit card'},
-        timestamp: Timestamp.fromDate(now.subtract(const Duration(hours: 3))),
-      ),
-      AuditLogModel(
-        id: '5',
-        actorId: 'system',
-        actorName: 'System',
-        targetUserId: 'system',
-        targetUserName: 'System',
-        action: 'system',
-        details: {'resource': 'backup', 'resourceId': 'backup_001', 'message': 'Automated database backup completed successfully (2.3GB)'},
-        timestamp: Timestamp.fromDate(now.subtract(const Duration(hours: 6))),
-      ),
-    ];
-  }
+
 
   void _applyFilters() {
     _filteredLogs = _auditLogs.where((log) {
@@ -161,6 +128,7 @@ class _EnhancedAuditLogScreenState extends State<EnhancedAuditLogScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: _loadAuditLogs,
           ),
+          // Removed test data population - using real audit logs only
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: _exportLogs,
@@ -507,6 +475,8 @@ class _EnhancedAuditLogScreenState extends State<EnhancedAuditLogScreen> {
       ),
     );
   }
+
+  // Removed test data population method - using real audit logs only
 
   @override
   void dispose() {

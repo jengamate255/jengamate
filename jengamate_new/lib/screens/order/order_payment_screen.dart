@@ -112,9 +112,9 @@ class _OrderPaymentScreenState extends State<OrderPaymentScreen> {
                 children: [
                   Text('Order ID: ${order.id}', style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: JMSpacing.xs),
-                  Text('Total Order Amount: \$${order.totalAmount.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleLarge),
-                  Text('Amount Paid: \$${order.amountPaid?.toStringAsFixed(2) ?? '0.00'}', style: Theme.of(context).textTheme.titleMedium),
-                  Text('Remaining Balance: \$${(order.totalAmount - (order.amountPaid ?? 0.0)).toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
+                  Text('Total Order Amount: TSh ${order.totalAmount.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleLarge),
+                  Text('Amount Paid: TSh ${order.amountPaid?.toStringAsFixed(2) ?? '0.00'}', style: Theme.of(context).textTheme.titleMedium),
+                  Text('Remaining Balance: TSh ${(order.totalAmount - (order.amountPaid ?? 0.0)).toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
                   Text('Status: ${order.statusDisplayName}', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: JMSpacing.lg),
                   
@@ -126,7 +126,7 @@ class _OrderPaymentScreenState extends State<OrderPaymentScreen> {
                     decoration: const InputDecoration(
                       labelText: 'Amount Paid',
                       border: OutlineInputBorder(),
-                      prefixText: '\$',
+                      prefixText: 'TSh ',
                     ),
                   ),
                   const SizedBox(height: JMSpacing.md),
@@ -163,7 +163,7 @@ class _OrderPaymentScreenState extends State<OrderPaymentScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Amount: \$${amount.toStringAsFixed(2)}'),
+                              Text('Amount: TSh ${amount.toStringAsFixed(2)}'),
                               Text('Method: ${proof['method'] ?? 'N/A'}'),
                               Text('Date: ${timestamp.toLocal().toIso8601String().split('T').first}'),
                               Text('Time: ${timestamp.toLocal().hour}:${timestamp.toLocal().minute.toString().padLeft(2, '0')}'),

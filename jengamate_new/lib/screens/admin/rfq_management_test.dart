@@ -2,25 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/rfq_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:intl/intl.dart';
-import 'package:go_router/go_router.dart';
-import 'package:jengamate/config/app_routes.dart';
-import 'package:jengamate/utils/theme.dart';
 
-class RfqManagementDashboard extends StatefulWidget {
-  const RfqManagementDashboard({super.key});
+class RfqManagementTest extends StatefulWidget {
+  const RfqManagementTest({super.key});
 
   @override
-  State<RfqManagementDashboard> createState() => _RfqManagementDashboardState();
+  State<RfqManagementTest> createState() => _RfqManagementTestState();
 }
 
-class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
+class _RfqManagementTestState extends State<RfqManagementTest> {
   final _dbService = DatabaseService();
   final _searchController = TextEditingController();
   String _selectedStatus = 'All';
   String _selectedType = 'All';
   List<RFQModel> _filteredRfqs = [];
   List<RFQModel> _allRfqs = [];
-  
+
   final List<String> _statusOptions = ['All', 'Pending', 'Approved', 'Rejected', 'Processing', 'Completed'];
   final List<String> _typeOptions = ['All', 'Standard', 'Bid', 'Catalog', 'Marketplace'];
 
@@ -56,7 +53,7 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('RFQ List View - Dashboard'),
+        title: const Text('RFQ Management Dashboard'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
@@ -77,12 +74,24 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          
+
           _allRfqs = snapshot.data ?? [];
           if (_allRfqs.isEmpty) {
-            return const Center(child: Text('No RFQs found.'));
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.request_quote, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('No RFQs found', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                  SizedBox(height: 8),
+                  Text('RFQs will appear here once customers submit requests', style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            );
           }
-          
+
+          // Initialize filtered list if empty
           if (_filteredRfqs.isEmpty && _allRfqs.isNotEmpty) {
             _filteredRfqs = _allRfqs;
           }
@@ -247,11 +256,10 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
               children: [
                 const Expanded(flex: 2, child: Text('Knowledge', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
                 const Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Min Qty', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Unit', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Expiry', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Participants', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Amount', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                const Expanded(flex: 2, child: Text('Customer', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                const Expanded(flex: 2, child: Text('Quantity', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                const Expanded(flex: 2, child: Text('Created', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                const Expanded(flex: 2, child: Text('Status', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
                 const Expanded(flex: 1, child: Text('Action', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
               ],
             ),
@@ -300,7 +308,15 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
           Expanded(
             flex: 2,
             child: Text(
-              'SE-${rfq.id.substring(0, 6)}',
+              rfq.customerName,
+              style: TextStyle(color: Colors.grey[600]),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              rfq.quantity.toString(),
               style: TextStyle(color: Colors.grey[600]),
             ),
           ),
@@ -313,30 +329,20 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
           ),
           Expanded(
             flex: 2,
-            child: Text(
-              DateFormat('dd MMM yy').format(rfq.updatedAt),
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Row(
-              children: [
-                _buildStatusBadge('Received', Colors.blue),
-                const SizedBox(width: 4),
-                _buildStatusBadge('Responded', Colors.green),
-                const SizedBox(width: 4),
-                _buildStatusBadge('Evaluated', Colors.orange),
-                const SizedBox(width: 4),
-                _buildStatusBadge('Awarded', Colors.purple),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              'TSh ${(rfq.quantity * 1000).toString()}',
-              style: const TextStyle(fontWeight: FontWeight.w500),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getStatusColor(rfq.status).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                rfq.status,
+                style: TextStyle(
+                  color: _getStatusColor(rfq.status),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -368,57 +374,6 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
     );
   }
 
-  Widget _buildStatusBadge(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  void _deleteRfq(RFQModel rfq) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete RFQ'),
-        content: Text('Are you sure you want to delete RFQ "${rfq.productName}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('RFQ deleted successfully')),
-                );
-              } catch (e) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error deleting RFQ: $e')),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -437,8 +392,54 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
   }
 
   void _viewRfqDetails(RFQModel rfq) {
-    final path = AppRouteBuilders.rfqDetailsPath(rfq.id);
-    context.go(path);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('RFQ Details - ${rfq.productName}'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('Customer', rfq.customerName),
+              _buildDetailRow('Email', rfq.customerEmail),
+              _buildDetailRow('Phone', rfq.customerPhone),
+              _buildDetailRow('Delivery Address', rfq.deliveryAddress),
+              _buildDetailRow('Quantity', rfq.quantity.toString()),
+              _buildDetailRow('Status', rfq.status),
+              _buildDetailRow('Created', DateFormat('dd MMM yyyy, HH:mm').format(rfq.createdAt)),
+              if (rfq.additionalNotes.isNotEmpty)
+                _buildDetailRow('Notes', rfq.additionalNotes),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
   }
 
   void _editRfqStatus(RFQModel rfq) {
@@ -448,49 +449,95 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Edit Status - ${rfq.productName}'),
-          content: DropdownButtonFormField<String>(
-            value: selected,
-            decoration: const InputDecoration(
-              labelText: 'Status',
-              border: OutlineInputBorder(),
-            ),
-            items: statuses
-                .map((s) => DropdownMenuItem<String>(value: s, child: Text(s)))
-                .toList(),
-            onChanged: (val) {
-              if (val != null) selected = val;
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                try {
-                  await _dbService.updateRFQStatus(rfq.id, selected);
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Status updated to "$selected"')),
-                    );
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Edit Status - ${rfq.productName}'),
+              content: DropdownButtonFormField<String>(
+                value: selected,
+                decoration: const InputDecoration(
+                  labelText: 'Status',
+                  border: OutlineInputBorder(),
+                ),
+                items: statuses
+                    .map((s) => DropdownMenuItem<String>(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      selected = val;
+                    });
                   }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to update status: $e')),
-                    );
-                  }
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      await _dbService.updateRFQStatus(rfq.id, selected);
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Status updated to "$selected"')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to update status: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
+    );
+  }
+
+  void _deleteRfq(RFQModel rfq) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete RFQ'),
+        content: Text('Are you sure you want to delete RFQ "${rfq.productName}"?\n\nThis action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                // Note: You'll need to add a deleteRFQ method to DatabaseService
+                // await _dbService.deleteRFQ(rfq.id);
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('RFQ deletion feature will be implemented'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              } catch (e) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting RFQ: $e')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }

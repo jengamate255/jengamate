@@ -13,6 +13,7 @@ import 'package:jengamate/screens/categories/categories_screen.dart';
 import 'package:jengamate/screens/inquiry/new_inquiry_screen.dart';
 import 'package:jengamate/screens/chat/chat_conversation_screen.dart';
 import 'package:jengamate/screens/commission/commission_screen.dart';
+import 'package:jengamate/screens/admin/commission_tiers_screen.dart';
 import 'package:jengamate/screens/withdrawals/withdrawals_screen.dart';
 import 'package:jengamate/screens/help_screen.dart';
 import 'package:jengamate/auth/password_reset_screen.dart';
@@ -57,6 +58,7 @@ class AppRoutes {
   static const String identityVerification = '/identity-verification';
   static const String prioritySupport = '/priority-support';
   static const String commission = '/commission';
+  static const String commissionTiers = '/commission-tiers';
   static const String withdrawals = '/withdrawals';
   static const String phoneRegistration = '/phone-registration';
   static const String otpVerification = '/otp-verification/:verificationId';

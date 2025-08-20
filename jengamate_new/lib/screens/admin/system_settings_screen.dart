@@ -49,11 +49,15 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
       _minimumWithdrawalController.text = config.minimumWithdrawal.toStringAsFixed(2);
       _maxRfqsPerDayController.text = config.maxRfqsPerDay.toString();
       _requireApprovalForNewUsers = config.requireApprovalForNewUsers;
-      
-      // Set default values for additional settings
-      _referralBonusController.text = '25.00';
-      _maxOrderValueController.text = '10000.00';
-      _systemMaintenanceController.text = 'System maintenance scheduled for tonight.';
+
+      // Load additional settings from database or use sensible defaults
+      _referralBonusController.text = config.referralBonus?.toStringAsFixed(2) ?? '25.00';
+      _maxOrderValueController.text = config.maxOrderValue?.toStringAsFixed(2) ?? '10000.00';
+      _systemMaintenanceController.text = config.maintenanceMessage ?? 'System maintenance in progress. Please check back later.';
+      _enableReferralProgram = config.enableReferralProgram ?? true;
+      _enableNotifications = config.enableNotifications ?? true;
+      _enableAutoApproval = config.enableAutoApproval ?? false;
+      _maintenanceMode = config.maintenanceMode ?? false;
       
       Logger.log('System configuration loaded successfully');
     } catch (e) {
@@ -143,7 +147,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                           controller: _minimumWithdrawalController,
                           label: 'Minimum Withdrawal Amount',
                           hint: 'Enter minimum withdrawal amount',
-                          prefix: '\$',
+                          prefix: 'TSh ',
                           validator: (value) => _validateAmount(value),
                         ),
                         const SizedBox(height: 16),
@@ -151,7 +155,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                           controller: _referralBonusController,
                           label: 'Referral Bonus Amount',
                           hint: 'Enter referral bonus amount',
-                          prefix: '\$',
+                          prefix: 'TSh ',
                           validator: (value) => _validateAmount(value),
                         ),
                       ],
@@ -172,7 +176,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                           controller: _maxOrderValueController,
                           label: 'Maximum Order Value',
                           hint: 'Enter maximum order value',
-                          prefix: '\$',
+                          prefix: 'TSh ',
                           validator: (value) => _validateAmount(value),
                         ),
                         const SizedBox(height: 16),
@@ -444,11 +448,12 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
 
   void _setDefaultValues() {
     setState(() {
-      _commissionRateController.text = '10.0';
-      _minimumWithdrawalController.text = '50.00';
-      _maxRfqsPerDayController.text = '5';
-      _referralBonusController.text = '25.00';
-      _maxOrderValueController.text = '10000.00';
+      // Set reasonable default values for a construction marketplace
+      _commissionRateController.text = '5.0';  // 5% commission rate
+      _minimumWithdrawalController.text = '100.00';  // TSh 100 minimum withdrawal
+      _maxRfqsPerDayController.text = '10';  // 10 RFQs per day limit
+      _referralBonusController.text = '50.00';  // TSh 50 referral bonus
+      _maxOrderValueController.text = '50000.00';  // TSh 50,000 max order value
       _requireApprovalForNewUsers = true;
       _enableReferralProgram = true;
       _enableNotifications = true;
@@ -456,9 +461,9 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
       _maintenanceMode = false;
       _systemMaintenanceController.text = 'System maintenance in progress. Please check back later.';
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings reset to default values')),
+      const SnackBar(content: Text('Settings reset to recommended default values')),
     );
   }
 

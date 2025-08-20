@@ -1,10 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:jengamate/models/rfq_model.dart';
-import 'package:jengamate/models/user_model.dart';
-import 'package:jengamate/services/database_service.dart';
-import 'package:jengamate/utils/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/models/notification_model.dart';
@@ -12,19 +9,20 @@ import 'package:jengamate/models/rfq_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/utils/logger.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationService {
   static NotificationService? _instance;
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = 
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
-  
+
   factory NotificationService() {
     _instance ??= NotificationService._internal();
     return _instance!;
   }
-  
+
   final DatabaseService _databaseService = DatabaseService();
+  static const String _notificationPreferenceKey = 'notifications_enabled';
+  bool _notificationsEnabled = true;
 
   NotificationService._internal();
   
@@ -128,11 +126,17 @@ class NotificationService {
     await _notificationsPlugin.cancelAll();
   }
 
-  bool get notificationsEnabled => true; // Default value, can be updated based on permission
+  bool get notificationsEnabled => _notificationsEnabled;
+
+  Future<void> loadNotificationSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    _notificationsEnabled = prefs.getBool(_notificationPreferenceKey) ?? true;
+  }
 
   Future<void> setNotificationsEnabled(bool enabled) async {
-    // Implementation would depend on your notification permission system
-    // For now, this is a placeholder that can be extended
+    _notificationsEnabled = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_notificationPreferenceKey, enabled);
   }
 
   Future<void> sendNewRfqNotification(

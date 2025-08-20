@@ -200,6 +200,41 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                   const SizedBox(height: 16),
+                  if (currentUser.role == UserRole.engineer)
+                    MenuGroup(
+                      title: 'Commission & Earnings',
+                      children: [
+                        ProfileMenuItem(
+                          icon: Icons.monetization_on_outlined,
+                          title: 'My Commissions',
+                          subtitle: 'View your commission history',
+                          iconColor: Colors.green.shade600,
+                          onTap: () {
+                            context.go(AppRoutes.commission);
+                          },
+                        ),
+                        ProfileMenuItem(
+                          icon: Icons.stars_outlined,
+                          title: 'Commission Tiers',
+                          subtitle: 'View tier requirements and benefits',
+                          iconColor: Colors.amber.shade600,
+                          onTap: () {
+                            context.go(AppRoutes.commissionTiers);
+                          },
+                        ),
+                        ProfileMenuItem(
+                          icon: Icons.account_balance_wallet_outlined,
+                          title: 'Withdrawals',
+                          subtitle: 'Manage your withdrawals',
+                          iconColor: Colors.blue.shade600,
+                          onTap: () {
+                            context.go(AppRoutes.withdrawals);
+                          },
+                        ),
+                      ],
+                    ),
+                  if (currentUser.role == UserRole.engineer)
+                    const SizedBox(height: 16),
                   MenuGroup(
                     title: 'Priority Services',
                     children: [
@@ -295,20 +330,23 @@ class ProfileScreen extends StatelessWidget {
                       ProfileMenuItem(
                         icon: Icons.chat_bubble_outline_rounded,
                         title: 'Chat on WhatsApp',
-                        onTap: () {
+                        onTap: () async {
                           // Open WhatsApp chat
-                          final Uri whatsappUri = Uri(
-                            scheme: 'https',
-                            host: 'wa.me',
-                            path: '254700123456', // Replace with actual support number
+                          final Uri whatsappUri = Uri.parse(
+                            'https://wa.me/254700000000?text=Hello, I need help with JengaMate'
                           );
                           try {
-                            launchUrl(whatsappUri);
+                            if (!await launchUrl(whatsappUri, mode: LaunchMode.externalApplication)) {
+                              throw Exception('Could not launch WhatsApp');
+                            }
                           } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Could not open WhatsApp')),
-                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Could not open WhatsApp. Please make sure WhatsApp is installed.'),
+                                ),
+                              );
+                            }
                           }
                         },
                       ),

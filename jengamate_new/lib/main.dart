@@ -3,25 +3,41 @@ import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/services/supabase_service.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/services/theme_service.dart';
+import 'package:jengamate/services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'config/app_router.dart';
 import 'config/app_theme.dart';
+import 'config/sentry_config.dart';
 import 'firebase_options.dart';
 
-void main() {
-  // Ensure binding init and runApp happen in the SAME zone to avoid zone mismatch on web
-  runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+Future<void> main() async {
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = SentryConfig.dsn;
+      options.environment = SentryConfig.environment;
+      options.release = SentryConfig.release;
+      options.tracesSampleRate = SentryConfig.tracesSampleRate;
+      options.profilesSampleRate = SentryConfig.profilesSampleRate;
+      options.attachStacktrace = SentryConfig.attachStackTrace;
+      options.sendDefaultPii = SentryConfig.sendDefaultPii;
+
+      // Enable performance monitoring
+      options.enableTracing = SentryConfig.enablePerformanceMonitoring;
+
+      // Debug settings
+      options.debug = kDebugMode;
+    },
+    appRunner: () => runZonedGuarded(() async {
+      WidgetsFlutterBinding.ensureInitialized();
 
     const bool kTestCrashOnStart = bool.fromEnvironment('TEST_CRASH_ON_START');
 
@@ -77,15 +93,17 @@ void main() {
           await FirebaseCrashlytics.instance
               .setCrashlyticsCollectionEnabled(!kDebugMode);
 
-          // Forward Flutter framework errors
+          // Forward Flutter framework errors to both Sentry and Firebase
           FlutterError.onError = (FlutterErrorDetails details) {
             FlutterError.presentError(details);
+            Sentry.captureException(details.exception, stackTrace: details.stack);
             FirebaseCrashlytics.instance.recordFlutterFatalError(details);
           };
 
-          // Forward uncaught async and platform errors
+          // Forward uncaught async and platform errors to both Sentry and Firebase
           PlatformDispatcher.instance.onError =
               (Object error, StackTrace stack) {
+            Sentry.captureException(error, stackTrace: stack);
             FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
             return true; // handled
           };
@@ -129,12 +147,16 @@ void main() {
         ),
       ));
     }
-  }, (error, stack) {
-    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android) {
-      // Best-effort reporting on non-web
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    }
-  });
+    }, (error, stack) {
+      // Report to both Sentry and Firebase Crashlytics
+      Sentry.captureException(error, stackTrace: stack);
+
+      if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android) {
+        // Best-effort reporting on non-web
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      }
+    }),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -152,6 +174,13 @@ class MyApp extends StatelessWidget {
           },
         ),
         Provider<AuthService>(create: (_) => AuthService()),
+        Provider<NotificationService>(
+          create: (_) {
+            final notificationService = NotificationService();
+            notificationService.loadNotificationSettings(); // Load settings asynchronously
+            return notificationService;
+          },
+        ),
         StreamProvider<User?>(
           create: (context) => context.read<AuthService>().authStateChanges,
           initialData: null,
