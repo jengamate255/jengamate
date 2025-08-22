@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jengamate/services/dynamic_data_service.dart';
 
 class InquiryFilterDialog extends StatefulWidget {
   final Function(Map<String, dynamic>) onApplyFilters;
@@ -20,21 +21,9 @@ class _InquiryFilterDialogState extends State<InquiryFilterDialog> {
   late DateTime? endDate;
   late String selectedPriority;
 
-  final List<String> inquiryStatuses = [
-    'all',
-    'PENDING',
-    'IN_PROGRESS',
-    'RESOLVED',
-    'CLOSED'
-  ];
-
-  final List<String> priorities = [
-    'all',
-    'LOW',
-    'MEDIUM',
-    'HIGH',
-    'URGENT'
-  ];
+  List<String> inquiryStatuses = [];
+  List<String> priorities = [];
+  final DynamicDataService _dynamicDataService = DynamicDataService();
 
   @override
   void initState() {
@@ -43,6 +32,23 @@ class _InquiryFilterDialogState extends State<InquiryFilterDialog> {
     startDate = widget.initialFilters['startDate'];
     endDate = widget.initialFilters['endDate'];
     selectedPriority = widget.initialFilters['priority'] ?? 'all';
+    _loadFilterData();
+  }
+
+  Future<void> _loadFilterData() async {
+    try {
+      await _dynamicDataService.initialize();
+      setState(() {
+        inquiryStatuses = _dynamicDataService.getInquiryStatuses();
+        priorities = _dynamicDataService.getPriorities();
+      });
+    } catch (e) {
+      // Fallback to default values if service fails
+      setState(() {
+        inquiryStatuses = ['all', 'PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
+        priorities = ['all', 'LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+      });
+    }
   }
 
   @override

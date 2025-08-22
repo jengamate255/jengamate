@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/content_moderation_dashboard_model.dart';
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/services/dynamic_data_service.dart';
 import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/utils/logger.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +15,7 @@ class ContentModerationDashboard extends StatefulWidget {
 
 class _ContentModerationDashboardState extends State<ContentModerationDashboard> with TickerProviderStateMixin {
   final DatabaseService _databaseService = DatabaseService();
+  final DynamicDataService _dynamicDataService = DynamicDataService();
   late TabController _tabController;
   
   List<ContentModerationModel> _pendingContent = [];
@@ -24,14 +26,31 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
   String _selectedContentType = 'all';
   String _selectedSeverity = 'all';
   
-  final List<String> _contentTypes = ['all', 'product', 'review', 'message', 'profile', 'inquiry'];
-  final List<String> _severityLevels = ['all', 'low', 'medium', 'high', 'critical'];
+  List<String> _contentTypes = [];
+  List<String> _severityLevels = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadFilterData();
     _loadModerationData();
+  }
+
+  Future<void> _loadFilterData() async {
+    try {
+      await _dynamicDataService.initialize();
+      setState(() {
+        _contentTypes = _dynamicDataService.getContentTypes();
+        _severityLevels = _dynamicDataService.getSeverityLevels();
+      });
+    } catch (e) {
+      // Fallback to default values if service fails
+      setState(() {
+        _contentTypes = ['all', 'product', 'review', 'message', 'profile', 'inquiry'];
+        _severityLevels = ['all', 'low', 'medium', 'high', 'critical'];
+      });
+    }
   }
 
   Future<void> _loadModerationData() async {

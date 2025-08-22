@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jengamate/services/dynamic_data_service.dart';
 
 class OrderFilterDialog extends StatefulWidget {
   final Function(Map<String, dynamic>) onApplyFilters;
@@ -21,15 +22,8 @@ class _OrderFilterDialogState extends State<OrderFilterDialog> {
   late double minAmount;
   late double maxAmount;
 
-  final List<String> orderStatuses = [
-    'all',
-    'PENDING',
-    'PROCESSING',
-    'SHIPPED',
-    'DELIVERED',
-    'CANCELLED',
-    'REFUNDED'
-  ];
+  List<String> orderStatuses = [];
+  final DynamicDataService _dynamicDataService = DynamicDataService();
 
   @override
   void initState() {
@@ -39,6 +33,21 @@ class _OrderFilterDialogState extends State<OrderFilterDialog> {
     endDate = widget.initialFilters['endDate'];
     minAmount = widget.initialFilters['minAmount'] ?? 0.0;
     maxAmount = widget.initialFilters['maxAmount'] ?? 999999.0;
+    _loadOrderStatuses();
+  }
+
+  Future<void> _loadOrderStatuses() async {
+    try {
+      await _dynamicDataService.initialize();
+      setState(() {
+        orderStatuses = _dynamicDataService.getOrderStatuses();
+      });
+    } catch (e) {
+      // Fallback to default values if service fails
+      setState(() {
+        orderStatuses = ['all', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'];
+      });
+    }
   }
 
   @override
