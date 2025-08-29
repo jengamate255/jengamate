@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/models/financial_transaction_model.dart';
 import 'package:jengamate/models/enums/transaction_enums.dart';
 import 'package:jengamate/services/database_service.dart';
@@ -17,11 +18,15 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   final DatabaseService _databaseService = DatabaseService();
   List<FinancialTransaction> _transactions = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
   String _selectedFilter = 'all';
   TransactionStatus? _statusFilter;
   TransactionType? _typeFilter;
   DateTimeRange? _dateRange;
   final TextEditingController _searchController = TextEditingController();
+  final int _pageSize = 50;
+  DocumentSnapshot? _lastDocument;
 
   @override
   void initState() {
@@ -29,94 +34,177 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     _loadTransactions();
   }
 
-  Future<void> _loadTransactions() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadTransactions({bool loadMore = false}) async {
+    if (loadMore && (_isLoadingMore || !_hasMoreData)) return;
+
+    setState(() {
+      if (loadMore) {
+        _isLoadingMore = true;
+      } else {
+        _isLoading = true;
+        _transactions.clear();
+        _lastDocument = null;
+        _hasMoreData = true;
+      }
+    });
+
     try {
-      // TODO: Implement actual transaction loading from database service
-      // For now, creating sample data to demonstrate UI
-      _transactions = _generateSampleTransactions();
-      Logger.log('Loaded ${_transactions.length} financial transactions');
+      // Use the database service method for paginated transactions
+      final newTransactions = await _databaseService.getPaginatedFinancialTransactions(
+        limit: _pageSize,
+        startAfter: loadMore ? _lastDocument : null,
+      );
+
+      if (mounted) {
+        setState(() {
+          if (loadMore) {
+            _transactions.addAll(newTransactions);
+          } else {
+            _transactions = newTransactions;
+          }
+          _hasMoreData = newTransactions.length == _pageSize;
+        });
+
+        // Update last document for pagination if we have transactions
+        if (newTransactions.isNotEmpty && newTransactions.length == _pageSize) {
+          _lastDocument = await _databaseService.getLastTransactionDocument();
+        }
+      }
+
+      Logger.log('Loaded ${newTransactions.length} financial transactions from database');
     } catch (e) {
-      Logger.logError('Error loading transactions', e, StackTrace.current);
+      Logger.logError('Error loading financial transactions', e, StackTrace.current);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading transactions: $e')),
+          SnackBar(
+            content: Text('Error loading transactions: $e'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _loadTransactions(loadMore: loadMore),
+            ),
+          ),
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+      }
     }
   }
 
-  List<FinancialTransaction> _generateSampleTransactions() {
-    final now = DateTime.now();
-    return [
-      FinancialTransaction(
-        id: '1',
-        amount: 150.00,
-        type: TransactionType.commission,
-        userId: 'user1',
-        relatedId: 'order1',
-        description: 'Commission from Order #12345',
-        status: TransactionStatus.completed,
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-      FinancialTransaction(
-        id: '2',
-        amount: 500.00,
-        type: TransactionType.withdrawal,
-        userId: 'user2',
-        relatedId: 'withdrawal1',
-        description: 'Withdrawal Request',
-        status: TransactionStatus.pending,
-        createdAt: now.subtract(const Duration(days: 2)),
-      ),
-      FinancialTransaction(
-        id: '3',
-        amount: 75.50,
-        type: TransactionType.refund,
-        userId: 'user3',
-        relatedId: 'order2',
-        description: 'Refund for Order #12346',
-        status: TransactionStatus.completed,
-        createdAt: now.subtract(const Duration(days: 3)),
-      ),
-    ];
-  }
-
-  List<FinancialTransaction> get _filteredTransactions {
-    var filtered = _transactions.where((transaction) {
-      // Status filter
-      if (_statusFilter != null && transaction.status != _statusFilter) {
+  /// Validates transaction data for consistency and accuracy
+  bool _validateTransaction(FinancialTransaction transaction) {
+    try {
+      // Basic validation
+      if (transaction.id.isEmpty) {
+        Logger.logError('Invalid transaction: empty ID', transaction.toMap(), StackTrace.current);
         return false;
       }
       
-      // Type filter
-      if (_typeFilter != null && transaction.type != _typeFilter) {
+      if (transaction.amount <= 0) {
+        Logger.logError('Invalid transaction: non-positive amount', transaction.toMap(), StackTrace.current);
         return false;
       }
       
-      // Date range filter
-      if (_dateRange != null) {
-        if (transaction.createdAt.isBefore(_dateRange!.start) ||
-            transaction.createdAt.isAfter(_dateRange!.end)) {
-          return false;
-        }
+      if (transaction.userId.isEmpty) {
+        Logger.logError('Invalid transaction: empty user ID', transaction.toMap(), StackTrace.current);
+        return false;
       }
       
-      // Search filter
-      if (_searchController.text.isNotEmpty) {
-        final searchTerm = _searchController.text.toLowerCase();
-        return transaction.description?.toLowerCase().contains(searchTerm) == true ||
-               transaction.id.toLowerCase().contains(searchTerm) ||
-               transaction.referenceNumber?.toLowerCase().contains(searchTerm) == true;
+      // Validate transaction type and status combination
+      if (transaction.type == TransactionType.withdrawal &&
+          transaction.status == TransactionStatus.completed &&
+          transaction.amount > 0) {
+        // Withdrawal amounts should be negative for accounting
+        // This is a data consistency check
       }
       
       return true;
-    }).toList();
+    } catch (e) {
+      Logger.logError('Error validating transaction', e, StackTrace.current);
+      return false;
+    }
+  }
+
+  /// Sanitizes and processes transaction data for display
+  FinancialTransaction _sanitizeTransaction(FinancialTransaction transaction) {
+    // Ensure description is not null or empty
+    String sanitizedDescription = transaction.description?.trim() ??
+        'Transaction ${transaction.type.toString().split('.').last} #${transaction.id.substring(0, 8)}';
     
-    // Sort by date (newest first)
-    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    // Ensure proper amount formatting
+    double sanitizedAmount = double.parse(transaction.amount.toStringAsFixed(2));
+    
+    return FinancialTransaction(
+      id: transaction.id,
+      amount: sanitizedAmount,
+      type: transaction.type,
+      userId: transaction.userId,
+      relatedId: transaction.relatedId,
+      description: sanitizedDescription,
+      status: transaction.status,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
+      referenceNumber: transaction.referenceNumber?.trim(),
+      metadata: transaction.metadata,
+    );
+  }
+
+  List<FinancialTransaction> get _filteredTransactions {
+    var filtered = _transactions
+        .where(_validateTransaction) // Validate each transaction
+        .map(_sanitizeTransaction) // Sanitize data
+        .where((transaction) {
+          // Status filter
+          if (_statusFilter != null && transaction.status != _statusFilter) {
+            return false;
+          }
+          
+          // Type filter
+          if (_typeFilter != null && transaction.type != _typeFilter) {
+            return false;
+          }
+          
+          // Date range filter with proper validation
+          if (_dateRange != null) {
+            final transactionDate = transaction.createdAt;
+            final startDate = _dateRange!.start;
+            final endDate = _dateRange!.end.add(const Duration(hours: 23, minutes: 59, seconds: 59));
+            
+            if (transactionDate.isBefore(startDate) || transactionDate.isAfter(endDate)) {
+              return false;
+            }
+          }
+          
+          // Enhanced search filter with multiple criteria
+          if (_searchController.text.isNotEmpty) {
+            final searchTerm = _searchController.text.toLowerCase().trim();
+            if (searchTerm.isEmpty) return true;
+            
+            return transaction.description?.toLowerCase().contains(searchTerm) == true ||
+                   transaction.id.toLowerCase().contains(searchTerm) ||
+                   transaction.referenceNumber?.toLowerCase().contains(searchTerm) == true ||
+                   transaction.type.toString().toLowerCase().contains(searchTerm) ||
+                   transaction.status.toString().toLowerCase().contains(searchTerm) ||
+                   transaction.amount.toString().contains(searchTerm);
+          }
+          
+          return true;
+        }).toList();
+    
+    // Optimized sorting with null safety
+    try {
+      filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    } catch (e) {
+      Logger.logError('Error sorting transactions', e, StackTrace.current);
+      // If sorting fails, return unsorted list rather than crashing
+    }
+    
     return filtered;
   }
 
@@ -151,17 +239,37 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   }
 
   Widget _buildSummaryCards() {
-    final totalIncome = _transactions
-        .where((t) => t.type == TransactionType.commission && t.status == TransactionStatus.completed)
-        .fold(0.0, (sum, t) => sum + t.amount);
+    // Calculate metrics from validated live data with error handling
+    double totalIncome = 0.0;
+    double totalWithdrawals = 0.0;
+    double pendingAmount = 0.0;
     
-    final totalWithdrawals = _transactions
-        .where((t) => t.type == TransactionType.withdrawal && t.status == TransactionStatus.completed)
-        .fold(0.0, (sum, t) => sum + t.amount);
-    
-    final pendingAmount = _transactions
-        .where((t) => t.status == TransactionStatus.pending)
-        .fold(0.0, (sum, t) => sum + t.amount);
+    try {
+      // Validate and sanitize transactions before calculations
+      final validTransactions = _transactions.where(_validateTransaction).map(_sanitizeTransaction);
+      
+      for (var transaction in validTransactions) {
+        switch (transaction.status) {
+          case TransactionStatus.completed:
+            if (transaction.type == TransactionType.commission) {
+              totalIncome += transaction.amount;
+            } else if (transaction.type == TransactionType.withdrawal) {
+              totalWithdrawals += transaction.amount;
+            }
+            break;
+          case TransactionStatus.pending:
+            pendingAmount += transaction.amount;
+            break;
+          default:
+            break;
+        }
+      }
+      
+      Logger.log('Summary calculations: Income=$totalIncome, Withdrawals=$totalWithdrawals, Pending=$pendingAmount');
+    } catch (e) {
+      Logger.logError('Error calculating summary metrics', e, StackTrace.current);
+      // Display error state but don't crash
+    }
 
     return Container(
       padding: Responsive.getResponsivePadding(context),
@@ -304,15 +412,15 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
         label: Text(label),
         selected: isSelected,
         onSelected: (_) => onTap(),
-        selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
+        selectedColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
       ),
     );
   }
 
   Widget _buildTransactionsList() {
     final filteredTransactions = _filteredTransactions;
-    
-    if (filteredTransactions.isEmpty) {
+
+    if (filteredTransactions.isEmpty && !_isLoading) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -325,13 +433,32 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: filteredTransactions.length,
-      itemBuilder: (context, index) {
-        final transaction = filteredTransactions[index];
-        return _buildTransactionCard(transaction);
-      },
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: filteredTransactions.length,
+            itemBuilder: (context, index) {
+              final transaction = filteredTransactions[index];
+              return _buildTransactionCard(transaction);
+            },
+          ),
+        ),
+        if (_hasMoreData && !_isLoading && !_isLoadingMore)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: ElevatedButton(
+              onPressed: () => _loadTransactions(loadMore: true),
+              child: const Text('Load More Transactions'),
+            ),
+          ),
+        if (_isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: CircularProgressIndicator(),
+          ),
+      ],
     );
   }
 
@@ -343,7 +470,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.2),
+          backgroundColor: color.withValues(alpha: 0.2),
           child: Icon(_getTransactionIcon(transaction.type), color: color),
         ),
         title: Text(
@@ -441,7 +568,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

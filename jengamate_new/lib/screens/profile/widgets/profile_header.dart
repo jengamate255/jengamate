@@ -27,8 +27,7 @@ class ProfileHeader extends StatelessWidget {
               backgroundColor: AppTheme.primaryColor,
               backgroundImage: currentUser?.photoUrl != null
                   ? NetworkImage(currentUser!.photoUrl!) as ImageProvider
-                  : const AssetImage(
-                      'assets/images/default_avatar.png'), // Default avatar
+                  : null, // Use null for fallback to child widget
               child: currentUser?.photoUrl == null
                   ? const Icon(Icons.person, color: Colors.white, size: 32)
                   : null,

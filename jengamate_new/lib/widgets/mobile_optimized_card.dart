@@ -289,8 +289,8 @@ class MobileOptimizedChip extends StatelessWidget {
               selected: selected,
               onSelected: (_) => onTap?.call(),
               backgroundColor: backgroundColor,
-              selectedColor: backgroundColor?.withOpacity(0.3) ?? 
-                  Theme.of(context).primaryColor.withOpacity(0.3),
+              selectedColor: backgroundColor?.withValues(alpha: 0.3) ??
+                  Theme.of(context).primaryColor.withValues(alpha: 0.3),
             )
           : Chip(
               label: Text(

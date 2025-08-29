@@ -38,10 +38,23 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
       final topProducts = await _databaseService.getTopSellingProducts(5);
       final userGrowthData = await _databaseService.getUserGrowthOverTime();
 
+      // Fetch category data for pie chart
+      List<Map<String, dynamic>> categoryData = [];
+      try {
+        final categoriesSnapshot = await _databaseService.getCategories().first;
+        categoryData = categoriesSnapshot.map((category) => {
+          'name': category.name,
+          'productCount': 0, // This would need to be calculated based on products in each category
+        }).toList();
+      } catch (e) {
+        Logger.logError('Error loading category data', e, StackTrace.current);
+      }
+
       setState(() {
         _analyticsData = {
           ...analytics,
           'topProducts': topProducts,
+          'categories': categoryData,
         };
         _salesData = _generateSalesData(salesOverTime);
         _userGrowthData = _generateUserGrowthData(userGrowthData);
@@ -110,10 +123,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
   }
 
   List<PieChartSectionData> _generateCategoryData() {
-    // Get category data from analytics or show "No Data" message
-    final categoryData = _analyticsData['categoryData'] as List<Map<String, dynamic>>? ?? [];
+    // Get category data from database service
+    final categories = _analyticsData['categories'] as List<Map<String, dynamic>>? ?? [];
 
-    if (categoryData.isEmpty) {
+    if (categories.isEmpty) {
       // Show single section indicating no data
       return [
         PieChartSectionData(
@@ -128,18 +141,17 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
 
     final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.red, Colors.teal];
 
-    return categoryData.asMap().entries.map((entry) {
+    return categories.asMap().entries.map((entry) {
       final index = entry.key;
       final category = entry.value;
       final color = colors[index % colors.length];
-      final value = (category['value'] as num?)?.toDouble() ?? 0.0;
       final name = category['name'] as String? ?? 'Unknown';
-      final percentage = category['percentage'] as num? ?? 0;
+      final productCount = category['productCount'] as int? ?? 0;
 
       return PieChartSectionData(
         color: color,
-        value: value,
-        title: '$name\n${percentage.toStringAsFixed(1)}%',
+        value: productCount.toDouble(),
+        title: '$name\n$productCount',
         radius: 60,
         titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
       );
@@ -384,7 +396,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
                   dotData: FlDotData(show: false),
                   belowBarData: BarAreaData(
                     show: true,
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   ),
                 ),
               ],
@@ -453,7 +465,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
                   dotData: FlDotData(show: false),
                   belowBarData: BarAreaData(
                     show: true,
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                   ),
                 ),
               ],

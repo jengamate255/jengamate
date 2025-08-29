@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'image_upload_test_screen.dart';
+import 'pdf_test_screen.dart';
 
 class TestNavigationHelper {
   /// Navigate to the Image Upload Test Screen
@@ -8,6 +9,16 @@ class TestNavigationHelper {
       context,
       MaterialPageRoute(
         builder: (context) => const ImageUploadTestScreen(),
+      ),
+    );
+  }
+
+  /// Navigate to the PDF Generation Test Screen
+  static void navigateToPdfTest(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const PdfTestScreen(),
       ),
     );
   }
@@ -32,6 +43,9 @@ class TestNavigationHelper {
           case 'image_upload':
             navigateToImageUploadTest(context);
             break;
+          case 'pdf_test':
+            navigateToPdfTest(context);
+            break;
         }
       },
       itemBuilder: (context) => [
@@ -42,6 +56,16 @@ class TestNavigationHelper {
               Icon(Icons.cloud_upload, color: Colors.blue),
               SizedBox(width: 8),
               Text('Test Image Upload'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'pdf_test',
+          child: Row(
+            children: [
+              Icon(Icons.picture_as_pdf, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Test PDF Generation'),
             ],
           ),
         ),

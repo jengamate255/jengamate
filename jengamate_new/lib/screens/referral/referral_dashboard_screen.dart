@@ -171,9 +171,9 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3)),
+                border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -322,7 +322,7 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: statusColor.withOpacity(0.2),
+          backgroundColor: statusColor.withValues(alpha: 0.2),
           child: Text(
             (user.firstName?.isNotEmpty == true ? user.firstName![0] : 'U').toUpperCase(),
             style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
@@ -350,7 +350,7 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.2),
+                color: statusColor.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -396,7 +396,7 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(

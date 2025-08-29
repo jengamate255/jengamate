@@ -5,8 +5,8 @@ import 'package:jengamate/models/enums/order_enums.dart';
 class OrderModel {
   final String id;
   final String orderNumber; // Added orderNumber field
-  final String buyerId;
-  final String supplierId;
+  final String? buyerId;
+  final String? supplierId;
   final double totalAmount;
   final OrderStatus status;
   final OrderType type;
@@ -29,8 +29,8 @@ class OrderModel {
   OrderModel({
     required this.id,
     required this.orderNumber, // Added orderNumber to constructor
-    required this.buyerId,
-    required this.supplierId,
+    this.buyerId,
+    this.supplierId,
     required this.totalAmount,
     required this.status,
     required this.type,
@@ -70,8 +70,8 @@ class OrderModel {
     return OrderModel(
       id: doc.id,
       orderNumber: data['orderNumber'] ?? '', // Added orderNumber from Firestore
-      buyerId: data['buyerId'] ?? '',
-      supplierId: data['supplierId'] ?? '',
+      buyerId: data['buyerId'],
+      supplierId: data['supplierId'],
       totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0.0,
       status: orderStatus,
       type: orderType,

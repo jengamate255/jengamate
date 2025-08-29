@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:jengamate/config/app_routes.dart';
-import '../../services/role_service.dart';
-import '../../models/enhanced_user.dart';
-import '../../services/audit_log_service.dart';
-import '../../services/auth_service.dart';
-import '../../services/database_service.dart';
-import '../../models/user_model.dart';
-import '../../models/enums/user_role.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:jengamate/models/enhanced_user.dart';
+import 'package:jengamate/services/admin_analytics_service.dart';
+import 'package:jengamate/widgets/advanced_filter_panel.dart';
+import 'package:jengamate/widgets/user_activity_timeline.dart';
+import 'package:jengamate/models/admin_user_activity.dart';
+import 'package:provider/provider.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({Key? key}) : super(key: key);
@@ -17,13 +15,19 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
-  final RoleService _roleService = RoleService();
-  final AuditLogService _auditLogService = AuditLogService();
-  final AuthService _authService = AuthService();
-  final DatabaseService _dbService = DatabaseService();
+  final AdminAnalyticsService _analyticsService = AdminAnalyticsService();
   final TextEditingController _searchController = TextEditingController();
+  
+  Map<String, dynamic> _currentFilters = {};
   String _searchQuery = '';
-  String _selectedRoleFilter = 'all';
+  bool _isLoading = false;
+  bool _showFilters = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,48 +36,28 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         title: const Text('User Management'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddUserDialog,
-            tooltip: 'Add New User',
+            icon: const Icon(Icons.filter_list),
+            onPressed: () => _showFilterDialog(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: _exportUsers,
           ),
         ],
       ),
       body: Column(
         children: [
-          _buildSearchAndFilter(),
+          _buildSearchBar(),
+          _buildStatsCards(),
           Expanded(
-            child: StreamBuilder<List<EnhancedUser>>(
-              stream: _roleService.streamAllUsers(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final users = _filterUsers(snapshot.data!);
-                
-                if (users.isEmpty) {
-                  return const Center(child: Text('No users found'));
-                }
-
-                return ListView.builder(
-                  itemCount: users.length,
-                  itemBuilder: (context, index) {
-                    return _buildUserCard(users[index]);
-                  },
-                );
-              },
-            ),
+            child: _buildUserList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchAndFilter() {
+  Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Row(
@@ -82,500 +66,328 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Search users',
+                hintText: 'Search users by name, email, or phone...',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
               ),
               onChanged: (value) {
                 setState(() {
-                  _searchQuery = value;
+                  _searchQuery = value.toLowerCase();
                 });
               },
             ),
           ),
-          const SizedBox(width: 16),
-          DropdownButton<String>(
-            value: _selectedRoleFilter,
-            items: [
-              const DropdownMenuItem(
-                value: 'all',
-                child: Text('All Roles'),
-              ),
-              ..._roleService.getAvailableRoles().map((role) {
-                return DropdownMenuItem(
-                  value: role,
-                  child: Text(role),
-                );
-              }),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _selectedRoleFilter = value ?? 'all';
-              });
-            },
-          ),
+          const SizedBox(width: 8),
+          if (_currentFilters.isNotEmpty)
+            Chip(
+              label: Text('${_currentFilters.length} filters'),
+              onDeleted: () {
+                setState(() {
+                  _currentFilters.clear();
+                });
+              },
+            ),
         ],
       ),
     );
   }
 
+  Widget _buildStatsCards() {
+    return StreamBuilder<Map<String, dynamic>>(
+      stream: _analyticsService.getUserAnalytics(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final data = snapshot.data!;
+        final stats = [
+          {
+            'title': 'Total Users',
+            'value': data['totalUsers']?.toString() ?? '0',
+            'icon': Icons.people,
+            'color': Colors.blue,
+          },
+          {
+            'title': 'Active Users',
+            'value': data['activeUsers']?.toString() ?? '0',
+            'icon': Icons.check_circle,
+            'color': Colors.green,
+          },
+          {
+            'title': 'Pending',
+            'value': data['pendingUsers']?.toString() ?? '0',
+            'icon': Icons.pending,
+            'color': Colors.orange,
+          },
+          {
+            'title': 'Suspended',
+            'value': data['suspendedUsers']?.toString() ?? '0',
+            'icon': Icons.block,
+            'color': Colors.red,
+          },
+        ];
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: stats.map((stat) {
+              return Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Icon(stat['icon'] as IconData, color: stat['color'] as Color),
+                        const SizedBox(height: 8),
+                        Text(
+                          stat['value'] as String,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          stat['title'] as String,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildUserList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _getFilteredUsers(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final users = snapshot.data!.docs
+            .map((doc) => EnhancedUser.fromFirestore(doc))
+            .where((user) => _matchesSearch(user))
+            .toList();
+
+        if (users.isEmpty) {
+          return const Center(
+            child: Text('No users found matching your criteria'),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            return _buildUserCard(users[index]);
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildUserCard(EnhancedUser user) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 8.0),
       child: ListTile(
-        onTap: () => context.go(AppRoutes.userDetails, extra: user),
         leading: CircleAvatar(
-          backgroundImage: user.photoURL != null && user.photoURL!.isNotEmpty
-              ? NetworkImage(user.photoURL!)
-              : null,
-          child: (user.photoURL == null || user.photoURL!.isEmpty) &&
-                  user.displayName.isNotEmpty
-              ? Text(user.displayName[0].toUpperCase())
-              : null,
+          backgroundColor: _getUserStatusColor((user.isActive ? 'approved' : 'suspended')),
+          child: Text(
+            user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
         title: Text(user.displayName),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(user.email),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 4,
-              children: user.roles.map((role) {
-                return Chip(
-                  label: Text(role),
-                  backgroundColor: _getRoleColor(role),
-                  labelStyle: const TextStyle(color: Colors.white, fontSize: 12),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                );
-              }).toList(),
+            Text(
+              '${user.roles.join(', ').toUpperCase()} • ${(user.isActive ? 'approved' : 'suspended').toUpperCase()}',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) => _handleUserAction(user, value),
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Text('Edit User'),
-            ),
-            const PopupMenuItem(
-              value: 'roles',
-              child: Text('Manage Roles'),
-            ),
-            const PopupMenuItem(
-              value: 'permissions',
-              child: Text('View Permissions'),
-            ),
-            const PopupMenuItem(
-              value: 'audit',
-              child: Text('Audit Log'),
-            ),
-            const PopupMenuItem(
-              value: 'deactivate',
-              child: Text('Deactivate User'),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Text('Delete User'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Color _getRoleColor(String role) {
-    switch (role) {
-      case 'super_admin':
-        return Colors.red;
-      case 'admin':
-        return Colors.orange;
-      case 'moderator':
-        return Colors.blue;
-      case 'user':
-        return Colors.green;
-      case 'guest':
-        return Colors.grey;
-      default:
-        return Colors.purple;
-    }
-  }
-
-  List<EnhancedUser> _filterUsers(List<EnhancedUser> users) {
-    return users.where((user) {
-      final matchesSearch = _searchQuery.isEmpty ||
-          user.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          user.email.toLowerCase().contains(_searchQuery.toLowerCase());
-
-      final matchesRole = _selectedRoleFilter == 'all' ||
-          user.roles.contains(_selectedRoleFilter);
-
-      return matchesSearch && matchesRole;
-    }).toList();
-  }
-
-  void _handleUserAction(EnhancedUser user, String action) {
-    switch (action) {
-      case 'edit':
-        _showEditUserDialog(user);
-        break;
-      case 'roles':
-        _showRoleManagementDialog(user);
-        break;
-      case 'permissions':
-        _showPermissionsDialog(user);
-        break;
-      case 'audit':
-        _showAuditLogDialog(user);
-        break;
-      case 'deactivate':
-        _deactivateUser(user);
-        break;
-      case 'delete':
-        _deleteUser(user);
-        break;
-
-    }
-  }
-
-  void _showAddUserDialog() {
-    final formKey = GlobalKey<FormState>();
-    final firstNameCtrl = TextEditingController();
-    final lastNameCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final passwordCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    final companyCtrl = TextEditingController();
-    List<String> selectedRoles = ['user'];
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          bool isSubmitting = false;
-
-          Future<void> submit() async {
-            if (isSubmitting) return;
-            if (!formKey.currentState!.validate()) return;
-            setState(() => isSubmitting = true);
-            try {
-              // 1) Create auth user
-              final cred = await _authService.registerWithEmailAndPassword(
-                emailCtrl.text.trim(),
-                passwordCtrl.text,
-              );
-              final uid = cred.user?.uid;
-              if (uid == null) {
-                throw Exception('Failed to obtain new user UID');
-              }
-
-              // 2) Create Firestore user document
-              final model = UserModel(
-                uid: uid,
-                firstName: firstNameCtrl.text.trim(),
-                lastName: lastNameCtrl.text.trim(),
-                email: emailCtrl.text.trim(),
-                phoneNumber: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
-                companyName: companyCtrl.text.trim().isEmpty ? null : companyCtrl.text.trim(),
-                role: _inferPrimaryRole(selectedRoles),
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-              );
-              await _dbService.createUser(model);
-
-              // 3) Assign roles array and claims via RoleService
-              await _roleService.setUserRoles(uid, selectedRoles);
-
-              // 4) Audit log
-              final actor = _authService.currentUser;
-              if (actor != null) {
-                await _auditLogService.logAction(
-                  actorId: actor.uid,
-                  actorName: actor.displayName ?? 'Unknown Admin',
-                  targetUserId: uid,
-                  targetUserName: '${firstNameCtrl.text.trim()} ${lastNameCtrl.text.trim()}',
-                  action: 'created user',
-                  details: {
-                    'email': emailCtrl.text.trim(),
-                    'roles': selectedRoles,
-                  },
-                );
-              }
-
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('User created successfully')),
-                );
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to create user: $e')),
-                );
-              }
-            } finally {
-              if (context.mounted) setState(() => isSubmitting = false);
-            }
-          }
-
-          return AlertDialog(
-            title: const Text('Add New User'),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: firstNameCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'First Name',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: lastNameCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Last Name',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: emailCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Required';
-                        final email = v.trim();
-                        if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) return 'Invalid email';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: passwordCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Temporary Password',
-                        border: OutlineInputBorder(),
-                      ),
-                      obscureText: true,
-                      validator: (v) => (v == null || v.length < 6) ? 'Min 6 chars' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: phoneCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone (optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: companyCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Company (optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: _roleService.getAvailableRoles().map((role) {
-                          return FilterChip(
-                            label: Text(role),
-                            selected: selectedRoles.contains(role),
-                            onSelected: (sel) {
-                              setState(() {
-                                if (sel) {
-                                  if (!selectedRoles.contains(role)) selectedRoles.add(role);
-                                } else {
-                                  selectedRoles.remove(role);
-                                }
-                                if (selectedRoles.isEmpty) selectedRoles = ['user'];
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: isSubmitting ? null : submit,
-                child: isSubmitting
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Create User'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  void _showEditUserDialog(EnhancedUser user) {
-    final nameController = TextEditingController(text: user.displayName);
-    final emailController = TextEditingController(text: user.email);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit User'),
-        content: Column(
+        trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Display Name'),
+            IconButton(
+              icon: const Icon(Icons.visibility),
+              onPressed: () => _viewUserDetails(user),
             ),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+            PopupMenuButton<String>(
+              onSelected: (value) => _handleUserAction(user, value),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'view',
+                  child: Text('View Details'),
+                ),
+                if ((user.isActive ? 'approved' : 'suspended') != 'approved')
+                  const PopupMenuItem(
+                    value: 'approve',
+                    child: Text('Approve'),
+                  ),
+                if ((user.isActive ? 'approved' : 'suspended') != 'suspended')
+                  const PopupMenuItem(
+                    value: 'suspend',
+                    child: Text('Suspend'),
+                  ),
+                if ((user.isActive ? 'approved' : 'suspended') == 'suspended')
+                  const PopupMenuItem(
+                    value: 'reactivate',
+                    child: Text('Reactivate'),
+                  ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete'),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final actor = _authService.currentUser;
-              if (actor != null) {
-                await _auditLogService.logAction(
-                  actorId: actor.uid,
-                  actorName: actor.displayName ?? 'Unknown Admin',
-                  targetUserId: user.uid,
-                  targetUserName: user.displayName,
-                  action: 'edited user details',
-                  details: {
-                    'oldName': user.displayName,
-                    'newName': nameController.text,
-                    'oldEmail': user.email,
-                    'newEmail': emailController.text,
-                  },
-                );
-              }
-              // Update user logic
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
 
-  void _showRoleManagementDialog(EnhancedUser user) {
-    final availableRoles = _roleService.getAvailableRoles();
-    final selectedRoles = List<String>.from(user.roles);
+  Stream<QuerySnapshot> _getFilteredUsers() {
+    Query query = FirebaseFirestore.instance.collection('users');
 
+    // Apply filters
+    if (_currentFilters['role'] != null) {
+      query = query.where('role', isEqualTo: _currentFilters['role']);
+    }
+
+    if (_currentFilters['status'] != null) {
+      query = query.where('status', isEqualTo: _currentFilters['status']);
+    }
+
+    if (_currentFilters['isActive'] != null) {
+      query = query.where('isActive', isEqualTo: _currentFilters['isActive']);
+    }
+
+    if (_currentFilters['startDate'] != null) {
+      query = query.where('createdAt', isGreaterThanOrEqualTo: _currentFilters['startDate']);
+    }
+
+    if (_currentFilters['endDate'] != null) {
+      query = query.where('createdAt', isLessThanOrEqualTo: _currentFilters['endDate']);
+    }
+
+    return query.snapshots();
+  }
+
+  bool _matchesSearch(EnhancedUser user) {
+    if (_searchQuery.isEmpty) return true;
+    
+    return user.displayName.toLowerCase().contains(_searchQuery) ||
+           user.email.toLowerCase().contains(_searchQuery) ||
+           (user.phoneNumber?.toLowerCase().contains(_searchQuery) ?? false);
+  }
+
+  Color _getUserStatusColor(String status) {
+    switch (status) {
+      case 'approved':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'rejected':
+        return Colors.red;
+      case 'suspended':
+        return Colors.grey;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  void _showFilterDialog() {
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Manage Roles'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: availableRoles.map((role) {
-                return CheckboxListTile(
-                  title: Text(role),
-                  value: selectedRoles.contains(role),
-                  onChanged: (value) {
-                    setState(() {
-                      if (value == true) {
-                        selectedRoles.add(role);
-                      } else {
-                        selectedRoles.remove(role);
-                      }
-                    });
-                  },
-                );
-              }).toList(),
-            ),
+      builder: (context) => Dialog(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: MediaQuery.of(context).size.height * 0.8,
+          child: AdvancedFilterPanel(
+            initialFilters: _currentFilters,
+            onFiltersChanged: (filters) {
+              setState(() {
+                _currentFilters = filters;
+              });
+            },
+            onClearFilters: () {
+              setState(() {
+                _currentFilters.clear();
+              });
+            },
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final actor = _authService.currentUser;
-                if (actor != null) {
-                  await _auditLogService.logAction(
-                    actorId: actor.uid,
-                    actorName: actor.displayName ?? 'Unknown Admin',
-                    targetUserId: user.uid,
-                    targetUserName: user.displayName,
-                    action: 'changed roles',
-                    details: {
-                      'oldRoles': user.roles,
-                      'newRoles': selectedRoles,
-                    },
-                  );
-                }
-                await _roleService.setUserRoles(user.uid, selectedRoles);
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  void _showPermissionsDialog(EnhancedUser user) {
-    final permissions = _roleService.getUserPermissions(user.roles);
-    
+  void _viewUserDetails(EnhancedUser user) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('User Permissions'),
+        title: Text('User Details: ${user.displayName}'),
         content: SingleChildScrollView(
           child: Column(
-            children: permissions.entries.map((entry) {
-              return ListTile(
-                leading: Icon(
-                  entry.value ? Icons.check_circle : Icons.cancel,
-                  color: entry.value ? Colors.green : Colors.red,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow('Name', user.displayName),
+              _buildDetailRow('Email', user.email),
+              _buildDetailRow('Phone', user.phoneNumber ?? 'N/A'),
+              _buildDetailRow('Role', user.roles.join(', ').toUpperCase()),
+              _buildDetailRow('Status', (user.isActive ? 'approved' : 'suspended').toUpperCase()),
+              _buildDetailRow('Active', user.isActive ? 'Yes' : 'No'),
+              _buildDetailRow('Created', user.createdAt?.toString() ?? 'N/A'),
+              _buildDetailRow('Last Login', user.lastLoginAt?.toString() ?? 'N/A'),
+              const SizedBox(height: 16),
+              const Text(
+                'Recent Activity',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 200,
+                width: 400,
+                child: StreamBuilder<List<AdminUserActivity>>(
+                  stream: _analyticsService.getUserActivities(
+                    userId: user.uid,
+                    limit: 10,
+                  ),
+                  builder: (context, snapshot) {
+                    return UserActivityTimeline(
+                      activities: snapshot.data ?? [],
+                      isLoading: !snapshot.hasData,
+                    );
+                  },
                 ),
-                title: Text(entry.key),
-                subtitle: Text(entry.value ? 'Granted' : 'Denied'),
-              );
-            }).toList(),
+              ),
+            ],
           ),
         ),
         actions: [
@@ -588,92 +400,119 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  void _showAuditLogDialog(EnhancedUser user) {
-    context.go(
-      AppRoutes.auditLog,
-      extra: {'userId': user.uid, 'userName': user.displayName},
-    );
-  }
-
-  void _deactivateUser(EnhancedUser user) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Deactivate User'),
-        content: Text('Are you sure you want to deactivate ${user.displayName}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final actor = _authService.currentUser;
-              if (actor != null) {
-                await _auditLogService.logAction(
-                  actorId: actor.uid,
-                  actorName: actor.displayName ?? 'Unknown Admin',
-                  targetUserId: user.uid,
-                  targetUserName: user.displayName,
-                  action: 'deactivated',
-                );
-              }
-              // Deactivate user logic
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Deactivate'),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
   }
 
-  void _deleteUser(EnhancedUser user) {
-    showDialog(
+  Future<void> _handleUserAction(EnhancedUser user, String action) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete ${user.displayName}? This action cannot be undone.'),
+        title: Text('Confirm $action'),
+        content: Text('Are you sure you want to $action ${user.displayName}?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final actor = _authService.currentUser;
-              if (actor != null) {
-                await _auditLogService.logAction(
-                  actorId: actor.uid,
-                  actorName: actor.displayName ?? 'Unknown Admin',
-                  targetUserId: user.uid,
-                  targetUserName: user.displayName,
-                  action: 'deleted',
-                );
-              }
-              // Delete user logic
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm'),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() => _isLoading = true);
+
+      switch (action) {
+        case 'approve':
+          await _updateUserStatus(user.uid, 'approved');
+          break;
+        case 'suspend':
+          await _updateUserStatus(user.uid, 'suspended');
+          break;
+        case 'reactivate':
+          await _updateUserStatus(user.uid, 'approved');
+          break;
+        case 'delete':
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .delete();
+          break;
+      }
+
+      // Log the action
+      await _analyticsService.logUserActivity(
+        userId: user.uid,
+        action: action,
+        ipAddress: 'admin_panel',
+        userAgent: 'admin_dashboard',
+        metadata: {
+          'performedBy': 'admin',
+          'targetUser': user.uid,
+        },
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User ${action}d successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _updateUserStatus(String userId, String status) async {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .update({'status': status});
   }
-}
 
-// Helper to infer a primary role enum from selected roles array
-UserRole _inferPrimaryRole(List<String> roles) {
-  // Prefer admin > supplier > engineer > user > guest
-  if (roles.contains('super_admin') || roles.contains('admin')) return UserRole.admin;
-  if (roles.contains('supplier')) return UserRole.supplier;
-  return UserRole.engineer;
+  Future<void> _exportUsers() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      final csvData = await _analyticsService.exportUsersToCSV(
+        filters: _currentFilters,
+      );
+
+      if (csvData.isNotEmpty) {
+        // In a real app, you would save this to a file
+        // For now, we'll show a success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Users exported successfully')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error exporting users: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 }

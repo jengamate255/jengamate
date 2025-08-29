@@ -4,6 +4,18 @@ class ProductModel {
 
   factory ProductModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    
+    // Handle backward compatibility for fields that might be in different locations
+    final specifications = Map<String, dynamic>.from(data['specifications'] ?? {});
+    
+    // Migrate top-level fields to specifications if needed
+    if (data['gauge'] != null) {
+      specifications['gauge'] = data['gauge'];
+    }
+    if (data['profile'] != null) {
+      specifications['profile'] = data['profile'];
+    }
+    
     return ProductModel(
       id: doc.id,
       name: data['name'] ?? '',
@@ -11,8 +23,8 @@ class ProductModel {
       price: (data['price'] as num?)?.toDouble() ?? 0.0,
       imageUrl: data['imageUrl'] ?? '',
       imageUrls: List<String>.from(data['imageUrls'] ?? []),
-      categoryId: data['categoryId'] ?? '',
-      subCategoryId: data['subCategoryId'],
+      categoryId: data['categoryId'] ?? data['category'] ?? '', // Backward compatibility
+      subCategoryId: data['subCategoryId'] ?? data['subcategory'], // Backward compatibility
       supplierId: data['supplierId'] ?? '',
       isHot: data['isHot'] ?? false,
       numberOfReviews: (data['numberOfReviews'] as num?)?.toInt() ?? 0,
@@ -30,12 +42,12 @@ class ProductModel {
               .toList() ??
           const [],
       unitId: data['unitId'],
-      brandId: data['brandId'],
+      brandId: data['brandId'] ?? data['brand'], // Backward compatibility
       status: data['status'] ?? 'active',
       isActive: data['isActive'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      specifications: data['specifications'] as Map<String, dynamic>?,
+      specifications: specifications.isNotEmpty ? specifications : null,
     );
   }
   final String id;
@@ -61,6 +73,13 @@ class ProductModel {
   final List<ProductVariant> variants;
   final String? unitId;
   final String? brandId;
+  
+  // Backward compatibility getters
+  String? get brand => brandId; // For backward compatibility
+  String? get category => categoryId; // For backward compatibility
+  String? get subcategory => subCategoryId; // For backward compatibility
+  String? get gauge => specifications?['gauge']?.toString(); // Get gauge from specifications
+  String? get profile => specifications?['profile']?.toString(); // Get profile from specifications
   final String status;
   final bool isActive;
   final DateTime createdAt;
@@ -140,9 +159,11 @@ class ProductModel {
       'description': description,
       'price': price,
       'imageUrl': imageUrl,
-      'imageUrls': imageUrls, // Include new field
+      'imageUrls': imageUrls,
       'categoryId': categoryId,
+      'category': categoryId, // Backward compatibility
       'subCategoryId': subCategoryId,
+      'subcategory': subCategoryId, // Backward compatibility
       'supplierId': supplierId,
       'isHot': isHot,
       'numberOfReviews': numberOfReviews,
@@ -158,11 +179,16 @@ class ProductModel {
       'variants': variants.map((v) => v.toMap()).toList(),
       'unitId': unitId,
       'brandId': brandId,
+      'brand': brandId, // Backward compatibility
       'status': status,
       'isActive': isActive,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
-      'specifications': specifications,
+      'specifications': {
+        ...?specifications,
+        if (gauge != null) 'gauge': gauge, // Ensure gauge is in specifications
+        if (profile != null) 'profile': profile, // Ensure profile is in specifications
+      },
     };
   }
 

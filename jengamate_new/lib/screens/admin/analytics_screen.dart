@@ -31,11 +31,59 @@ class AnalyticsScreen extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Sales Analytics Unavailable',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Database index required. Click the link in the error message to create the index.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              // Trigger a reload
+                              (context as Element).markNeedsBuild();
+                            },
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
                 final salesData = snapshot.data ?? {};
                 if (salesData.isEmpty) {
-                  return const Center(child: Text('No sales data available.'));
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.trending_up, color: Colors.grey, size: 48),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'No Sales Data Available',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No completed orders found in the last 30 days.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
 
                 // Prepare data for the line chart

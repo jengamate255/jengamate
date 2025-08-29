@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:jengamate/models/chat_room_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/widgets/avatar_widget.dart';
 import 'package:jengamate/config/app_routes.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -122,13 +123,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     final lastMessageTime = chatRoom.lastMessageTimestamp ?? chatRoom.createdAt;
 
                     return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: otherUser.photoUrl != null
-                            ? NetworkImage(otherUser.photoUrl!)
-                            : null,
-                        child: otherUser.photoUrl == null
-                            ? const Icon(Icons.person)
-                            : null,
+                      leading: AvatarWidget(
+                        photoUrl: otherUser.photoUrl,
+                        displayName: otherUser.displayName,
+                        radius: 20,
                       ),
                       title: Text(otherUser.displayName),
                       subtitle: Text(

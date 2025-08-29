@@ -311,7 +311,7 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Theme.of(context).primaryColor.withOpacity(0.1),
+      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
       child: Responsive.isMobile(context)
           ? Column(children: _buildStatItems(openTickets, inProgressTickets, resolvedTickets, totalTickets))
           : Row(
@@ -405,7 +405,7 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: statusColor.withOpacity(0.2),
+          backgroundColor: statusColor.withValues(alpha: 0.2),
           child: Icon(_getStatusIcon(ticket.status), color: statusColor, size: 20),
         ),
         title: Text(
@@ -685,7 +685,7 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -700,7 +700,7 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/rfq_model.dart';
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/services/notification_service.dart';
+import 'package:jengamate/services/reporting_service.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/utils/theme.dart';
+import 'package:jengamate/utils/logger.dart';
+import 'dart:async';
 
 class RfqManagementDashboard extends StatefulWidget {
   const RfqManagementDashboard({super.key});
@@ -13,21 +17,102 @@ class RfqManagementDashboard extends StatefulWidget {
   State<RfqManagementDashboard> createState() => _RfqManagementDashboardState();
 }
 
-class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
-  final _dbService = DatabaseService();
-  final _searchController = TextEditingController();
-  String _selectedStatus = 'All';
-  String _selectedType = 'All';
-  List<RFQModel> _filteredRfqs = [];
-  List<RFQModel> _allRfqs = [];
-  
-  final List<String> _statusOptions = ['All', 'Pending', 'Approved', 'Rejected', 'Processing', 'Completed'];
-  final List<String> _typeOptions = ['All', 'Standard', 'Bid', 'Catalog', 'Marketplace'];
+class _RfqManagementDashboardState extends State<RfqManagementDashboard> with WidgetsBindingObserver {
+   final _dbService = DatabaseService();
+   final _notificationService = NotificationService();
+   final _reportingService = ReportingService();
+   final _searchController = TextEditingController();
+   String _selectedStatus = 'All';
+   String _selectedType = 'All';
+   List<RFQModel> _filteredRfqs = [];
+   List<RFQModel> _allRfqs = [];
+   StreamSubscription<List<RFQModel>>? _rfqSubscription;
+   bool _isLoading = true;
+   bool _hasError = false;
+   String _errorMessage = '';
+   int _retryCount = 0;
+   static const int _maxRetries = 3;
+
+   final List<String> _statusOptions = ['All', 'Pending', 'Approved', 'Rejected', 'Processing', 'Completed'];
+   final List<String> _typeOptions = ['All', 'Standard', 'Bid', 'Catalog', 'Marketplace'];
+
+   // Date range filtering
+   DateTime? _startDate;
+   DateTime? _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeStream();
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _rfqSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _retryConnection();
+    }
+  }
+
+  void _initializeStream() {
+    _rfqSubscription?.cancel();
+    _rfqSubscription = _dbService.streamAllRFQs().listen(
+      _onDataReceived,
+      onError: _onStreamError,
+      onDone: _onStreamDone,
+    );
+  }
+
+  void _onDataReceived(List<RFQModel> rfqs) {
+    setState(() {
+      _allRfqs = rfqs;
+      _isLoading = false;
+      _hasError = false;
+      _retryCount = 0;
+      _filterRfqs();
+    });
+  }
+
+  void _onStreamError(Object error) {
+    Logger.logError('RFQ Stream Error', error, StackTrace.current);
+    setState(() {
+      _hasError = true;
+      _errorMessage = error.toString();
+      _isLoading = false;
+    });
+    _handleStreamError(error);
+  }
+
+  void _onStreamDone() {
+    Logger.log('RFQ Stream completed');
+  }
+
+  void _handleStreamError(Object error) {
+    if (_retryCount < _maxRetries) {
+      _retryCount++;
+      Future.delayed(Duration(seconds: _retryCount * 2), () {
+        if (mounted) {
+          _initializeStream();
+        }
+      });
+    }
+  }
+
+  void _retryConnection() {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _retryCount = 0;
+    });
+    _initializeStream();
   }
 
   void _filterRfqs() {
@@ -68,32 +153,76 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
           ),
         ),
       ),
-      body: StreamBuilder<List<RFQModel>>(
-        stream: _dbService.streamAllRFQs(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          
-          _allRfqs = snapshot.data ?? [];
-          if (_allRfqs.isEmpty) {
-            return const Center(child: Text('No RFQs found.'));
-          }
-          
-          if (_filteredRfqs.isEmpty && _allRfqs.isNotEmpty) {
-            _filteredRfqs = _allRfqs;
-          }
+      body: _buildBody(),
+    );
+  }
 
-          return Column(
-            children: [
-              _buildFilterSection(),
-              Expanded(child: _buildRfqTable()),
-            ],
-          );
-        },
+  Widget _buildBody() {
+    if (_isLoading) {
+      return _buildLoadingState();
+    }
+
+    if (_hasError) {
+      return _buildErrorState();
+    }
+
+    if (_allRfqs.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return Column(
+      children: [
+        _buildFilterSection(),
+        Expanded(child: _buildRfqTable()),
+      ],
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Loading RFQs...', style: TextStyle(color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red),
+          SizedBox(height: 16),
+          Text('Connection Error', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text(_errorMessage, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+          SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _retryConnection,
+            icon: Icon(Icons.refresh),
+            label: Text('Retry (${_retryCount}/${_maxRetries})'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.request_quote, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text('No RFQs found', style: TextStyle(fontSize: 18, color: Colors.grey)),
+          SizedBox(height: 8),
+          Text('RFQs will appear here once customers submit requests', style: TextStyle(color: Colors.grey)),
+        ],
       ),
     );
   }
@@ -245,12 +374,11 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
             ),
             child: Row(
               children: [
-                const Expanded(flex: 2, child: Text('Knowledge', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                const Expanded(flex: 2, child: Text('Product/Service', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
                 const Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Min Qty', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Unit', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Expiry', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Participants', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                const Expanded(flex: 2, child: Text('Quantity', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                const Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                const Expanded(flex: 2, child: Text('Status', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
                 const Expanded(flex: 2, child: Text('Amount', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
                 const Expanded(flex: 1, child: Text('Action', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
               ],
@@ -313,21 +441,13 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
           ),
           Expanded(
             flex: 2,
-            child: Text(
-              DateFormat('dd MMM yy').format(rfq.updatedAt),
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Row(
+            child: Wrap(
+              spacing: 4.0, // gap between adjacent chips
+              runSpacing: 4.0, // gap between lines
               children: [
                 _buildStatusBadge('Received', Colors.blue),
-                const SizedBox(width: 4),
                 _buildStatusBadge('Responded', Colors.green),
-                const SizedBox(width: 4),
                 _buildStatusBadge('Evaluated', Colors.orange),
-                const SizedBox(width: 4),
                 _buildStatusBadge('Awarded', Colors.purple),
               ],
             ),
@@ -477,6 +597,8 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Status updated to "$selected"')),
                     );
+                    // Send notification for status change
+                    await _sendStatusChangeNotification(rfq, selected);
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -493,4 +615,16 @@ class _RfqManagementDashboardState extends State<RfqManagementDashboard> {
       },
     );
   }
-}
+   Future<void> _sendStatusChangeNotification(RFQModel rfq, String newStatus) async {
+     try {
+       await _notificationService.showNotification(
+         title: 'RFQ Status Updated',
+         body: 'RFQ "${rfq.productName}" status changed to $newStatus',
+         payload: 'rfq/${rfq.id}',
+       );
+       Logger.log('Status change notification sent for RFQ: ${rfq.id}');
+     } catch (e) {
+       Logger.logError('Failed to send status change notification', e, StackTrace.current);
+     }
+   }
+ }

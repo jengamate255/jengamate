@@ -26,17 +26,17 @@ class ProductInteractionService {
         productName: product.name,
         userId: user.uid,
         userName: user.name,
-        userEmail: user.email,
+        userEmail: user.email ?? 'unknown@example.com',
         userRole: user.role.toString().split('.').last,
         interactionType: interactionType,
         timestamp: DateTime.now(),
         productDetails: {
-          'category': product.category,
-          'subcategory': product.subcategory,
+          'category': product.category ?? 'uncategorized',
+          'subcategory': product.subcategory ?? '',
           'price': product.price,
-          'brand': product.brand,
-          'gauge': product.gauge,
-          'profile': product.profile,
+          'brand': product.brand ?? 'unknown',
+          'gauge': product.gauge ?? '',
+          'profile': product.profile ?? '',
           'type': product.type,
           'thickness': product.thickness,
           'color': product.color,
@@ -58,14 +58,21 @@ class ProductInteractionService {
 
       await _firestore.collection(_interactionsCollection).add(interaction.toMap());
 
-      // Log analytics event
-      Logger.logEvent('product_interaction', parameters: {
+      // Log analytics event with null safety and proper typing
+      final parameters = <String, Object>{
         'product_id': product.id,
         'product_name': product.name,
         'interaction_type': interactionType,
         'user_role': user.role.toString().split('.').last,
-        'category': product.category,
-      });
+      };
+      
+      // Add category if it's not null
+      final category = product.category;
+      if (category != null) {
+        parameters['category'] = category;
+      }
+      
+      Logger.logEvent('product_interaction', parameters: parameters);
 
       Logger.log('Product interaction tracked: ${product.name} - $interactionType by ${user.name}');
     } catch (e, s) {
@@ -91,15 +98,15 @@ class ProductInteractionService {
         productName: product.name,
         engineerId: engineer.uid,
         engineerName: engineer.name,
-        engineerEmail: engineer.email,
+        engineerEmail: engineer.email ?? 'unknown@example.com',
         status: 'initiated',
         createdAt: DateTime.now(),
         productSpecs: {
-          'category': product.category,
-          'subcategory': product.subcategory,
-          'brand': product.brand,
-          'gauge': product.gauge,
-          'profile': product.profile,
+          'category': product.category ?? 'uncategorized',
+          'subcategory': product.subcategory ?? '',
+          'brand': product.brand ?? 'unknown',
+          'gauge': product.gauge ?? '',
+          'profile': product.profile ?? '',
           'type': product.type,
           'thickness': product.thickness,
           'color': product.color,
@@ -132,7 +139,7 @@ class ProductInteractionService {
         'product_id': product.id,
         'product_name': product.name,
         'engineer_id': engineer.uid,
-        'quantity': quantity,
+        'quantity': quantity ?? 1,
       });
 
       Logger.log('RFQ tracking created: ${product.name} by ${engineer.name}');

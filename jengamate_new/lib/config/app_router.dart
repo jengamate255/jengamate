@@ -63,6 +63,9 @@ import 'package:jengamate/screens/admin/rfq_management_dashboard.dart';
 import 'package:jengamate/screens/admin/rfq_analytics_dashboard.dart';
 import 'package:jengamate/screens/supplier/supplier_rfq_dashboard.dart';
 import 'package:jengamate/screens/admin/rfq_management_test.dart';
+import 'package:jengamate/screens/invoices/invoices_screen.dart';
+import 'package:jengamate/screens/invoices/invoice_details_screen.dart';
+import 'package:jengamate/screens/invoices/create_invoice_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -390,6 +393,22 @@ class AppRouter {
       GoRoute(
         path: '/admin-support',
         builder: (context, state) => const SupportDashboardScreen(isAdminView: true),
+      ),
+      // Invoice Routes
+      GoRoute(
+        path: AppRoutes.invoices,
+        builder: (context, state) => const InvoicesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.createInvoice,
+        builder: (context, state) => const CreateInvoiceScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.invoiceDetails,
+        builder: (context, state) {
+          final invoiceId = state.pathParameters['invoiceId']!;
+          return InvoiceDetailsScreen(invoiceId: invoiceId);
+        },
       ),
     ],
   );

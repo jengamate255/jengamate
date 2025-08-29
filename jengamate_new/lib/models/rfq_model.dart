@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RFQModel {
   final String id;
-  final String userId;
+  final String? userId;
   final String productId;
   final String productName;
   final String customerName;
@@ -21,7 +21,7 @@ class RFQModel {
 
   RFQModel({
     required this.id,
-    this.userId = '',
+    this.userId,
     required this.productId,
     required this.productName,
     this.inquiryId,
@@ -44,7 +44,7 @@ class RFQModel {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return RFQModel(
       id: doc.id,
-      userId: data['userId'] ?? '',
+      userId: data['userId'],
       productId: data['productId'] ?? '',
       productName: data['productName'] ?? '',
       customerName: data['customerName'] ?? '',
@@ -66,7 +66,7 @@ class RFQModel {
   factory RFQModel.fromMap(Map<String, dynamic> data, String id) {
     return RFQModel(
       id: id,
-      userId: data['userId'] ?? '',
+      userId: data['userId'],
       productId: data['productId'] ?? '',
       productName: data['productName'] ?? '',
       customerName: data['customerName'] ?? '',

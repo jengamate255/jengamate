@@ -31,10 +31,12 @@ import 'package:jengamate/screens/admin/rfq_management_screen.dart';
 import 'package:jengamate/screens/admin/rfq_management_screen.dart' as admin;
 import 'package:jengamate/screens/test/image_upload_test_screen.dart';
 import 'package:jengamate/screens/rfq/rfq_details_screen.dart' as rfq_details;
-import 'package:jengamate/auth/engineer_registration_screen.dart'; // Import the new screen
+import 'package:jengamate/auth/engineer_registration_screen.dart';
 import 'package:jengamate/screens/admin/add_edit_product_screen.dart';
 import 'package:jengamate/models/product_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
+import 'package:jengamate/screens/invoices/invoices_screen.dart';
+import 'package:jengamate/screens/invoices/invoice_details_screen.dart';
 
 class AppRoutes {
   static const String login = '/login';
@@ -69,11 +71,13 @@ class AppRoutes {
   static const String rfqList = '/rfq-list';
   static const String rfqManagement = '/rfq-management';
   static const String rfqDetails = '/rfqs/:rfqId';
-  static const String engineerRegistration =
-      '/engineer-registration'; // New route
-  static const String imageUploadTest = '/image-upload-test'; // Test route
+  static const String engineerRegistration = '/engineer-registration';
+  static const String imageUploadTest = '/image-upload-test';
   static const String addEditProduct = '/add-edit-product';
   static const String chatConversation = '/chat-conversation/:chatId';
+  static const String invoices = '/invoices';
+  static const String invoiceDetails = '/invoices/:invoiceId';
+  static const String createInvoice = '/invoices/create';
 
 
 }
@@ -95,5 +99,9 @@ class AppRouteBuilders {
 
   static String rfqDetailsPath(String rfqId) {
     return AppRoutes.rfqDetails.replaceFirst(':rfqId', rfqId);
+  }
+
+  static String invoiceDetailsPath(String invoiceId) {
+    return AppRoutes.invoiceDetails.replaceFirst(':invoiceId', invoiceId);
   }
 }

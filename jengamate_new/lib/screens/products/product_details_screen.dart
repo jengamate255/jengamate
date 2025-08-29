@@ -575,7 +575,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(6.0),
-                    color: AppTheme.primaryColor.withOpacity(0.2),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
                   ),
                   child: const Center(
                     child: Icon(

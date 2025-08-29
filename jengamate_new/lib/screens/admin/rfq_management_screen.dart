@@ -39,9 +39,13 @@ class _RfqManagementScreenState extends State<RFQManagementScreen> {
               return Card(
                 margin: const EdgeInsets.all(8.0),
                 child: ListTile(
-                  title: Text('RFQ ID: ${rfq.id}'),
-                  subtitle: Text(
-                      'User: ${rfq.userId} - ${DateFormat.yMd().add_jm().format(rfq.createdAt)}'),
+                  title: Flexible(child: Text('RFQ ID: ${rfq.id}')),
+                  subtitle: Flexible(
+                    child: Text(
+                      'User: ${rfq.userId} - ${DateFormat.yMd().add_jm().format(rfq.createdAt)}',
+                      overflow: TextOverflow.ellipsis, // Add ellipsis for long text
+                    ),
+                  ),
                 ),
               );
             },

@@ -276,7 +276,7 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Theme.of(context).primaryColor.withOpacity(0.1),
+      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -361,7 +361,7 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
       margin: const EdgeInsets.only(bottom: 8),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: severityColor.withOpacity(0.2),
+          backgroundColor: severityColor.withValues(alpha: 0.2),
           child: Icon(contentIcon, color: severityColor, size: 20),
         ),
         title: Text(
@@ -499,7 +499,7 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

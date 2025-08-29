@@ -1,4 +1,13 @@
 class Validators {
+  /// Required field validation with custom message
+  static String? requiredField(String? value, String fieldName) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+    return null;
+  }
+
+  /// Required field validation with custom message
   /// Email validation
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {

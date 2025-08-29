@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/models/message_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -83,13 +84,14 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       appBar: AppBar(
         title: Text(widget.otherUserName),
         actions: [
-          if (_chatPartner?.photoUrl != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: CircleAvatar(
-                backgroundImage: NetworkImage(_chatPartner!.photoUrl!),
-              ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: AvatarWidget(
+              photoUrl: _chatPartner?.photoUrl,
+              displayName: _chatPartner?.displayName ?? widget.otherUserName,
+              radius: 16,
             ),
+          ),
         ],
       ),
       body: Column(

@@ -13,6 +13,7 @@ import 'package:jengamate/services/supabase_service.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/services/theme_service.dart';
 import 'package:jengamate/services/notification_service.dart';
+import 'package:jengamate/services/invoice_service.dart';
 import 'package:provider/provider.dart';
 import 'config/app_router.dart';
 import 'config/app_theme.dart';
@@ -37,9 +38,11 @@ Future<void> main() async {
       options.debug = kDebugMode;
     },
     appRunner: () => runZonedGuarded(() async {
+      // Ensure Flutter bindings are initialized in the same zone as runApp
+      // to prevent "Zone mismatch" errors.
       WidgetsFlutterBinding.ensureInitialized();
 
-    const bool kTestCrashOnStart = bool.fromEnvironment('TEST_CRASH_ON_START');
+      const bool kTestCrashOnStart = bool.fromEnvironment('TEST_CRASH_ON_START');
 
     try {
       debugPrint('🚀 Initializing Firebase...');
@@ -53,21 +56,8 @@ Future<void> main() async {
         runApp(const MyApp());
         return; // prevent executing Firebase init below
       }
-      // Manually configure Firebase for web to avoid issues with environment variables in release builds.
-      const firebaseOptionsWeb = FirebaseOptions(
-        apiKey: "AIzaSyCZku_umeY0AXt_IyG6Y898RKHfpL2rw7E",
-        appId: "1:546254001513:web:c9b63734564a66474899f8",
-        messagingSenderId: "546254001513",
-        projectId: "jengamate",
-        authDomain: "jengamate.firebaseapp.com",
-        storageBucket: "jengamate.firebasestorage.app",
-        measurementId: "G-F1FP84T3E7",
-      );
-
       await Firebase.initializeApp(
-        options: kIsWeb
-            ? firebaseOptionsWeb
-            : DefaultFirebaseOptions.currentPlatform,
+        options: DefaultFirebaseOptions.currentPlatform,
       );
 
       // Initialize Supabase with configured credentials
@@ -88,10 +78,11 @@ Future<void> main() async {
       //   }
       // }
 
-      if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android) {
+      if (!kIsWeb) { // Apply Crashlytics setup only if not on web
         try {
+          // Only enable Crashlytics collection in release mode
           await FirebaseCrashlytics.instance
-              .setCrashlyticsCollectionEnabled(!kDebugMode);
+              .setCrashlyticsCollectionEnabled(kReleaseMode);
 
           // Forward Flutter framework errors to both Sentry and Firebase
           FlutterError.onError = (FlutterErrorDetails details) {
@@ -100,11 +91,13 @@ Future<void> main() async {
             FirebaseCrashlytics.instance.recordFlutterFatalError(details);
           };
 
-          // Forward uncaught async and platform errors to both Sentry and Firebase
+          // Forward uncaught async and platform errors to Sentry and Firebase (if enabled)
           PlatformDispatcher.instance.onError =
               (Object error, StackTrace stack) {
             Sentry.captureException(error, stackTrace: stack);
-            FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+            if (kReleaseMode) { // Only record fatal errors in release mode
+              FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+            }
             return true; // handled
           };
 
@@ -151,8 +144,7 @@ Future<void> main() async {
       // Report to both Sentry and Firebase Crashlytics
       Sentry.captureException(error, stackTrace: stack);
 
-      if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android) {
-        // Best-effort reporting on non-web
+      if (!kIsWeb && kReleaseMode) { // Best-effort reporting on non-web in release mode
         FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       }
     }),
@@ -180,6 +172,9 @@ class MyApp extends StatelessWidget {
             notificationService.loadNotificationSettings(); // Load settings asynchronously
             return notificationService;
           },
+        ),
+        Provider<InvoiceService>(
+          create: (_) => InvoiceService(),
         ),
         StreamProvider<User?>(
           create: (context) => context.read<AuthService>().authStateChanges,

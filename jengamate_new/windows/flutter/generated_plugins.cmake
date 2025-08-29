@@ -10,6 +10,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_auth
   firebase_core
   firebase_storage
+  printing
   sentry_flutter
   share_plus
   url_launcher_windows

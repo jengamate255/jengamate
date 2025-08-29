@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class QuoteModel {
   final String id;
   final String rfqId;
-  final String supplierId;
+  final String? supplierId;
   final double price;
   final String notes;
   final DateTime? deliveryDate;
@@ -13,7 +13,7 @@ class QuoteModel {
   QuoteModel({
     required this.id,
     required this.rfqId,
-    required this.supplierId,
+    this.supplierId,
     required this.price,
     this.notes = '',
     this.deliveryDate,
@@ -26,7 +26,7 @@ class QuoteModel {
     return QuoteModel(
       id: doc.id,
       rfqId: data['rfqId'] ?? '',
-      supplierId: data['supplierId'] ?? '',
+      supplierId: data['supplierId'] as String?,
       price: (data['price'] ?? 0.0).toDouble(),
       notes: data['notes'] ?? '',
       deliveryDate: (data['deliveryDate'] as Timestamp?)?.toDate(),
@@ -39,7 +39,7 @@ class QuoteModel {
     return QuoteModel(
       id: id,
       rfqId: map['rfqId'] ?? '',
-      supplierId: map['supplierId'] ?? '',
+      supplierId: map['supplierId'] as String?,
       price: (map['price'] ?? 0.0).toDouble(),
       notes: map['notes'] ?? '',
       deliveryDate: map['deliveryDate']?.toDate(),

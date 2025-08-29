@@ -300,7 +300,7 @@ class _SectionHeader extends StatelessWidget {
           style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(width: 8),
-        Expanded(child: Divider(color: theme.dividerColor.withOpacity(0.4))),
+        Expanded(child: Divider(color: theme.dividerColor.withValues(alpha: 0.4))),
       ],
     );
   }
@@ -361,9 +361,9 @@ class _TierList extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.4)),
+                    border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.4)),
                   ),
                   child: Text('Order: ${t.order}', style: const TextStyle(fontWeight: FontWeight.w600)),
                 ),
@@ -503,9 +503,9 @@ class _ResultBox extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.06),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.4)),
+        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -35,6 +35,26 @@ class UserModel {
   final List<String> subscribedCategoryIds;
 
   String get displayName => '$firstName $lastName'; // Updated getter
+  String get name => displayName; // Alias for compatibility
+  
+  // Location related fields
+  String? get location => _location ?? (cityTown != null && region != null 
+      ? '$cityTown, $region' 
+      : cityTown ?? region ?? address);
+  final String? _location; // For backward compatibility
+  
+  // Backward compatible location setter
+  UserModel withLocation(String? value) {
+    if (value == null) return this;
+    
+    final parts = value.split(',').map((e) => e.trim()).toList();
+    if (parts.length > 1) {
+      return copyWith(cityTown: parts[0], region: parts[1]);
+    } else if (parts.isNotEmpty) {
+      return copyWith(cityTown: parts[0]);
+    }
+    return this;
+  }
 
   UserModel({
     required this.uid,
@@ -67,7 +87,7 @@ class UserModel {
     this.referralCode,
     this.lastLogin,
     this.fcmToken,
-  });
+  }) : _location = null;
 
   // Factory constructor to create a UserModel from a map (e.g., from Firestore)
   factory UserModel.fromMap(Map<String, dynamic> data, String documentId) {

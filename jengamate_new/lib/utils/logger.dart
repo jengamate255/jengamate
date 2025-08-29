@@ -29,16 +29,18 @@ class Logger {
     }
 
     // Firebase Crashlytics integration
-    try {
-      if (error != null) {
-        FirebaseCrashlytics.instance.recordError(error, stackTrace, reason: message);
-      } else {
-        FirebaseCrashlytics.instance.log(message);
-      }
-    } catch (e) {
-      // Silently fail if Firebase is not configured
-      if (kDebugMode) {
-        print('[CRASHLYTICS_ERROR] $e');
+    if (!kIsWeb) { // Only attempt to log to Crashlytics if not on web
+      try {
+        if (error != null) {
+          FirebaseCrashlytics.instance.recordError(error, stackTrace, reason: message);
+        } else {
+          FirebaseCrashlytics.instance.log(message);
+        }
+      } catch (e) {
+        // Silently fail if Firebase is not configured or if there's an issue with Crashlytics
+        if (kDebugMode) {
+          print('[CRASHLYTICS_ERROR] $e');
+        }
       }
     }
   }

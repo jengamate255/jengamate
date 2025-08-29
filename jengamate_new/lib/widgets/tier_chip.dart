@@ -16,9 +16,9 @@ class TierChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = color.withOpacity(0.15);
+    final bg = color.withValues(alpha: 0.15);
     final borderColor = outlined
-        ? color.withOpacity(0.35)
+        ? color.withValues(alpha: 0.35)
         : Colors.transparent;
     return Container(
       padding: padding,

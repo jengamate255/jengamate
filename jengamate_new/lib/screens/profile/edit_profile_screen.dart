@@ -150,7 +150,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         : (widget.user.photoUrl != null
                             ? NetworkImage(widget.user.photoUrl!)
                                 as ImageProvider
-                            : const AssetImage('assets/images/default_avatar.png')),
+                            : null), // Use null for fallback to child widget
                     child: _profileImage == null && widget.user.photoUrl == null
                         ? const Icon(Icons.camera_alt,
                             size: 40, color: Colors.white70)

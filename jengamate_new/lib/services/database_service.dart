@@ -2,6 +2,7 @@
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added import for FirebaseAuth
 import 'package:jengamate/utils/logger.dart';
 import 'package:jengamate/models/category_model.dart';
 import 'package:jengamate/models/chat_room_model.dart';
@@ -38,6 +39,22 @@ class DatabaseService {
 
   // Collections
   final String _usersCollection = 'users';
+
+  // Get current user data
+  Future<UserModel?> getCurrentUser() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      
+      final doc = await _firestore.collection(_usersCollection).doc(user.uid).get();
+      if (!doc.exists) return null;
+      
+      return UserModel.fromMap(doc.data()!, doc.id); // Fixed argument for fromMap
+    } catch (e) {
+      Logger.logError('Error getting current user', e, StackTrace.current);
+      return null;
+    }
+  }
   final String _ordersCollection = 'orders';
   final String _paymentsCollection = 'payments';
   final String _transactionsCollection = 'financial_transactions';
@@ -104,9 +121,9 @@ class DatabaseService {
         // Create audit log for order creation
         try {
           await createAuditLog(
-            actorId: order.buyerId,
+            actorId: order.buyerId ?? '',
             actorName: 'User', // This could be enhanced to get actual user name
-            targetUserId: order.buyerId,
+            targetUserId: order.buyerId ?? '',
             targetUserName: 'User',
             action: 'create',
             details: {
@@ -129,7 +146,7 @@ class DatabaseService {
         if (order.totalAmount <= 0) {
           throw Exception('Order total amount must be positive');
         }
-        if (order.buyerId.isEmpty || order.supplierId.isEmpty) {
+        if (order.buyerId == null || order.buyerId!.isEmpty || order.supplierId == null || order.supplierId!.isEmpty) {
           throw Exception('Order must have both buyer and supplier');
         }
       },
@@ -138,13 +155,13 @@ class DatabaseService {
 
   Future<ProductModel?> getProduct(String productId) async {
     try {
-      final doc = await _firestore.collection('products').doc(productId).get();
+      final doc = await _firestore.collection(_productsCollection).doc(productId).get();
       if (doc.exists) {
         return ProductModel.fromFirestore(doc);
       }
       return null;
-    } catch (e, s) {
-      Logger.logError('Failed to get product', e, s);
+    } catch (e) {
+      Logger.logError('Failed to get product', e);
       return null;
     }
   }
@@ -407,7 +424,7 @@ class DatabaseService {
 
           final supplierCommissionRecord = CommissionModel(
             id: '', // Firestore will generate this
-            userId: order.supplierId,
+            userId: order.supplierId ?? '',
             total: supplierCommissionAmount,
             direct: commissionRules.direct,
             referral: 0,
@@ -427,14 +444,55 @@ class DatabaseService {
   }
 
   // Financial Transaction Management
-  Stream<List<FinancialTransaction>> getFinancialTransactions() {
+  Stream<List<FinancialTransaction>> getFinancialTransactions({int limit = 100}) {
     return _firestore
         .collection(_transactionsCollection)
         .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => FinancialTransaction.fromFirestore(doc))
             .toList());
+  }
+
+  Future<List<FinancialTransaction>> getPaginatedFinancialTransactions({
+    int limit = 50,
+    DocumentSnapshot? startAfter,
+  }) async {
+    try {
+      Query query = _firestore
+          .collection(_transactionsCollection)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final snapshot = await query.get();
+      return snapshot.docs
+          .map((doc) => FinancialTransaction.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      Logger.logError('Error getting paginated financial transactions', e, StackTrace.current);
+      return [];
+    }
+  }
+
+  // Helper method to get the last document for pagination
+  Future<DocumentSnapshot?> getLastTransactionDocument() async {
+    try {
+      final snapshot = await _firestore
+          .collection(_transactionsCollection)
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
+    } catch (e) {
+      Logger.logError('Error getting last transaction document', e, StackTrace.current);
+      return null;
+    }
   }
 
   Future<List<FinancialTransaction>> getUserTransactions(String userId) async {
@@ -661,22 +719,152 @@ class DatabaseService {
   }
 
   Stream<List<RFQModel>> streamUserRFQs(String userId) {
-    return _firestore
-        .collection(_rfqsCollection)
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => RFQModel.fromFirestore(doc)).toList());
+    try {
+      return _firestore
+          .collection(_rfqsCollection)
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .handleError((error) {
+            Logger.logError('Error in streamUserRFQs with orderBy', error, StackTrace.current);
+            // Return fallback stream without orderBy if index is missing
+            return _firestore
+                .collection(_rfqsCollection)
+                .where('userId', isEqualTo: userId)
+                .snapshots()
+                .map((snapshot) {
+                  var rfqs = snapshot.docs
+                      .map((doc) => RFQModel.fromFirestore(doc))
+                      .toList();
+                  // Sort in memory as fallback
+                  rfqs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                  return rfqs;
+                });
+          })
+          .map((snapshot) =>
+              snapshot.docs.map((doc) => RFQModel.fromFirestore(doc)).toList());
+    } catch (e) {
+      Logger.logError('Critical error in streamUserRFQs', e, StackTrace.current);
+      // Return fallback query without orderBy
+      return _firestore
+          .collection(_rfqsCollection)
+          .where('userId', isEqualTo: userId)
+          .snapshots()
+          .map((snapshot) {
+            var rfqs = snapshot.docs
+                .map((doc) => RFQModel.fromFirestore(doc))
+                .toList();
+            // Sort in memory as fallback
+            rfqs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return rfqs;
+          });
+    }
   }
 
   Stream<List<RFQModel>> streamAllRFQs() {
+    try {
+      return _firestore
+          .collection(_rfqsCollection)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .handleError((error) {
+            Logger.logError('Error in streamAllRFQs with orderBy', error, StackTrace.current);
+            // Return fallback stream without orderBy if index is missing
+            return _firestore
+                .collection(_rfqsCollection)
+                .snapshots()
+                .map((snapshot) {
+                  var rfqs = snapshot.docs
+                      .map((doc) => RFQModel.fromFirestore(doc))
+                      .toList();
+                  // Sort in memory as fallback
+                  rfqs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                  return rfqs;
+                });
+          })
+          .map((snapshot) =>
+              snapshot.docs.map((doc) => RFQModel.fromFirestore(doc)).toList());
+    } catch (e) {
+      Logger.logError('Critical error in streamAllRFQs', e, StackTrace.current);
+      // Return fallback query without orderBy
+      return _firestore
+          .collection(_rfqsCollection)
+          .snapshots()
+          .map((snapshot) {
+            var rfqs = snapshot.docs
+                .map((doc) => RFQModel.fromFirestore(doc))
+                .toList();
+            // Sort in memory as fallback
+            rfqs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return rfqs;
+          });
+    }
+  }
+
+  // Quote Management
+  Future<void> createQuote(QuoteModel quote) async {
+    try {
+      // Validate quote data before saving
+      if (quote.supplierId == null || quote.supplierId!.isEmpty) {
+        Logger.logError('Quote creation failed: supplierId is null or empty', quote.toMap(), StackTrace.current);
+        throw Exception('Quote supplier ID is required');
+      }
+      
+      if (quote.rfqId.isEmpty) {
+        Logger.logError('Quote creation failed: rfqId is empty', quote.toMap(), StackTrace.current);
+        throw Exception('Quote RFQ ID is required');
+      }
+      
+      if (quote.price <= 0) {
+        Logger.logError('Quote creation failed: price is invalid', quote.toMap(), StackTrace.current);
+        throw Exception('Quote price must be greater than zero');
+      }
+
+      Logger.log('Creating quote with data: ${quote.toMap()}');
+      
+      final docRef = await _firestore.collection(_quotesCollection).add(quote.toMap());
+      
+      Logger.log('Quote created successfully with ID: ${docRef.id}');
+      
+      // Verify the quote was saved correctly
+      final savedQuote = await docRef.get();
+      if (savedQuote.exists) {
+        final savedData = savedQuote.data() as Map<String, dynamic>;
+        Logger.log('Verified saved quote data: $savedData');
+        
+        if (savedData['supplierId'] == null || savedData['supplierId'].toString().isEmpty) {
+          Logger.logError('Critical error: supplierId was not saved properly', savedData, StackTrace.current);
+          throw Exception('Quote was not saved properly - supplier ID is missing');
+        }
+      } else {
+        Logger.logError('Critical error: Quote document was not created', docRef.id, StackTrace.current);
+        throw Exception('Quote was not saved properly');
+      }
+      
+    } catch (e) {
+      Logger.logError('Failed to create quote', e, StackTrace.current);
+      throw Exception('Failed to create quote: $e');
+    }
+  }
+
+  Future<void> updateQuote(QuoteModel quote) async {
+    try {
+      await _firestore
+          .collection(_quotesCollection)
+          .doc(quote.id)
+          .update(quote.toMap());
+    } catch (e) {
+      throw Exception('Failed to update quote: $e');
+    }
+  }
+
+  Stream<List<QuoteModel>> streamQuotes(String rfqId) {
     return _firestore
-        .collection(_rfqsCollection)
-        .orderBy('createdAt', descending: true)
+        .collection(_quotesCollection)
+        .where('rfqId', isEqualTo: rfqId)
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((doc) => RFQModel.fromFirestore(doc)).toList());
+            snapshot.docs.map((doc) => QuoteModel.fromFirestore(doc)).toList());
   }
 
   Future<RFQModel?> getRFQ(String rfqId) async {
@@ -809,24 +997,47 @@ class DatabaseService {
       final now = DateTime.now();
       final thirtyDaysAgo = now.subtract(const Duration(days: 30));
 
-      final snapshot = await _firestore
-          .collection(_ordersCollection)
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(thirtyDaysAgo))
-          .where('status', isEqualTo: 'completed')
-          .get();
+      QuerySnapshot snapshot;
+      try {
+        // Try compound query first
+        snapshot = await _firestore
+            .collection(_ordersCollection)
+            .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(thirtyDaysAgo))
+            .where('status', isEqualTo: 'completed')
+            .get();
+      } catch (e) {
+        Logger.logError('Compound query failed for sales data, using fallback', e, StackTrace.current);
+        // Fallback: Get all recent orders and filter by status in memory
+        snapshot = await _firestore
+            .collection(_ordersCollection)
+            .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(thirtyDaysAgo))
+            .get();
+      }
 
       final salesData = <DateTime, double>{};
 
       for (var doc in snapshot.docs) {
-        final order = OrderModel.fromFirestore(doc);
-        final date = DateTime(
-          order.createdAt.year,
-          order.createdAt.month,
-          order.createdAt.day,
-        );
-        salesData[date] = (salesData[date] ?? 0.0) + order.totalAmount;
+        try {
+          final order = OrderModel.fromFirestore(doc);
+          
+          // Apply status filter in memory if needed
+          if (order.status != OrderStatus.completed) {
+            continue;
+          }
+          
+          final date = DateTime(
+            order.createdAt.year,
+            order.createdAt.month,
+            order.createdAt.day,
+          );
+          salesData[date] = (salesData[date] ?? 0.0) + order.totalAmount;
+        } catch (e) {
+          Logger.logError('Error processing order for sales data', e, StackTrace.current);
+          continue;
+        }
       }
 
+      Logger.log('Sales data retrieved: ${salesData.length} days with total sales');
       return salesData;
     } catch (e, s) {
       Logger.logError('Error getting sales over time', e, s);
@@ -854,27 +1065,48 @@ class DatabaseService {
 
   Future<List<Map<String, dynamic>>> getTopSellingProducts(int limit) async {
     try {
-      final snapshot = await _firestore
-          .collection(_ordersCollection)
-          .where('status', isEqualTo: 'completed')
-          .get();
+      QuerySnapshot snapshot;
+      try {
+        // Try compound query first
+        snapshot = await _firestore
+            .collection(_ordersCollection)
+            .where('status', isEqualTo: 'completed')
+            .get();
+      } catch (e) {
+        Logger.logError('Compound query failed for top selling products, using fallback', e, StackTrace.current);
+        // Fallback: Get all orders and filter by status in memory
+        snapshot = await _firestore
+            .collection(_ordersCollection)
+            .get();
+      }
 
       final productSales = <String, Map<String, dynamic>>{};
 
       for (var doc in snapshot.docs) {
-        final order = OrderModel.fromFirestore(doc);
-        // Use rfqId as product identifier since OrderModel doesn't have productId
-        final productId = order.rfqId ?? 'unknown';
+        try {
+          final order = OrderModel.fromFirestore(doc);
 
-        if (productSales.containsKey(productId)) {
-          productSales[productId]!['quantity'] += 1;
-          productSales[productId]!['totalSales'] += order.totalAmount;
-        } else {
-          productSales[productId] = {
-            'productId': productId,
-            'quantity': 1,
-            'totalSales': order.totalAmount,
-          };
+          // Apply status filter in memory if needed
+          if (order.status != OrderStatus.completed) {
+            continue;
+          }
+
+          // Use rfqId as product identifier since OrderModel doesn't have productId
+          final productId = order.rfqId ?? 'unknown';
+
+          if (productSales.containsKey(productId)) {
+            productSales[productId]!['quantity'] += 1;
+            productSales[productId]!['totalSales'] += order.totalAmount;
+          } else {
+            productSales[productId] = {
+              'productId': productId,
+              'quantity': 1,
+              'totalSales': order.totalAmount,
+            };
+          }
+        } catch (e) {
+          Logger.logError('Error processing order for top selling products', e, StackTrace.current);
+          continue;
         }
       }
 
@@ -882,6 +1114,7 @@ class DatabaseService {
       final sortedProducts = productSales.values.toList()
         ..sort((a, b) => (b['quantity'] as int).compareTo(a['quantity'] as int));
 
+      Logger.log('Top selling products data retrieved: ${sortedProducts.length} products');
       return sortedProducts.take(limit).toList();
     } catch (e, s) {
       Logger.logError('Error getting top selling products', e, s);
@@ -894,24 +1127,46 @@ class DatabaseService {
       final now = DateTime.now();
       final thirtyDaysAgo = now.subtract(const Duration(days: 30));
 
-      final snapshot = await _firestore
-          .collection(_usersCollection)
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(thirtyDaysAgo))
-          .get();
+      QuerySnapshot snapshot;
+      try {
+        // Try compound query first
+        snapshot = await _firestore
+            .collection(_usersCollection)
+            .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(thirtyDaysAgo))
+            .get();
+      } catch (e) {
+        Logger.logError('Compound query failed for user growth, using fallback', e, StackTrace.current);
+        // Fallback: Get all users and filter by date in memory
+        snapshot = await _firestore
+            .collection(_usersCollection)
+            .get();
+      }
 
       final userGrowthData = <DateTime, int>{};
 
       for (var doc in snapshot.docs) {
-        final user = UserModel.fromFirestore(doc);
-        final createdAt = user.createdAt ?? DateTime.now();
-        final date = DateTime(
-          createdAt.year,
-          createdAt.month,
-          createdAt.day,
-        );
-        userGrowthData[date] = (userGrowthData[date] ?? 0) + 1;
+        try {
+          final user = UserModel.fromFirestore(doc);
+          final createdAt = user.createdAt ?? DateTime.now();
+
+          // Apply date filter in memory if needed
+          if (createdAt.isBefore(thirtyDaysAgo)) {
+            continue;
+          }
+
+          final date = DateTime(
+            createdAt.year,
+            createdAt.month,
+            createdAt.day,
+          );
+          userGrowthData[date] = (userGrowthData[date] ?? 0) + 1;
+        } catch (e) {
+          Logger.logError('Error processing user for growth data', e, StackTrace.current);
+          continue;
+        }
       }
 
+      Logger.log('User growth data retrieved: ${userGrowthData.length} days with user registrations');
       return userGrowthData;
     } catch (e, s) {
       Logger.logError('Error getting user growth over time', e, s);
@@ -935,17 +1190,6 @@ class DatabaseService {
     }
   }
 
-  Future<ProductModel?> getProduct(String productId) async {
-    try {
-      final doc = await _firestore.collection(_productsCollection).doc(productId).get();
-      if (doc.exists) {
-        return ProductModel.fromFirestore(doc);
-      }
-      return null;
-    } catch (e) {
-      throw Exception('Failed to get product: $e');
-    }
-  }
 
   // Category Management
   Future<void> addCategory(CategoryModel category) async {
@@ -1221,22 +1465,40 @@ class DatabaseService {
         inquiriesFuture,
       ]);
 
-      // Calculate total revenue from completed orders
+      // Calculate total revenue from completed orders with fallback
       double totalRevenue = 0.0;
       try {
-        final completedOrdersSnapshot = await _firestore
-            .collection(_ordersCollection)
-            .where('status', isEqualTo: 'completed')
-            .get();
+        QuerySnapshot completedOrdersSnapshot;
+        try {
+          // Try compound query first
+          completedOrdersSnapshot = await _firestore
+              .collection(_ordersCollection)
+              .where('status', isEqualTo: 'completed')
+              .get();
+        } catch (e) {
+          Logger.logError('Compound query failed for total revenue, using fallback', e, StackTrace.current);
+          // Fallback: Get all orders and filter by status in memory
+          completedOrdersSnapshot = await _firestore
+              .collection(_ordersCollection)
+              .get();
+        }
 
         for (var doc in completedOrdersSnapshot.docs) {
-          final order = OrderModel.fromFirestore(doc);
-          totalRevenue += order.totalAmount;
+          try {
+            final order = OrderModel.fromFirestore(doc);
+            if (order.status == OrderStatus.completed) {
+              totalRevenue += order.totalAmount;
+            }
+          } catch (e) {
+            Logger.logError('Error processing order for total revenue', e, StackTrace.current);
+            continue;
+          }
         }
       } catch (e) {
         Logger.logError('Error calculating total revenue', e, StackTrace.current);
       }
 
+      Logger.log('Admin analytics data retrieved successfully');
       return {
         'totalUsers': results[0].count ?? 0,
         'totalOrders': results[1].count ?? 0,
@@ -1348,17 +1610,6 @@ class DatabaseService {
     }
   }
 
-    Future<void> createQuote(QuoteModel newQuote) async {
-    try {
-      await _firestore
-          .collection('quotes')
-          .add(newQuote.toMap());
-      Logger.log('Quote created successfully');
-    } catch (e, s) {
-      Logger.logError('Error creating quote', e, s);
-      throw Exception('Failed to create quote: $e');
-    }
-  }
 
   Future<void> sendQuoteSubmissionNotification(QuoteModel quote) async {
     try {
@@ -1369,7 +1620,7 @@ class DatabaseService {
       // Create notification for the customer
       final notification = NotificationModel(
         id: _firestore.collection(_notificationsCollection).doc().id,
-        userId: rfq.userId,
+        userId: rfq.userId!, // Ensure userId is not null
         title: 'New Quote Received',
         message: 'You have received a new quote for your RFQ: ${rfq.productName}',
         type: 'quote',
@@ -1714,15 +1965,6 @@ class DatabaseService {
             .toList());
   }
 
-  // Quotes
-  Stream<List<QuoteModel>> streamQuotes(String rfqId) {
-    return _firestore
-        .collection(_quotesCollection)
-        .where('rfqId', isEqualTo: rfqId)
-        .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => QuoteModel.fromFirestore(doc)).toList());
-  }
 
   // Review Management
   Future<void> addReview(ReviewModel review) async {

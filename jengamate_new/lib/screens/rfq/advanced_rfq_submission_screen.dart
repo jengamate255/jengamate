@@ -47,17 +47,260 @@ class _AdvancedRfqSubmissionScreenState
       try {
         await _dbService.createRFQ(newRfq);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('RFQ submitted successfully')),
-        );
+        // Show detailed success confirmation dialog
+        await _showSuccessDialog();
         Navigator.pop(context);
       } catch (error) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error submitting RFQ: $error')),
-        );
+        // Show detailed error dialog
+        await _showErrorDialog(error.toString());
       }
     }
+  }
+
+  Future<void> _showSuccessDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          icon: const Icon(
+            Icons.check_circle,
+            color: Colors.green,
+            size: 48,
+          ),
+          title: const Text(
+            'RFQ Submitted Successfully!',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.green,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Your Request for Quote has been submitted successfully.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                const Text(
+                  'RFQ Details:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildDetailRow('Product:', _productName),
+                _buildDetailRow('Quantity:', _quantity.toString()),
+                _buildDetailRow('Customer:', _customerName),
+                _buildDetailRow('Email:', _customerEmail),
+                _buildDetailRow('Phone:', _customerPhone),
+                if (_deliveryAddress.isNotEmpty)
+                  _buildDetailRow('Delivery Address:', _deliveryAddress),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'What happens next?',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '• Suppliers will review your RFQ\n'
+                        '• You\'ll receive quotes via email and app notifications\n'
+                        '• Compare quotes and select the best offer\n'
+                        '• Track your RFQ status in the dashboard',
+                        style: TextStyle(color: Colors.blue.shade700),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('View My RFQs'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                // TODO: Navigate to user's RFQ list
+              },
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showErrorDialog(String error) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          icon: const Icon(
+            Icons.error_outline,
+            color: Colors.red,
+            size: 48,
+          ),
+          title: const Text(
+            'RFQ Submission Failed',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'We encountered an error while submitting your RFQ. Please try again.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Error Details:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        error.length > 200 ? '${error.substring(0, 200)}...' : error,
+                        style: TextStyle(color: Colors.red.shade700, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.lightbulb_outline, color: Colors.blue.shade600, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Suggestions:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '• Check your internet connection\n'
+                        '• Verify all required fields are filled\n'
+                        '• Try refreshing the page\n'
+                        '• Contact support if the problem persists',
+                        style: TextStyle(color: Colors.blue.shade700),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Contact Support'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                // TODO: Navigate to support/help screen
+              },
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Try Again'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: Colors.black87),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
