@@ -54,8 +54,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 label: Text('Documents'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.moderation),
-                selectedIcon: Icon(Icons.moderation),
+                icon: Icon(Icons.policy),
+                selectedIcon: Icon(Icons.policy),
                 label: Text('Content'),
               ),
               NavigationRailDestination(
@@ -476,7 +476,7 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
                 ),
                 _buildQuickActionButton(
                   'Moderate Content',
-                  Icons.moderation,
+                  Icons.policy,
                   Colors.orange,
                   () => Navigator.push(
                     context,
@@ -600,7 +600,7 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
 
   String _formatDateTime(dynamic timestamp) {
     if (timestamp == null) return 'N/A';
-    
+
     DateTime dateTime;
     if (timestamp is Timestamp) {
       dateTime = timestamp.toDate();

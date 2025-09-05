@@ -75,23 +75,25 @@ class AppRoutes {
   static const String imageUploadTest = '/image-upload-test';
   static const String addEditProduct = '/add-edit-product';
   static const String chatConversation = '/chat-conversation/:chatId';
+  static const String orders = '/orders';
+  static const String orderDetails = '/orders/:orderId';
   static const String invoices = '/invoices';
   static const String invoiceDetails = '/invoices/:invoiceId';
   static const String createInvoice = '/invoices/create';
-
-
 }
 
 class AppRouteBuilders {
   static String otpVerificationPath(String verificationId) {
-    return AppRoutes.otpVerification.replaceFirst(':verificationId', verificationId);
+    return AppRoutes.otpVerification
+        .replaceFirst(':verificationId', verificationId);
   }
 
   static String chatConversationPath(String chatId) {
     return AppRoutes.chatConversation.replaceFirst(':chatId', chatId);
   }
 
-  static String rfqSubmissionPath({required String productId, required String productName}) {
+  static String rfqSubmissionPath(
+      {required String productId, required String productName}) {
     return AppRoutes.rfqSubmission
         .replaceFirst(':productId', productId)
         .replaceFirst(':productName', Uri.encodeComponent(productName));
@@ -99,6 +101,10 @@ class AppRouteBuilders {
 
   static String rfqDetailsPath(String rfqId) {
     return AppRoutes.rfqDetails.replaceFirst(':rfqId', rfqId);
+  }
+
+  static String orderDetailsPath(String orderId) {
+    return AppRoutes.orderDetails.replaceFirst(':orderId', orderId);
   }
 
   static String invoiceDetailsPath(String invoiceId) {

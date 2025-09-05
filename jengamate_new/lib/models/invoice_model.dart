@@ -43,6 +43,7 @@ class InvoiceModel {
   final String id;
   final String invoiceNumber;
   final String customerId;
+  final String? orderId;
   final String customerName;
   final String customerEmail;
   final String? customerPhone;
@@ -69,6 +70,7 @@ class InvoiceModel {
     required this.id,
     required this.invoiceNumber,
     required this.customerId,
+    this.orderId,
     required this.customerName,
     required this.customerEmail,
     this.customerPhone,
@@ -119,6 +121,7 @@ class InvoiceModel {
       'id': id,
       'invoiceNumber': invoiceNumber,
       'customerId': customerId,
+      'orderId': orderId,
       'customerName': customerName,
       'customerEmail': customerEmail,
       'customerPhone': customerPhone,
@@ -151,6 +154,7 @@ class InvoiceModel {
       id: data['id'] ?? '',
       invoiceNumber: data['invoiceNumber'] ?? '',
       customerId: data['customerId'] ?? '',
+      orderId: data['orderId'],
       customerName: data['customerName'] ?? '',
       customerEmail: data['customerEmail'] ?? '',
       customerPhone: data['customerPhone'],
@@ -183,6 +187,7 @@ class InvoiceModel {
     String? id,
     String? invoiceNumber,
     String? customerId,
+    String? orderId,
     String? customerName,
     String? customerEmail,
     String? customerPhone,
@@ -209,6 +214,7 @@ class InvoiceModel {
       id: id ?? this.id,
       invoiceNumber: invoiceNumber ?? this.invoiceNumber,
       customerId: customerId ?? this.customerId,
+      orderId: orderId ?? this.orderId,
       customerName: customerName ?? this.customerName,
       customerEmail: customerEmail ?? this.customerEmail,
       customerPhone: customerPhone ?? this.customerPhone,

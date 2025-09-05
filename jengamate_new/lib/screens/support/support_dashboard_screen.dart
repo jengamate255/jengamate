@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/support_ticket_model.dart';
+import 'package:jengamate/models/faq_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/utils/responsive.dart';
@@ -8,18 +9,19 @@ import 'package:intl/intl.dart';
 
 class SupportDashboardScreen extends StatefulWidget {
   final bool isAdminView;
-  
+
   const SupportDashboardScreen({super.key, this.isAdminView = false});
 
   @override
   State<SupportDashboardScreen> createState() => _SupportDashboardScreenState();
 }
 
-class _SupportDashboardScreenState extends State<SupportDashboardScreen> with TickerProviderStateMixin {
+class _SupportDashboardScreenState extends State<SupportDashboardScreen>
+    with TickerProviderStateMixin {
   final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
   late TabController _tabController;
-  
+
   List<SupportTicket> _tickets = [];
   List<FAQItem> _faqs = [];
   bool _isLoading = true;
@@ -30,7 +32,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: widget.isAdminView ? 4 : 3, vsync: this);
+    _tabController =
+        TabController(length: widget.isAdminView ? 4 : 3, vsync: this);
     _loadSupportData();
   }
 
@@ -45,7 +48,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
           _tickets = await _databaseService.getAllSupportTickets();
         } else {
           // Regular users see only their tickets
-          _tickets = await _databaseService.getUserSupportTickets(currentUser.uid);
+          _tickets =
+              await _databaseService.getUserSupportTickets(currentUser.uid);
         }
       } else {
         _tickets = [];
@@ -60,7 +64,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
         _faqs = await _databaseService.getFAQs();
       }
 
-      Logger.log('Loaded ${_tickets.length} support tickets and ${_faqs.length} FAQs');
+      Logger.log(
+          'Loaded ${_tickets.length} support tickets and ${_faqs.length} FAQs');
     } catch (e) {
       Logger.logError('Error loading support data', e, StackTrace.current);
       // Fallback to empty lists instead of sample data
@@ -81,48 +86,73 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
   }
 
   Future<void> _createDefaultFAQs() async {
+    final now = DateTime.now();
     final defaultFAQs = [
       FAQItem(
-        id: '',
+        uid: '',
         question: 'How do I reset my password?',
-        answer: 'You can reset your password by clicking "Forgot Password" on the login screen and following the instructions sent to your email.',
+        answer:
+            'You can reset your password by clicking "Forgot Password" on the login screen and following the instructions sent to your email.',
         category: 'account',
+        order: 0,
         isPopular: true,
+        createdAt: now,
+        updatedAt: now,
       ),
       FAQItem(
-        id: '',
+        uid: '',
         question: 'How are commissions calculated?',
-        answer: 'Commissions are calculated based on your tier level and the total value of sales you generate. Higher tiers receive higher commission rates.',
+        answer:
+            'Commissions are calculated based on your tier level and the total value of sales you generate. Higher tiers receive higher commission rates.',
         category: 'commission',
+        order: 1,
         isPopular: true,
+        createdAt: now,
+        updatedAt: now,
       ),
       FAQItem(
-        id: '',
+        uid: '',
         question: 'How long does it take to process withdrawals?',
-        answer: 'Withdrawal requests are typically processed within 3-5 business days. You will receive an email confirmation once processed.',
+        answer:
+            'Withdrawal requests are typically processed within 3-5 business days. You will receive an email confirmation once processed.',
         category: 'payment',
+        order: 2,
         isPopular: false,
+        createdAt: now,
+        updatedAt: now,
       ),
       FAQItem(
-        id: '',
+        uid: '',
         question: 'How do I refer new users?',
-        answer: 'You can refer new users by sharing your unique referral code found in the Referral Dashboard. You earn bonuses for successful referrals.',
+        answer:
+            'You can refer new users by sharing your unique referral code found in the Referral Dashboard. You earn bonuses for successful referrals.',
         category: 'referral',
+        order: 3,
         isPopular: true,
+        createdAt: now,
+        updatedAt: now,
       ),
       FAQItem(
-        id: '',
+        uid: '',
         question: 'How do I submit an RFQ (Request for Quote)?',
-        answer: 'Navigate to the product you\'re interested in and click "Request Quote". Fill in your requirements and contact details, and suppliers will respond with quotes.',
+        answer:
+            'Navigate to the product you\'re interested in and click "Request Quote". Fill in your requirements and contact details, and suppliers will respond with quotes.',
         category: 'rfq',
+        order: 4,
         isPopular: true,
+        createdAt: now,
+        updatedAt: now,
       ),
       FAQItem(
-        id: '',
+        uid: '',
         question: 'What payment methods are accepted?',
-        answer: 'We accept M-Pesa, bank transfers, and credit/debit cards. All payments are processed securely through our payment partners.',
+        answer:
+            'We accept M-Pesa, bank transfers, and credit/debit cards. All payments are processed securely through our payment partners.',
         category: 'payment',
+        order: 5,
         isPopular: true,
+        createdAt: now,
+        updatedAt: now,
       ),
     ];
 
@@ -136,13 +166,12 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isAdminView ? 'Support Management' : 'Support Center'),
+        title:
+            Text(widget.isAdminView ? 'Support Management' : 'Support Center'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
@@ -270,10 +299,13 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
             labelText: 'Status',
             border: OutlineInputBorder(),
           ),
-          items: ['all', 'open', 'in_progress', 'resolved', 'closed'].map((status) {
+          items: ['all', 'open', 'in_progress', 'resolved', 'closed']
+              .map((status) {
             return DropdownMenuItem(
               value: status,
-              child: Text(status == 'all' ? 'All Status' : status.replaceAll('_', ' ').toUpperCase()),
+              child: Text(status == 'all'
+                  ? 'All Status'
+                  : status.replaceAll('_', ' ').toUpperCase()),
             );
           }).toList(),
           onChanged: (value) {
@@ -292,7 +324,9 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
           items: ['all', 'low', 'medium', 'high', 'urgent'].map((priority) {
             return DropdownMenuItem(
               value: priority,
-              child: Text(priority == 'all' ? 'All Priorities' : priority.toUpperCase()),
+              child: Text(priority == 'all'
+                  ? 'All Priorities'
+                  : priority.toUpperCase()),
             );
           }).toList(),
           onChanged: (value) {
@@ -305,23 +339,29 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
 
   Widget _buildTicketStats() {
     final openTickets = _tickets.where((t) => t.status == 'open').length;
-    final inProgressTickets = _tickets.where((t) => t.status == 'in_progress').length;
-    final resolvedTickets = _tickets.where((t) => t.status == 'resolved').length;
+    final inProgressTickets =
+        _tickets.where((t) => t.status == 'in_progress').length;
+    final resolvedTickets =
+        _tickets.where((t) => t.status == 'resolved').length;
     final totalTickets = _tickets.length;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
       child: Responsive.isMobile(context)
-          ? Column(children: _buildStatItems(openTickets, inProgressTickets, resolvedTickets, totalTickets))
+          ? Column(
+              children: _buildStatItems(openTickets, inProgressTickets,
+                  resolvedTickets, totalTickets))
           : Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: _buildStatItems(openTickets, inProgressTickets, resolvedTickets, totalTickets),
+              children: _buildStatItems(openTickets, inProgressTickets,
+                  resolvedTickets, totalTickets),
             ),
     );
   }
 
-  List<Widget> _buildStatItems(int open, int inProgress, int resolved, int total) {
+  List<Widget> _buildStatItems(
+      int open, int inProgress, int resolved, int total) {
     return [
       _buildStatItem('Total', total.toString(), Colors.blue),
       _buildStatItem('Open', open.toString(), Colors.red),
@@ -359,10 +399,12 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
         final currentUserId = _authService.currentUser?.uid;
         if (ticket.userId != currentUserId) return false;
       }
-      
-      if (_selectedStatus != 'all' && ticket.status != _selectedStatus) return false;
-      if (_selectedPriority != 'all' && ticket.priority != _selectedPriority) return false;
-      
+
+      if (_selectedStatus != 'all' && ticket.status != _selectedStatus)
+        return false;
+      if (_selectedPriority != 'all' && ticket.priority != _selectedPriority)
+        return false;
+
       if (_searchController.text.isNotEmpty) {
         final searchTerm = _searchController.text.toLowerCase();
         if (!ticket.subject.toLowerCase().contains(searchTerm) &&
@@ -370,7 +412,7 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
           return false;
         }
       }
-      
+
       return true;
     }).toList();
 
@@ -381,7 +423,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
           children: [
             Icon(Icons.support_agent, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text('No tickets found', style: TextStyle(fontSize: 18, color: Colors.grey)),
+            Text('No tickets found',
+                style: TextStyle(fontSize: 18, color: Colors.grey)),
           ],
         ),
       );
@@ -400,13 +443,14 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
   Widget _buildTicketCard(SupportTicket ticket) {
     final statusColor = _getStatusColor(ticket.status);
     final priorityColor = _getPriorityColor(ticket.priority);
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: statusColor.withValues(alpha: 0.2),
-          child: Icon(_getStatusIcon(ticket.status), color: statusColor, size: 20),
+          child:
+              Icon(_getStatusIcon(ticket.status), color: statusColor, size: 20),
         ),
         title: Text(
           ticket.subject,
@@ -416,7 +460,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (widget.isAdminView) Text('User: ${ticket.userName}'),
-            Text(ticket.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+            Text(ticket.description,
+                maxLines: 2, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
             Text(
               DateFormat('MMM dd, yyyy HH:mm').format(ticket.createdAt),
@@ -454,7 +499,7 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
 
   Widget _buildPopularFAQs() {
     final popularFAQs = _faqs.where((faq) => faq.isPopular).toList();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -467,7 +512,7 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
 
   Widget _buildFAQCategories() {
     final categories = _faqs.map((faq) => faq.category).toSet().toList();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -479,8 +524,9 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
   }
 
   Widget _buildCategorySection(String category) {
-    final categoryFAQs = _faqs.where((faq) => faq.category == category).toList();
-    
+    final categoryFAQs =
+        _faqs.where((faq) => faq.category == category).toList();
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: ExpansionTile(
@@ -508,50 +554,71 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
 
   Widget _buildGuidesList() {
     final guides = [
-      {'title': 'Getting Started Guide', 'description': 'Learn the basics of using JengaMate'},
-      {'title': 'Commission System Guide', 'description': 'Understand how commissions work'},
-      {'title': 'Referral Program Guide', 'description': 'Maximize your referral earnings'},
-      {'title': 'Payment & Withdrawal Guide', 'description': 'Manage your payments and withdrawals'},
+      {
+        'title': 'Getting Started Guide',
+        'description': 'Learn the basics of using JengaMate'
+      },
+      {
+        'title': 'Commission System Guide',
+        'description': 'Understand how commissions work'
+      },
+      {
+        'title': 'Referral Program Guide',
+        'description': 'Maximize your referral earnings'
+      },
+      {
+        'title': 'Payment & Withdrawal Guide',
+        'description': 'Manage your payments and withdrawals'
+      },
     ];
 
     return Column(
-      children: guides.map((guide) => Card(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: ListTile(
-          leading: const Icon(Icons.book),
-          title: Text(guide['title']!),
-          subtitle: Text(guide['description']!),
-          trailing: const Icon(Icons.arrow_forward_ios),
-          onTap: () {
-            // TODO: Navigate to guide details
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Opening ${guide['title']}')),
-            );
-          },
-        ),
-      )).toList(),
+      children: guides
+          .map((guide) => Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: const Icon(Icons.book),
+                  title: Text(guide['title']!),
+                  subtitle: Text(guide['description']!),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    // TODO: Navigate to guide details
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Opening ${guide['title']}')),
+                    );
+                  },
+                ),
+              ))
+          .toList(),
     );
   }
 
   Widget _buildSupportMetrics() {
     return Responsive.isMobile(context)
         ? Column(children: _buildMetricCardsList())
-        : Row(children: _buildMetricCardsList().map((card) => Expanded(child: card)).toList());
+        : Row(
+            children: _buildMetricCardsList()
+                .map((card) => Expanded(child: card))
+                .toList());
   }
 
   List<Widget> _buildMetricCardsList() {
     return [
-      _buildMetricCard('Avg Response Time', '2.5 hrs', Icons.schedule, Colors.blue),
+      _buildMetricCard(
+          'Avg Response Time', '2.5 hrs', Icons.schedule, Colors.blue),
       const SizedBox(width: 16, height: 8),
-      _buildMetricCard('Resolution Rate', '94%', Icons.check_circle, Colors.green),
+      _buildMetricCard(
+          'Resolution Rate', '94%', Icons.check_circle, Colors.green),
       const SizedBox(width: 16, height: 8),
-      _buildMetricCard('Customer Satisfaction', '4.8/5', Icons.star, Colors.orange),
+      _buildMetricCard(
+          'Customer Satisfaction', '4.8/5', Icons.star, Colors.orange),
       const SizedBox(width: 16, height: 8),
       _buildMetricCard('Active Agents', '5', Icons.people, Colors.purple),
     ];
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -619,12 +686,14 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            ...['Support Agent', 'Senior Support', 'Team Lead'].map((agent) => ListTile(
-              leading: CircleAvatar(child: Text(agent[0])),
-              title: Text(agent),
-              subtitle: const Text('Tickets resolved: 15 | Avg response: 1.2 hrs'),
-              trailing: const Text('4.9★'),
-            )),
+            ...['Support Agent', 'Senior Support', 'Team Lead']
+                .map((agent) => ListTile(
+                      leading: CircleAvatar(child: Text(agent[0])),
+                      title: Text(agent),
+                      subtitle: const Text(
+                          'Tickets resolved: 15 | Avg response: 1.2 hrs'),
+                      trailing: const Text('4.9★'),
+                    )),
           ],
         ),
       ),
@@ -635,48 +704,68 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
     return Text(
       title,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.bold,
-      ),
+            fontWeight: FontWeight.bold,
+          ),
     );
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'open': return Colors.red;
-      case 'in_progress': return Colors.orange;
-      case 'resolved': return Colors.green;
-      case 'closed': return Colors.grey;
-      default: return Colors.grey;
+      case 'open':
+        return Colors.red;
+      case 'in_progress':
+        return Colors.orange;
+      case 'resolved':
+        return Colors.green;
+      case 'closed':
+        return Colors.grey;
+      default:
+        return Colors.grey;
     }
   }
 
   Color _getPriorityColor(String priority) {
     switch (priority) {
-      case 'urgent': return Colors.red;
-      case 'high': return Colors.orange;
-      case 'medium': return Colors.yellow[700]!;
-      case 'low': return Colors.green;
-      default: return Colors.grey;
+      case 'urgent':
+        return Colors.red;
+      case 'high':
+        return Colors.orange;
+      case 'medium':
+        return Colors.yellow[700]!;
+      case 'low':
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
 
   IconData _getStatusIcon(String status) {
     switch (status) {
-      case 'open': return Icons.circle;
-      case 'in_progress': return Icons.pending;
-      case 'resolved': return Icons.check_circle;
-      case 'closed': return Icons.cancel;
-      default: return Icons.help;
+      case 'open':
+        return Icons.circle;
+      case 'in_progress':
+        return Icons.pending;
+      case 'resolved':
+        return Icons.check_circle;
+      case 'closed':
+        return Icons.cancel;
+      default:
+        return Icons.help;
     }
   }
 
   IconData _getCategoryIcon(String category) {
     switch (category) {
-      case 'account': return Icons.person;
-      case 'payment': return Icons.payment;
-      case 'commission': return Icons.account_balance_wallet;
-      case 'referral': return Icons.share;
-      default: return Icons.help;
+      case 'account':
+        return Icons.person;
+      case 'payment':
+        return Icons.payment;
+      case 'commission':
+        return Icons.account_balance_wallet;
+      case 'referral':
+        return Icons.share;
+      default:
+        return Icons.help;
     }
   }
 
@@ -690,7 +779,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
       ),
       child: Text(
         priority.toUpperCase(),
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w500),
+        style:
+            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -705,7 +795,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
       ),
       child: Text(
         status.replaceAll('_', ' ').toUpperCase(),
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w500),
+        style:
+            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -738,8 +829,15 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
               DropdownButtonFormField<String>(
                 value: selectedCategory,
                 decoration: const InputDecoration(labelText: 'Category'),
-                items: ['general', 'account', 'payment', 'commission', 'technical'].map((cat) {
-                  return DropdownMenuItem(value: cat, child: Text(cat.toUpperCase()));
+                items: [
+                  'general',
+                  'account',
+                  'payment',
+                  'commission',
+                  'technical'
+                ].map((cat) {
+                  return DropdownMenuItem(
+                      value: cat, child: Text(cat.toUpperCase()));
                 }).toList(),
                 onChanged: (value) => selectedCategory = value!,
               ),
@@ -748,7 +846,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
                 value: selectedPriority,
                 decoration: const InputDecoration(labelText: 'Priority'),
                 items: ['low', 'medium', 'high', 'urgent'].map((pri) {
-                  return DropdownMenuItem(value: pri, child: Text(pri.toUpperCase()));
+                  return DropdownMenuItem(
+                      value: pri, child: Text(pri.toUpperCase()));
                 }).toList(),
                 onChanged: (value) => selectedPriority = value!,
               ),
@@ -764,7 +863,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Support ticket created successfully')),
+                const SnackBar(
+                    content: Text('Support ticket created successfully')),
               );
             },
             child: const Text('Create'),
@@ -778,7 +878,8 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen> with Ti
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TicketDetailsScreen(ticket: ticket, isAdminView: widget.isAdminView),
+        builder: (context) => TicketDetailsScreen(
+            ticket: ticket, isAdminView: widget.isAdminView),
       ),
     );
   }
@@ -798,13 +899,14 @@ class TicketDetailsScreen extends StatelessWidget {
   final SupportTicket ticket;
   final bool isAdminView;
 
-  const TicketDetailsScreen({super.key, required this.ticket, required this.isAdminView});
+  const TicketDetailsScreen(
+      {super.key, required this.ticket, required this.isAdminView});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Ticket #${ticket.id}'),
+        title: Text('Ticket #${ticket.uid}'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),

@@ -85,10 +85,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                   onTap: () {
                     if (!notification.isRead) {
-                      _notificationService.markNotificationAsRead(notification.id);
+                      _notificationService
+                          .markNotificationAsRead(notification.uid);
                     }
 
-                    if (notification.type == 'rfq' && notification.relatedId != null) {
+                    if (notification.type == 'rfq' &&
+                        notification.relatedId != null) {
                       context.go('/rfqs/${notification.relatedId}');
                     }
                   },
@@ -100,4 +102,4 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
-} 
+}

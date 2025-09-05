@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "546254001513",
+    "project_id": "jengamate",
+    "storage_bucket": "jengamate.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:546254001513:android:127ff570e875719a4899f8",
+        "android_client_info": {
+          "package_name": "app.jengamate.kinglion"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "546254001513-ij8d57h03aooipits8oels490bt97fsl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATWzJgseKO2q9jL2y91e3uUhHSfxzh9nU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "546254001513-ij8d57h03aooipits8oels490bt97fsl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "546254001513-q1oas27vn2fiur3nuirjus0mdqt1lt8i.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.myFlutterApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

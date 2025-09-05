@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/services/auth_service.dart';
-import 'package:jengamate/utils/sentry_test.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/screens/categories/categories_screen.dart';
@@ -15,6 +14,8 @@ import 'package:jengamate/screens/supplier/supplier_rfq_dashboard.dart';
 import 'package:jengamate/screens/admin/add_edit_product_screen.dart';
 import 'package:jengamate/screens/admin/add_edit_category_screen.dart';
 import 'package:jengamate/screens/admin/product_management_screen.dart';
+import 'package:jengamate/screens/order/orders_screen.dart';
+import 'package:jengamate/screens/invoices/invoices_screen.dart';
 import 'package:jengamate/widgets/app_drawer.dart';
 import 'package:jengamate/widgets/navigation_helper.dart';
 import 'package:jengamate/utils/responsive.dart';
@@ -53,30 +54,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final Map<String, Widget> allScreens = {
       'Dashboard': const DashboardTabScreen(),
-      'Categories': const CategoriesScreen(),
       'Products': const ProductsScreen(),
       'Inquiries': const InquiryScreen(),
       'RFQs': const SupplierRFQDashboard(),
+      'Orders': const OrdersScreen(),
+      'Invoices': const InvoicesScreen(),
       'Profile': const ProfileScreen(),
       'Admin Tools': const AdminToolsScreen(),
     };
 
     final Map<String, IconData> allIcons = {
       'Dashboard': Icons.dashboard_outlined,
-      'Categories': Icons.category_outlined,
       'Products': Icons.shopping_bag_outlined,
       'Inquiries': Icons.receipt_long_outlined,
       'RFQs': Icons.request_quote_outlined,
+      'Orders': Icons.shopping_cart_outlined,
+      'Invoices': Icons.receipt_outlined,
       'Profile': Icons.person_outline,
       'Admin Tools': Icons.admin_panel_settings_outlined,
     };
 
     final Map<String, IconData> allActiveIcons = {
       'Dashboard': Icons.dashboard,
-      'Categories': Icons.category,
       'Products': Icons.shopping_bag,
       'Inquiries': Icons.receipt_long,
       'RFQs': Icons.request_quote,
+      'Orders': Icons.shopping_cart,
+      'Invoices': Icons.receipt,
       'Profile': Icons.person,
       'Admin Tools': Icons.admin_panel_settings,
     };
@@ -85,17 +89,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (user.role == UserRole.admin) {
       allowedScreenKeys = [
         'Dashboard',
-        'Categories',
         'Products',
         'Inquiries',
+        'Orders',
+        'Invoices',
         'Profile',
         'Admin Tools'
       ];
     } else if (user.role == UserRole.supplier) {
-      allowedScreenKeys = ['Dashboard', 'Products', 'Categories', 'RFQs', 'Profile'];
+      allowedScreenKeys = [
+        'Dashboard',
+        'Products',
+        'RFQs',
+        'Orders',
+        'Profile'
+      ];
     } else {
       // engineer
-      allowedScreenKeys = ['Dashboard', 'Products', 'Inquiries', 'Profile'];
+      allowedScreenKeys = [
+        'Dashboard',
+        'Products',
+        'Inquiries',
+        'Orders',
+        'Profile'
+      ];
     }
 
     final List<Widget> _screens =
@@ -125,7 +142,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // Theme toggle
             Consumer<ThemeService>(
               builder: (context, themeService, _) => IconButton(
-                tooltip: themeService.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
+                tooltip: themeService.isDarkMode
+                    ? 'Switch to light mode'
+                    : 'Switch to dark mode',
                 icon: Icon(
                   themeService.isDarkMode ? Icons.light_mode : Icons.dark_mode,
                   size: Responsive.getResponsiveIconSize(context),
@@ -167,7 +186,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           items: _navItems,
           type: BottomNavigationBarType.fixed,
         ),
-        floatingActionButton: _buildFloatingActionButton(user, allowedScreenKeys),
+        floatingActionButton:
+            _buildFloatingActionButton(user, allowedScreenKeys),
         drawer: AppDrawer(user: user),
       );
     } else {
@@ -196,7 +216,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // Theme toggle
             Consumer<ThemeService>(
               builder: (context, themeService, _) => IconButton(
-                tooltip: themeService.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
+                tooltip: themeService.isDarkMode
+                    ? 'Switch to light mode'
+                    : 'Switch to dark mode',
                 icon: Icon(
                   themeService.isDarkMode ? Icons.light_mode : Icons.dark_mode,
                   size: Responsive.getResponsiveIconSize(context),
@@ -247,55 +269,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
-      body: Row(
-        children: [
-          NavigationRail(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-              // Navigate to Admin Tools if selected
-              if (allowedScreenKeys[index] == 'Admin Tools') {
-                context.go(AppRoutes.adminTools);
-              }
-            },
-            labelType: NavigationRailLabelType.all,
-            minWidth: Responsive.isDesktop(context) ? 80 : 60,
-            minExtendedWidth: Responsive.isDesktop(context) ? 200 : 160,
-            destinations: _navItems.map((item) {
-              return NavigationRailDestination(
-                icon: Icon(
-                  (item.icon as Icon).icon,
-                  size: Responsive.getResponsiveIconSize(context),
-                ),
-                selectedIcon: Icon(
-                  (item.activeIcon as Icon).icon,
-                  size: Responsive.getResponsiveIconSize(context),
-                ),
-                label: Text(
-                  item.label!,
-                  style: TextStyle(
-                    fontSize: Responsive.getResponsiveFontSize(context,
-                        mobile: 12, tablet: 14, desktop: 16),
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+                // Navigate to Admin Tools if selected
+                if (allowedScreenKeys[index] == 'Admin Tools') {
+                  context.go(AppRoutes.adminTools);
+                }
+              },
+              labelType: NavigationRailLabelType.all,
+              minWidth: Responsive.isDesktop(context) ? 80 : 60,
+              minExtendedWidth: Responsive.isDesktop(context) ? 200 : 160,
+              destinations: _navItems.map((item) {
+                return NavigationRailDestination(
+                  icon: Icon(
+                    (item.icon as Icon).icon,
+                    size: Responsive.getResponsiveIconSize(context),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
-          const VerticalDivider(thickness: 1, width: 1),
-          Expanded(
-            child: IndexedStack(
-              index: _selectedIndex,
-              children: _screens,
+                  selectedIcon: Icon(
+                    (item.activeIcon as Icon).icon,
+                    size: Responsive.getResponsiveIconSize(context),
+                  ),
+                  label: Text(
+                    item.label!,
+                    style: TextStyle(
+                      fontSize: Responsive.getResponsiveFontSize(context,
+                          mobile: 12, tablet: 14, desktop: 16),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: _buildFloatingActionButton(user, allowedScreenKeys),
-    );
+            const VerticalDivider(thickness: 1, width: 1),
+            Expanded(
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: _screens,
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton:
+            _buildFloatingActionButton(user, allowedScreenKeys),
+      );
+    }
   }
-}
 
   Widget _buildFloatingActionButton(
       UserModel user, List<String> allowedScreenKeys) {
@@ -324,17 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
           child: const Icon(Icons.add_shopping_cart),
         );
-      case 'Categories':
-        if (user.role == UserRole.admin) {
-          return FloatingActionButton(
-            heroTag: "addCategory",
-            onPressed: () {
-              // TODO: Add category dialog
-            },
-            child: const Icon(Icons.add),
-          );
-        }
-        break;
+
       case 'Suppliers':
         if (user.role == UserRole.admin) {
           return FloatingActionButton(
@@ -359,15 +372,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           top: Radius.circular(Responsive.getResponsiveBorderRadius(context)),
         ),
       ),
-        builder: (context) => AdaptivePadding(
+      builder: (context) => AdaptivePadding(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Quick Actions',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: JMSpacing.sm),
             Wrap(

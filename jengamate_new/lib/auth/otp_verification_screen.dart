@@ -54,7 +54,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     try {
       // TODO: The verifyOTP method may need to be updated to handle user registration
       // with the new parameters, or a separate registration call is needed.
-            final result = await authService.verifyOTP(
+      final result = await authService.verifyOTP(
         widget.verificationId,
         otp,
       );
@@ -94,82 +94,102 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     final phoneNumber = widget.phoneNumber;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('Verify OTP'),
       ),
-      body: AdaptivePadding(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: JMCard(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Icon(
-                      Icons.sms,
-                      size: 64,
-                      color: Colors.blue,
-                    ),
-                    const SizedBox(height: JMSpacing.lg),
-                    const Text(
-                      'Enter Verification Code',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: AdaptivePadding(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: JMCard(
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const Icon(
+                                  Icons.sms,
+                                  size: 64,
+                                  color: Colors.blue,
+                                ),
+                                const SizedBox(height: JMSpacing.lg),
+                                const Text(
+                                  'Enter Verification Code',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: JMSpacing.md),
+                                Text(
+                                  'We sent a 6-digit code to $phoneNumber',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: JMSpacing.xl),
+                                JMFormField(
+                                  controller: _otpController,
+                                  label: 'OTP Code',
+                                  prefixIcon: const Icon(Icons.lock),
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    LengthLimitingTextInputFormatter(6),
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Please enter the OTP code';
+                                    }
+                                    if (value.trim().length != 6) {
+                                      return 'OTP must be 6 digits';
+                                    }
+                                    if (!RegExp(r'^[0-9]{6}$')
+                                        .hasMatch(value.trim())) {
+                                      return 'Please enter a valid OTP code';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: JMSpacing.xl),
+                                JMButton(
+                                  onPressed: _isLoading ? null : _verifyOtp,
+                                  isLoading: _isLoading,
+                                  child: const Text('Verify OTP'),
+                                ),
+                                const SizedBox(height: JMSpacing.lg),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text(
+                                      'Didn\'t receive code? Resend'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: JMSpacing.md),
-                    Text(
-                      'We sent a 6-digit code to $phoneNumber',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: JMSpacing.xl),
-                    JMFormField(
-                      controller: _otpController,
-                      label: 'OTP Code',
-                      prefixIcon: const Icon(Icons.lock),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        LengthLimitingTextInputFormatter(6),
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter the OTP code';
-                        }
-                        if (value.trim().length != 6) {
-                          return 'OTP must be 6 digits';
-                        }
-                        if (!RegExp(r'^[0-9]{6}$').hasMatch(value.trim())) {
-                          return 'Please enter a valid OTP code';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: JMSpacing.xl),
-                    JMButton(
-                      onPressed: _isLoading ? null : _verifyOtp,
-                      isLoading: _isLoading,
-                      child: const Text('Verify OTP'),
-                    ),
-                    const SizedBox(height: JMSpacing.lg),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Didn\'t receive code? Resend'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

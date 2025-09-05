@@ -6,7 +6,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/services/supabase_service.dart';
@@ -17,137 +16,71 @@ import 'package:jengamate/services/invoice_service.dart';
 import 'package:provider/provider.dart';
 import 'config/app_router.dart';
 import 'config/app_theme.dart';
-import 'config/sentry_config.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  await SentryFlutter.init(
-    (options) {
-      options.dsn = SentryConfig.dsn;
-      options.environment = SentryConfig.environment;
-      options.release = SentryConfig.release;
-      options.tracesSampleRate = SentryConfig.tracesSampleRate;
-      options.profilesSampleRate = SentryConfig.profilesSampleRate;
-      options.attachStacktrace = SentryConfig.attachStackTrace;
-      options.sendDefaultPii = SentryConfig.sendDefaultPii;
-
-      // Enable performance monitoring
-      options.enableTracing = SentryConfig.enablePerformanceMonitoring;
-
-      // Debug settings
-      options.debug = kDebugMode;
-    },
-    appRunner: () => runZonedGuarded(() async {
-      // Ensure Flutter bindings are initialized in the same zone as runApp
-      // to prevent "Zone mismatch" errors.
+  // Wrap the entire application in a guarded zone to catch all errors.
+  runZonedGuarded<Future<void>>(
+    () async {
+      // Ensure Flutter bindings are initialized first.
       WidgetsFlutterBinding.ensureInitialized();
 
-      const bool kTestCrashOnStart = bool.fromEnvironment('TEST_CRASH_ON_START');
+      // Sentry removed.
 
-    try {
-      debugPrint('🚀 Initializing Firebase...');
-      // Temporary: skip Firebase init on Android while Google Services are disabled
-      final bool isAndroidPlatform =
-          !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-      if (isAndroidPlatform) {
-        debugPrint(
-            '⏭️ Skipping Firebase initialization on Android for this build');
+      // Initialize Firebase and Supabase.
+      try {
+        debugPrint('🚀 Initializing Firebase...');
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
         await SupabaseService.instance.initialize();
-        runApp(const MyApp());
-        return; // prevent executing Firebase init below
-      }
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+        debugPrint('✅ Firebase and Supabase initialized successfully');
 
-      // Initialize Supabase with configured credentials
-      await SupabaseService.instance.initialize();
-
-      debugPrint('✅ Firebase initialized successfully');
-
-      // Connect to local emulators in debug mode - DISABLED for production
-      // if (kDebugMode) {
-      //   try {
-      //     debugPrint('?? Connecting to local Firebase emulators...');
-      //     await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-      //         FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8082);
-      //     await FirebaseStorage.instance.useStorageEmulator('localhost', 9199);
-      //     debugPrint('?? Connected to local emulators');
-      //   } catch (e) {
-      //     debugPrint('?? Failed to connect to emulators: $e');
-      //   }
-      // }
-
-      if (!kIsWeb) { // Apply Crashlytics setup only if not on web
-        try {
-          // Only enable Crashlytics collection in release mode
+        // Set up crash reporting and global error handlers.
+        if (kIsWeb) {
+          FlutterError.onError = (FlutterErrorDetails details) {
+            // Sentry removed; keep default behavior if needed.
+          };
+        } else {
+          // For mobile, use more comprehensive error handling.
           await FirebaseCrashlytics.instance
               .setCrashlyticsCollectionEnabled(kReleaseMode);
 
-          // Forward Flutter framework errors to both Sentry and Firebase
           FlutterError.onError = (FlutterErrorDetails details) {
             FlutterError.presentError(details);
-            Sentry.captureException(details.exception, stackTrace: details.stack);
             FirebaseCrashlytics.instance.recordFlutterFatalError(details);
           };
 
-          // Forward uncaught async and platform errors to Sentry and Firebase (if enabled)
-          PlatformDispatcher.instance.onError =
-              (Object error, StackTrace stack) {
-            Sentry.captureException(error, stackTrace: stack);
-            if (kReleaseMode) { // Only record fatal errors in release mode
+          PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+            if (kReleaseMode) {
               FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
             }
-            return true; // handled
+            return true; // Error handled.
           };
-
-          // Optional one-time test crash to verify Crashlytics (only when explicitly enabled)
-          if (kTestCrashOnStart && !kDebugMode) {
-            Future.delayed(const Duration(seconds: 2), () {
-              FirebaseCrashlytics.instance.crash();
-            });
-          }
-        } catch (e) {
-          debugPrint('⚠️ Crashlytics setup skipped/failed: $e');
         }
-      }
 
-      runApp(const MyApp());
-    } catch (e, stackTrace) {
-      debugPrint('❌ Firebase initialization failed: $e');
-      debugPrint('Stack trace: $stackTrace');
-      runApp(MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                const Text('Firebase Initialization Error',
-                    style:
-                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text('Error: $e',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red)),
-                ),
-              ],
+        // Run the app.
+        runApp(const MyApp());
+      } catch (e, stackTrace) {
+        debugPrint('❌ Initialization failed: $e');
+        debugPrint('Stack trace: $stackTrace');
+        runApp(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: Text('Initialization Error: $e'),
+              ),
             ),
           ),
-        ),
-      ));
-    }
-    }, (error, stack) {
-      // Report to both Sentry and Firebase Crashlytics
-      Sentry.captureException(error, stackTrace: stack);
-
-      if (!kIsWeb && kReleaseMode) { // Best-effort reporting on non-web in release mode
+        );
+      }
+    },
+    (error, stack) {
+      // Errors caught by the zone are reported to Crashlytics (Sentry removed).
+      if (!kIsWeb && kReleaseMode) {
         FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       }
-    }),
+    },
   );
 }
 
@@ -169,7 +102,8 @@ class MyApp extends StatelessWidget {
         Provider<NotificationService>(
           create: (_) {
             final notificationService = NotificationService();
-            notificationService.loadNotificationSettings(); // Load settings asynchronously
+            notificationService
+                .loadNotificationSettings(); // Load settings asynchronously
             return notificationService;
           },
         ),

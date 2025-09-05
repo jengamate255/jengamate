@@ -13,7 +13,8 @@ class AdminToolsScreen extends StatelessWidget {
       : _providedMetrics = null,
         _autoRefresh = true;
 
-  const AdminToolsScreen.withProvider(this._providedMetrics, {super.key, bool autoRefresh = false})
+  const AdminToolsScreen.withProvider(this._providedMetrics,
+      {super.key, bool autoRefresh = false})
       : _autoRefresh = autoRefresh;
 
   int _calculateCrossAxisCount(double width) {
@@ -21,6 +22,7 @@ class AdminToolsScreen extends StatelessWidget {
     if (width < 1000) return 2; // small/medium tablets
     return 3; // large tablets / desktop
   }
+
   @override
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> adminToolsFor(AdminMetricsProvider m) => [
@@ -115,7 +117,7 @@ class AdminToolsScreen extends StatelessWidget {
           },
           {
             'title': 'Content Moderation',
-            'icon': Icons.policy, // replaced unsupported icon
+            'icon': Icons.policy,
             'route': '/content-moderation',
           },
           {
@@ -150,7 +152,8 @@ class AdminToolsScreen extends StatelessWidget {
                   Container(
                     width: double.infinity,
                     color: Colors.red.withValues(alpha: 0.1),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
                       children: [
                         const Icon(Icons.error_outline, color: Colors.red),
@@ -171,7 +174,8 @@ class AdminToolsScreen extends StatelessWidget {
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final crossAxisCount = _calculateCrossAxisCount(constraints.maxWidth);
+                      final crossAxisCount =
+                          _calculateCrossAxisCount(constraints.maxWidth);
                       final grid = GridView.builder(
                         padding: const EdgeInsets.all(16.0),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -279,10 +283,22 @@ class _KpiRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <_KpiItem>[
-      _KpiItem(label: 'Pending Withdrawals', value: metrics.pendingWithdrawals, icon: Icons.account_balance_wallet),
-      _KpiItem(label: 'Pending Referrals', value: metrics.pendingReferrals, icon: Icons.group_add),
-      _KpiItem(label: 'Open Audit Items', value: metrics.openAuditItems, icon: Icons.fact_check),
-      _KpiItem(label: 'User Approvals', value: metrics.pendingUserApprovals, icon: Icons.verified_user),
+      _KpiItem(
+          label: 'Pending Withdrawals',
+          value: metrics.pendingWithdrawals,
+          icon: Icons.account_balance_wallet),
+      _KpiItem(
+          label: 'Pending Referrals',
+          value: metrics.pendingReferrals,
+          icon: Icons.group_add),
+      _KpiItem(
+          label: 'Open Audit Items',
+          value: metrics.openAuditItems,
+          icon: Icons.fact_check),
+      _KpiItem(
+          label: 'User Approvals',
+          value: metrics.pendingUserApprovals,
+          icon: Icons.verified_user),
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -290,7 +306,8 @@ class _KpiRow extends StatelessWidget {
         return Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: items.map((i) => _KpiTile(item: i, compact: isNarrow)).toList(),
+          children:
+              items.map((i) => _KpiTile(item: i, compact: isNarrow)).toList(),
         );
       },
     );
@@ -339,7 +356,8 @@ class _KpiTile extends StatelessWidget {
               Text(item.label, style: theme.textTheme.labelMedium),
               Text(
                 item.value.toString(),
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -348,7 +366,7 @@ class _KpiTile extends StatelessWidget {
     );
   }
 }
- 
+
 class _AdminToolCard extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -394,14 +412,16 @@ class _AdminToolCard extends StatelessWidget {
                 right: 12,
                 top: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.redAccent,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     badgeCount!.toString(),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

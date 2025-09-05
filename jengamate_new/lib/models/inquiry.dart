@@ -1,0 +1,353 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class Inquiry {
+  final String uid;
+  final String userId;
+  final String userName;
+  final String userEmail;
+  final String subject;
+  final String description;
+  final String
+      category; // 'product', 'service', 'quotation', 'support', 'general'
+  final String priority; // 'low', 'medium', 'high', 'urgent'
+  final String
+      status; // 'open', 'in_progress', 'waiting_for_response', 'resolved', 'closed'
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? resolvedAt;
+  final String? assignedTo;
+  final String? assignedToName;
+  final String? response;
+  final List<String> tags;
+  final Map<String, dynamic>? projectInfo; // For project-specific inquiries
+  final List<String>?
+      products; // Product IDs if inquiry is about specific products
+  final Map<String, dynamic>? metadata;
+
+  Inquiry({
+    required this.uid,
+    required this.userId,
+    required this.userName,
+    required this.userEmail,
+    required this.subject,
+    required this.description,
+    required this.category,
+    required this.priority,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    this.resolvedAt,
+    this.assignedTo,
+    this.assignedToName,
+    this.response,
+    required this.tags,
+    this.projectInfo,
+    this.products,
+    this.metadata,
+  });
+
+  factory Inquiry.fromMap(Map<String, dynamic> map) {
+    // Validate required fields to prevent incomplete inquiry errors
+    final userId = map['userId'] ?? '';
+    final subject = map['subject'] ?? '';
+    final uid = map['uid'] ?? '';
+
+    if (userId.isEmpty || subject.isEmpty) {
+      throw Exception(
+          'Inquiry data is incomplete - missing required userId or subject fields');
+    }
+
+    return Inquiry(
+      uid: uid,
+      userId: userId,
+      userName: map['userName'] ?? 'Unknown User',
+      userEmail: map['userEmail'] ?? 'Unknown',
+      subject: subject,
+      description: map['description'] ?? 'No description provided',
+      category: map['category'] ?? 'general',
+      priority: map['priority'] ?? 'medium',
+      status: map['status'] ?? 'open',
+      createdAt: _parseTimestamp(map['createdAt'], fallbackToNow: true),
+      updatedAt: _parseTimestamp(map['updatedAt'], fallbackToNow: false),
+      resolvedAt: map['resolvedAt'] != null
+          ? _parseOptionalTimestamp(map['resolvedAt'])
+          : null,
+      assignedTo: map['assignedTo'],
+      assignedToName: map['assignedToName'],
+      response: map['response'],
+      tags: List<String>.from(map['tags'] ?? []),
+      projectInfo: map['projectInfo'] as Map<String, dynamic>?,
+      products: List<String>.from(map['products'] ?? []),
+      metadata: map['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  // Helper method to parse timestamps safely
+  static DateTime _parseTimestamp(dynamic timestamp,
+      {bool fallbackToNow = true}) {
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    }
+    if (fallbackToNow) {
+      return DateTime.now();
+    }
+    return DateTime.now(); // Fallback anyway
+  }
+
+  // Helper method to parse optional timestamps
+  static DateTime? _parseOptionalTimestamp(dynamic timestamp) {
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    }
+    return null;
+  }
+
+  factory Inquiry.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Inquiry.fromMap(data);
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'uid': uid,
+      'userId': userId,
+      'userName': userName,
+      'userEmail': userEmail,
+      'subject': subject,
+      'description': description,
+      'category': category,
+      'priority': priority,
+      'status': status,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+      'resolvedAt': resolvedAt != null ? Timestamp.fromDate(resolvedAt!) : null,
+      'assignedTo': assignedTo,
+      'assignedToName': assignedToName,
+      'response': response,
+      'tags': tags,
+      'projectInfo': projectInfo,
+      'products': products,
+      'metadata': metadata,
+    };
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return toMap();
+  }
+
+  Inquiry copyWith({
+    String? uid,
+    String? userId,
+    String? userName,
+    String? userEmail,
+    String? subject,
+    String? description,
+    String? category,
+    String? priority,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? resolvedAt,
+    String? assignedTo,
+    String? assignedToName,
+    String? response,
+    List<String>? tags,
+    Map<String, dynamic>? projectInfo,
+    List<String>? products,
+    Map<String, dynamic>? metadata,
+  }) {
+    return Inquiry(
+      uid: uid ?? this.uid,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userEmail: userEmail ?? this.userEmail,
+      subject: subject ?? this.subject,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      priority: priority ?? this.priority,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
+      assignedTo: assignedTo ?? this.assignedTo,
+      assignedToName: assignedToName ?? this.assignedToName,
+      response: response ?? this.response,
+      tags: tags ?? this.tags,
+      projectInfo: projectInfo ?? this.projectInfo,
+      products: products ?? this.products,
+      metadata: metadata ?? this.metadata,
+    );
+  }
+
+  // Computed properties
+  bool get isOpen => status == 'open';
+  bool get isInProgress => status == 'in_progress';
+  bool get isResolved => status == 'resolved';
+  bool get isClosed => status == 'closed';
+  bool get isWaitingForResponse => status == 'waiting_for_response';
+
+  bool get isUrgent => priority == 'urgent';
+  bool get isHighPriority => priority == 'high';
+
+  String get statusDisplayName {
+    switch (status) {
+      case 'open':
+        return 'Open';
+      case 'in_progress':
+        return 'In Progress';
+      case 'waiting_for_response':
+        return 'Waiting for Response';
+      case 'resolved':
+        return 'Resolved';
+      case 'closed':
+        return 'Closed';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String get priorityDisplayName {
+    switch (priority) {
+      case 'low':
+        return 'Low';
+      case 'medium':
+        return 'Medium';
+      case 'high':
+        return 'High';
+      case 'urgent':
+        return 'Urgent';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String get categoryDisplayName {
+    switch (category) {
+      case 'product':
+        return 'Product Inquiry';
+      case 'service':
+        return 'Service Inquiry';
+      case 'quotation':
+        return 'Quotation Request';
+      case 'support':
+        return 'Support Request';
+      case 'general':
+        return 'General Inquiry';
+      default:
+        return category.replaceAll('_', ' ').toLowerCase();
+    }
+  }
+
+  // Helper methods
+  Duration get timeToResolution {
+    if (resolvedAt == null) return Duration.zero;
+    return resolvedAt!.difference(createdAt);
+  }
+
+  bool get isOverdue {
+    if (isResolved || isClosed) return false;
+
+    final daysOpen = DateTime.now().difference(createdAt).inDays;
+    switch (priority) {
+      case 'urgent':
+        return daysOpen > 1;
+      case 'high':
+        return daysOpen > 3;
+      case 'medium':
+        return daysOpen > 7;
+      case 'low':
+        return daysOpen > 14;
+      default:
+        return false;
+    }
+  }
+
+  String get projectName => projectInfo?['projectName'] ?? 'N/A';
+  String get deliveryAddress => projectInfo?['deliveryAddress'] ?? 'N/A';
+  DateTime? get expectedDeliveryDate {
+    final dateStr = projectInfo?['expectedDeliveryDate'];
+    if (dateStr is String) {
+      return DateTime.tryParse(dateStr);
+    }
+    return null;
+  }
+
+  bool get transportNeeded => projectInfo?['transportNeeded'] ?? false;
+
+  // Static factory methods for common inquiry types
+  static Inquiry productInquiry({
+    required String userId,
+    required String userName,
+    required String userEmail,
+    required String subject,
+    required String description,
+    required List<String> productIds,
+    String priority = 'medium',
+  }) {
+    return Inquiry(
+      uid: '',
+      userId: userId,
+      userName: userName,
+      userEmail: userEmail,
+      subject: subject,
+      description: description,
+      category: 'product',
+      priority: priority,
+      status: 'open',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      tags: ['product'],
+      products: productIds,
+    );
+  }
+
+  static Inquiry quotationRequest({
+    required String userId,
+    required String userName,
+    required String userEmail,
+    required String subject,
+    required String description,
+    Map<String, dynamic>? projectInfo,
+    String priority = 'high',
+  }) {
+    return Inquiry(
+      uid: '',
+      userId: userId,
+      userName: userName,
+      userEmail: userEmail,
+      subject: subject,
+      description: description,
+      category: 'quotation',
+      priority: priority,
+      status: 'open',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      tags: ['quotation'],
+      projectInfo: projectInfo,
+    );
+  }
+
+  static Inquiry supportRequest({
+    required String userId,
+    required String userName,
+    required String userEmail,
+    required String subject,
+    required String description,
+    String priority = 'medium',
+  }) {
+    return Inquiry(
+      uid: '',
+      userId: userId,
+      userName: userName,
+      userEmail: userEmail,
+      subject: subject,
+      description: description,
+      category: 'support',
+      priority: priority,
+      status: 'open',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      tags: ['support'],
+    );
+  }
+}

@@ -25,14 +25,15 @@ class CategoriesScreen extends StatelessWidget {
         title: const Text('Categories'),
       ),
       body: StreamBuilder<List<CategoryModel>>(
-        stream: dbService.getCategories(),
+        stream: dbService.streamCategories(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Padding(
               padding: Responsive.getResponsivePadding(context),
               child: ListView.separated(
                 itemCount: 6,
-                separatorBuilder: (_, __) => const SizedBox(height: JMSpacing.md),
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: JMSpacing.md),
                 itemBuilder: (context, index) => const JMCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,7 +59,8 @@ class CategoriesScreen extends StatelessWidget {
           return Padding(
             padding: Responsive.getResponsivePadding(context),
             child: ListView.separated(
-              padding: const EdgeInsets.only(top: JMSpacing.md, bottom: JMSpacing.md),
+              padding: const EdgeInsets.only(
+                  top: JMSpacing.md, bottom: JMSpacing.md),
               itemCount: categories.length,
               separatorBuilder: (_, __) => const SizedBox(height: JMSpacing.md),
               itemBuilder: (context, index) {
@@ -69,7 +71,8 @@ class CategoriesScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => CategoryFormScreen(category: category),
+                          builder: (context) =>
+                              CategoryFormScreen(category: category),
                         ),
                       );
                     }

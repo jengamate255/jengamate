@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/product.dart';
 import 'package:jengamate/screens/inquiry/widgets/product_form_card.dart';
-import 'package:jengamate/models/inquiry_model.dart';
+import 'package:jengamate/models/inquiry.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/widgets/custom_text_field.dart';
 import 'package:provider/provider.dart';
@@ -57,21 +57,19 @@ class _NewInquiryScreenState extends State<NewInquiryScreen> {
           throw Exception('User not logged in');
         }
 
-        final inquiry = InquiryModel(
-          id: '',
+        final inquiry = Inquiry(
+          uid: FirebaseFirestore.instance.collection('inquiries').doc().id,
           userId: currentUser.uid,
-          title: _projectNameController.text, // Added title
-          products: _products
-              .map((p) => {
-                    'type': p.type,
-                    'thickness': p.thickness,
-                    'color': p.color,
-                    'length': p.length,
-                    'quantity': p.quantity,
-                    'remarks': p.remarks,
-                    'drawings': p.drawings,
-                  })
-              .toList(),
+          userName: currentUser.displayName,
+          userEmail: currentUser.email ?? '',
+          subject: _projectNameController.text,
+          description: '',
+          category: 'quotation',
+          priority: 'medium',
+          status: 'open',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          tags: const ['quotation'],
           projectInfo: {
             'projectName': _projectNameController.text,
             'deliveryAddress': _deliveryAddressController.text,
@@ -79,9 +77,8 @@ class _NewInquiryScreenState extends State<NewInquiryScreen> {
             'expectedDeliveryDate': _expectedDeliveryDateController.text,
             'transportNeeded': _transportNeeded,
           },
-          attachments: [],
-          status: 'Pending',
-          createdAt: Timestamp.now(),
+          products: _products.map((p) => p.type).toList(),
+          metadata: null,
         );
 
         final dbService = DatabaseService();
@@ -124,36 +121,45 @@ class _NewInquiryScreenState extends State<NewInquiryScreen> {
                 // Project Details Section
                 Text(
                   'Project Details',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: JMSpacing.md),
                 CustomTextField(
                   controller: _projectNameController,
                   labelText: 'Project Name',
-                  validator: (value) => value!.isEmpty ? 'Please enter a project name' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'Please enter a project name' : null,
                 ),
                 const SizedBox(height: JMSpacing.md),
                 CustomTextField(
                   controller: _deliveryAddressController,
                   labelText: 'Delivery Address',
-                  validator: (value) => value!.isEmpty ? 'Please enter a delivery address' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'Please enter a delivery address' : null,
                 ),
                 const SizedBox(height: JMSpacing.md),
                 CustomTextField(
                   controller: _timelineController,
                   labelText: 'Required Timeline (e.g., 2 weeks)',
-                  validator: (value) => value!.isEmpty ? 'Please enter a timeline' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'Please enter a timeline' : null,
                 ),
                 const SizedBox(height: JMSpacing.md),
                 CustomTextField(
                   controller: _expectedDeliveryDateController,
                   labelText: 'Expected Delivery Date (e.g., 2025-02-15)',
-                  validator: (value) => value!.isEmpty ? 'Please enter expected delivery date' : null,
+                  validator: (value) => value!.isEmpty
+                      ? 'Please enter expected delivery date'
+                      : null,
                 ),
                 const SizedBox(height: JMSpacing.md),
                 CheckboxListTile(
                   title: const Text('Transport Needed'),
-                  subtitle: const Text('Check if you need transportation services'),
+                  subtitle:
+                      const Text('Check if you need transportation services'),
                   value: _transportNeeded,
                   onChanged: (value) {
                     setState(() {
@@ -167,7 +173,10 @@ class _NewInquiryScreenState extends State<NewInquiryScreen> {
                 // Products Section
                 Text(
                   'Products',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: JMSpacing.md),
                 ListView.builder(
@@ -176,7 +185,8 @@ class _NewInquiryScreenState extends State<NewInquiryScreen> {
                   itemCount: _products.length,
                   itemBuilder: (context, index) {
                     return ProductFormCard(
-                      key: ValueKey(_products[index]), // Important for state management
+                      key: ValueKey(
+                          _products[index]), // Important for state management
                       product: _products[index],
                       onRemove: () => _removeProduct(index),
                       isRemovable: _products.length > 1,

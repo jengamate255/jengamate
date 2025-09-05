@@ -25,7 +25,9 @@ class AdminAnalyticsService {
         metadata: metadata,
       );
 
-      await _firestore.collection('user_activities').add(activity.toFirestore());
+      await _firestore
+          .collection('user_activities')
+          .add(activity.toFirestore());
     } catch (e) {
       print('Error logging user activity: $e');
     }
@@ -51,8 +53,9 @@ class AdminAnalyticsService {
       query = query.where('timestamp', isLessThanOrEqualTo: endDate);
     }
 
-    return query.limit(limit).snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => AdminUserActivity.fromFirestore(doc)).toList());
+    return query.limit(limit).snapshots().map((snapshot) => snapshot.docs
+        .map((doc) => AdminUserActivity.fromFirestore(doc))
+        .toList());
   }
 
   // Get user statistics
@@ -106,16 +109,15 @@ class AdminAnalyticsService {
     Query userQuery = _firestore.collection('users');
 
     return userQuery.snapshots().asyncMap((snapshot) async {
-      final users = snapshot.docs
-          .map((doc) => EnhancedUser.fromFirestore(doc))
-          .toList();
+      final users =
+          snapshot.docs.map((doc) => EnhancedUser.fromFirestore(doc)).toList();
 
       // Filter by date range if provided
       if (startDate != null || endDate != null) {
         users.retainWhere((user) {
           final createdAt = user.createdAt;
           if (createdAt == null) return false;
-          
+
           if (startDate != null && createdAt.isBefore(startDate)) return false;
           if (endDate != null && createdAt.isAfter(endDate)) return false;
           return true;
@@ -126,7 +128,8 @@ class AdminAnalyticsService {
       final totalUsers = users.length;
       final activeUsers = users.where((u) => u.isActive).length;
       final suspendedUsers = users.where((u) => !u.isActive).length;
-      final pendingUsers = users.where((u) => u.roles.contains('pending')).length;
+      final pendingUsers =
+          users.where((u) => u.roles.contains('pending')).length;
 
       final roleCounts = {
         'admin': users.where((u) => u.roles.contains('admin')).length,
@@ -149,9 +152,10 @@ class AdminAnalyticsService {
     });
   }
 
-  List<Map<String, dynamic>> _calculateRegistrationTrends(List<EnhancedUser> users) {
+  List<Map<String, dynamic>> _calculateRegistrationTrends(
+      List<EnhancedUser> users) {
     final trends = <String, int>{};
-    
+
     for (final user in users) {
       if (user.createdAt != null) {
         final dateKey = DateFormat('yyyy-MM-dd').format(user.createdAt!);
@@ -159,9 +163,7 @@ class AdminAnalyticsService {
       }
     }
 
-    return trends.entries
-        .map((e) => {'date': e.key, 'count': e.value})
-        .toList()
+    return trends.entries.map((e) => {'date': e.key, 'count': e.value}).toList()
       ..sort((a, b) => (a['date'] as String).compareTo(b['date'] as String));
   }
 
@@ -172,32 +174,35 @@ class AdminAnalyticsService {
   }) async {
     try {
       Query query = _firestore.collection('users');
-      
+
       if (userIds != null && userIds.isNotEmpty) {
         query = query.where(FieldPath.documentId, whereIn: userIds);
       }
 
       final snapshot = await query.get();
-      final users = snapshot.docs
-          .map((doc) => EnhancedUser.fromFirestore(doc))
-          .toList();
+      final users =
+          snapshot.docs.map((doc) => EnhancedUser.fromFirestore(doc)).toList();
 
       // Apply additional filters
       if (filters != null) {
         users.retainWhere((user) {
-          if (filters['role'] != null && !user.roles.contains(filters['role'])) return false;
-          if (filters['status'] != null && !user.roles.contains(filters['status'])) return false;
-          if (filters['isActive'] != null && user.isActive != filters['isActive']) return false;
+          if (filters['role'] != null && !user.roles.contains(filters['role']))
+            return false;
+          if (filters['status'] != null &&
+              !user.roles.contains(filters['status'])) return false;
+          if (filters['isActive'] != null &&
+              user.isActive != filters['isActive']) return false;
           return true;
         });
       }
 
       // Generate CSV
       final csvBuffer = StringBuffer();
-      
+
       // Header
-      csvBuffer.writeln('ID,Name,Email,Phone,Role,Status,IsActive,CreatedAt,LastLogin');
-      
+      csvBuffer.writeln(
+          'ID,Name,Email,Phone,Role,Status,IsActive,CreatedAt,LastLogin');
+
       // Data
       for (final user in users) {
         csvBuffer.writeln(
@@ -209,6 +214,40 @@ class AdminAnalyticsService {
     } catch (e) {
       print('Error exporting users to CSV: $e');
       return '';
+    }
+
+    // Placeholder for getSystemHealth
+    Stream<Map<String, dynamic>> getSystemHealth() {
+      return Stream.value({
+        'cpuUsage': 25.0,
+        'memoryUsage': 40.0,
+        'diskUsage': 60.0,
+        'networkTraffic': 10.0,
+        'serverStatus': 'Operational',
+      });
+    }
+
+    // Placeholder for getDashboardStats
+    Stream<Map<String, dynamic>> getDashboardStats() {
+      return Stream.value({
+        'totalOrders': 1200,
+        'pendingOrders': 150,
+        'completedOrders': 900,
+        'totalRevenue': 150000.00,
+        'newUsersToday': 25,
+      });
+    }
+
+    // Placeholder for getRecentActivity
+    Stream<List<AdminUserActivity>> getRecentActivity({int limit = 5}) {
+      return _firestore
+          .collection('user_activities')
+          .orderBy('timestamp', descending: true)
+          .limit(limit)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => AdminUserActivity.fromFirestore(doc))
+              .toList());
     }
   }
 }

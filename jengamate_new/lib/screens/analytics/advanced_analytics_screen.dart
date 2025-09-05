@@ -9,10 +9,12 @@ class AdvancedAnalyticsScreen extends StatefulWidget {
   const AdvancedAnalyticsScreen({super.key});
 
   @override
-  State<AdvancedAnalyticsScreen> createState() => _AdvancedAnalyticsScreenState();
+  State<AdvancedAnalyticsScreen> createState() =>
+      _AdvancedAnalyticsScreenState();
 }
 
-class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with TickerProviderStateMixin {
+class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
+    with TickerProviderStateMixin {
   final DatabaseService _databaseService = DatabaseService();
   late TabController _tabController;
 
@@ -41,11 +43,14 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
       // Fetch category data for pie chart
       List<Map<String, dynamic>> categoryData = [];
       try {
-        final categoriesSnapshot = await _databaseService.getCategories().first;
-        categoryData = categoriesSnapshot.map((category) => {
-          'name': category.name,
-          'productCount': 0, // This would need to be calculated based on products in each category
-        }).toList();
+        final categoriesList = await _databaseService.getCategories();
+        categoryData = categoriesList
+            .map((category) => {
+                  'name': category.name,
+                  'productCount':
+                      0, // This would need to be calculated based on products in each category
+                })
+            .toList();
       } catch (e) {
         Logger.logError('Error loading category data', e, StackTrace.current);
       }
@@ -56,8 +61,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
           'topProducts': topProducts,
           'categories': categoryData,
         };
-        _salesData = _generateSalesData(salesOverTime);
-        _userGrowthData = _generateUserGrowthData(userGrowthData);
+        _salesData = _generateSalesData(_convertSalesListToMap(salesOverTime));
+        _userGrowthData = _generateUserGrowthData(
+            _convertUserGrowthListToMap(userGrowthData));
         _categoryData = _generateCategoryData();
       });
 
@@ -122,9 +128,46 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
     return data;
   }
 
+  Map<DateTime, double> _convertSalesListToMap(
+      List<Map<String, dynamic>> salesList) {
+    final Map<DateTime, double> result = {};
+    for (final item in salesList) {
+      final dateStr = item['month'] as String?;
+      final sales = (item['sales'] as num?)?.toDouble() ?? 0.0;
+      if (dateStr != null) {
+        try {
+          final date = DateTime.parse('${dateStr}-01');
+          result[date] = sales;
+        } catch (e) {
+          // Skip invalid dates
+        }
+      }
+    }
+    return result;
+  }
+
+  Map<DateTime, int> _convertUserGrowthListToMap(
+      List<Map<String, dynamic>> userGrowthList) {
+    final Map<DateTime, int> result = {};
+    for (final item in userGrowthList) {
+      final dateStr = item['month'] as String?;
+      final users = (item['users'] as num?)?.toInt() ?? 0;
+      if (dateStr != null) {
+        try {
+          final date = DateTime.parse('${dateStr}-01');
+          result[date] = users;
+        } catch (e) {
+          // Skip invalid dates
+        }
+      }
+    }
+    return result;
+  }
+
   List<PieChartSectionData> _generateCategoryData() {
     // Get category data from database service
-    final categories = _analyticsData['categories'] as List<Map<String, dynamic>>? ?? [];
+    final categories =
+        _analyticsData['categories'] as List<Map<String, dynamic>>? ?? [];
 
     if (categories.isEmpty) {
       // Show single section indicating no data
@@ -134,12 +177,20 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
           value: 100,
           title: 'No Data\nAvailable',
           radius: 60,
-          titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54),
+          titleStyle: const TextStyle(
+              fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54),
         ),
       ];
     }
 
-    final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.red, Colors.teal];
+    final colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+      Colors.teal
+    ];
 
     return categories.asMap().entries.map((entry) {
       final index = entry.key;
@@ -153,7 +204,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
         value: productCount.toDouble(),
         title: '$name\n$productCount',
         radius: 60,
-        titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
       );
     }).toList();
   }
@@ -292,22 +344,35 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
     final avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
 
     return Responsive.isMobile(context)
-        ? Column(children: _buildKPICardsList(totalRevenue, totalOrders, totalUsers, avgOrderValue))
+        ? Column(
+            children: _buildKPICardsList(
+                totalRevenue, totalOrders, totalUsers, avgOrderValue))
         : Wrap(
             spacing: Responsive.getResponsiveSpacing(context),
             runSpacing: Responsive.getResponsiveSpacing(context),
-            children: _buildKPICardsList(totalRevenue, totalOrders, totalUsers, avgOrderValue)
-                .map((card) => SizedBox(width: Responsive.getResponsiveCardWidth(context), child: card))
+            children: _buildKPICardsList(
+                    totalRevenue, totalOrders, totalUsers, avgOrderValue)
+                .map((card) => SizedBox(
+                    width: Responsive.getResponsiveCardWidth(context),
+                    child: card))
                 .toList(),
           );
   }
 
-  List<Widget> _buildKPICardsList(double revenue, int orders, int users, double avgOrder) {
+  List<Widget> _buildKPICardsList(
+      double revenue, int orders, int users, double avgOrder) {
     return [
-      _buildKPICard('Total Revenue', 'TSh ${NumberFormat('#,##0.00').format(revenue)}', Icons.attach_money, Colors.green),
-      _buildKPICard('Total Orders', NumberFormat('#,##0').format(orders), Icons.shopping_cart, Colors.blue),
-      _buildKPICard('Total Users', NumberFormat('#,##0').format(users), Icons.people, Colors.purple),
-      _buildKPICard('Avg Order Value', 'TSh ${avgOrder.toStringAsFixed(2)}', Icons.trending_up, Colors.orange),
+      _buildKPICard(
+          'Total Revenue',
+          'TSh ${NumberFormat('#,##0.00').format(revenue)}',
+          Icons.attach_money,
+          Colors.green),
+      _buildKPICard('Total Orders', NumberFormat('#,##0').format(orders),
+          Icons.shopping_cart, Colors.blue),
+      _buildKPICard('Total Users', NumberFormat('#,##0').format(users),
+          Icons.people, Colors.purple),
+      _buildKPICard('Avg Order Value', 'TSh ${avgOrder.toStringAsFixed(2)}',
+          Icons.trending_up, Colors.orange),
     ];
   }
 
@@ -336,9 +401,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
             Text(
               value,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
           ],
         ),
@@ -350,8 +415,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
     return Text(
       title,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.bold,
-      ),
+            fontWeight: FontWeight.bold,
+          ),
     );
   }
 
@@ -378,13 +443,16 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
                   sideTitles: SideTitles(
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
-                      final date = DateTime.now().subtract(Duration(days: (29 - value.toInt())));
+                      final date = DateTime.now()
+                          .subtract(Duration(days: (29 - value.toInt())));
                       return Text(DateFormat('M/d').format(date));
                     },
                   ),
                 ),
-                rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles:
+                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
               borderData: FlBorderData(show: true),
               lineBarsData: [
@@ -396,7 +464,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
                   dotData: FlDotData(show: false),
                   belowBarData: BarAreaData(
                     show: true,
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                    color:
+                        Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   ),
                 ),
               ],
@@ -452,8 +521,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
                     },
                   ),
                 ),
-                rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles:
+                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
               ),
               borderData: FlBorderData(show: true),
               lineBarsData: [
@@ -483,11 +554,17 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
 
     return Row(
       children: [
-        Expanded(child: _buildMetricCard('Today\'s Sales', 'TSh ${todaySales.toStringAsFixed(2)}', '', Colors.green)),
+        Expanded(
+            child: _buildMetricCard('Today\'s Sales',
+                'TSh ${todaySales.toStringAsFixed(2)}', '', Colors.green)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('This Week', 'TSh ${weekSales.toStringAsFixed(2)}', '', Colors.blue)),
+        Expanded(
+            child: _buildMetricCard('This Week',
+                'TSh ${weekSales.toStringAsFixed(2)}', '', Colors.blue)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('This Month', 'TSh ${monthSales.toStringAsFixed(2)}', '', Colors.purple)),
+        Expanded(
+            child: _buildMetricCard('This Month',
+                'TSh ${monthSales.toStringAsFixed(2)}', '', Colors.purple)),
       ],
     );
   }
@@ -499,11 +576,17 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
 
     return Row(
       children: [
-        Expanded(child: _buildMetricCard('New Users', '$newUsers', '', Colors.green)),
+        Expanded(
+            child:
+                _buildMetricCard('New Users', '$newUsers', '', Colors.green)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('Active Users', '$activeUsers', '', Colors.blue)),
+        Expanded(
+            child: _buildMetricCard(
+                'Active Users', '$activeUsers', '', Colors.blue)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('Retention Rate', '${retentionRate.toStringAsFixed(1)}%', '', Colors.orange)),
+        Expanded(
+            child: _buildMetricCard('Retention Rate',
+                '${retentionRate.toStringAsFixed(1)}%', '', Colors.orange)),
       ],
     );
   }
@@ -515,16 +598,23 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
 
     return Row(
       children: [
-        Expanded(child: _buildMetricCard('Total Products', '$totalProducts', '', Colors.blue)),
+        Expanded(
+            child: _buildMetricCard(
+                'Total Products', '$totalProducts', '', Colors.blue)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('Out of Stock', '$outOfStock', '', Colors.red)),
+        Expanded(
+            child: _buildMetricCard(
+                'Out of Stock', '$outOfStock', '', Colors.red)),
         const SizedBox(width: 16),
-        Expanded(child: _buildMetricCard('Low Stock', '$lowStock', '', Colors.orange)),
+        Expanded(
+            child:
+                _buildMetricCard('Low Stock', '$lowStock', '', Colors.orange)),
       ],
     );
   }
 
-  Widget _buildMetricCard(String title, String value, String change, Color color) {
+  Widget _buildMetricCard(
+      String title, String value, String change, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -536,8 +626,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
             Text(
               value,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -551,7 +641,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
   }
 
   Widget _buildTopProductsList() {
-    final products = _analyticsData['topProducts'] as List<Map<String, dynamic>>? ?? [];
+    final products =
+        _analyticsData['topProducts'] as List<Map<String, dynamic>>? ?? [];
 
     return Card(
       child: Padding(
@@ -562,8 +653,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
             Text(
               'Top Selling Products',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             if (products.isEmpty)
@@ -581,13 +672,14 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
               )
             else
               ...products.map((product) => ListTile(
-                title: Text(product['name'] as String? ?? 'Unknown Product'),
-                subtitle: Text('${product['quantity'] ?? 0} units sold'),
-                trailing: Text(
-                  'TSh ${NumberFormat('#,##0.00').format((product['totalSales'] as num?)?.toDouble() ?? 0.0)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              )),
+                    title:
+                        Text(product['name'] as String? ?? 'Unknown Product'),
+                    subtitle: Text('${product['quantity'] ?? 0} units sold'),
+                    trailing: Text(
+                      'TSh ${NumberFormat('#,##0.00').format((product['totalSales'] as num?)?.toDouble() ?? 0.0)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  )),
           ],
         ),
       ),
@@ -604,8 +696,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with 
             Text(
               'User Engagement',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             _buildEngagementRow('Daily Active Users', '1,234', '85%'),

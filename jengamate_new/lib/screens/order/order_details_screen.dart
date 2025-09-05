@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/models/payment_model.dart';
-import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/services/order_service.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/models/enums/payment_enums.dart';
 import 'payment_screen.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
+import 'package:jengamate/config/app_routes.dart';
+import 'package:jengamate/services/invoice_service.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
   final String orderId;
@@ -20,7 +24,7 @@ class OrderDetailsScreen extends StatefulWidget {
 }
 
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
-  final DatabaseService _databaseService = DatabaseService();
+  final OrderService _orderService = OrderService();
   late Future<OrderModel?> _orderFuture;
   late Stream<List<PaymentModel>> _paymentsStream;
 
@@ -28,12 +32,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   void initState() {
     super.initState();
     _loadOrder();
-    _paymentsStream = _databaseService.streamOrderPayments(widget.orderId);
+    _paymentsStream = _orderService.streamOrderPayments(widget.orderId);
   }
 
   void _loadOrder() {
     setState(() {
-      _orderFuture = _databaseService.getOrder(widget.orderId);
+      _orderFuture = _orderService.getOrderById(widget.orderId);
     });
   }
 
@@ -98,7 +102,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Order #${order.id.substring(0, 8)}',
+                  'Order #${order.id?.substring(0, 8) ?? ''}',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -159,12 +163,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       case OrderStatus.completed:
         color = Colors.green;
         break;
-      case OrderStatus.fullyPaid:
-        color = Colors.green;
-        break;
-      case OrderStatus.pendingPayment:
-        color = Colors.orange;
-        break;
       default:
         color = Colors.grey;
         break;
@@ -195,7 +193,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             // For now, showing a placeholder
             ListTile(
               title: const Text('Order Items'),
-              subtitle: Text('Total: \$${order.totalAmount.toStringAsFixed(2)}'),
+              subtitle:
+                  Text('Total: TSH ${order.totalAmount.toStringAsFixed(2)}'),
             ),
           ],
         ),
@@ -213,14 +212,17 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
         final payments = snapshot.data ?? [];
         final verifiedPayments = payments
-            .where((p) => p.status == PaymentStatus.verified)
+            .where((p) =>
+                p.status == PaymentStatus.verified ||
+                p.status == PaymentStatus.completed ||
+                p.status == PaymentStatus.settled)
             .toList();
-        
+
         final totalPaid = verifiedPayments.fold(
           0.0,
           (sum, payment) => sum + payment.amount,
         );
-        
+
         final remaining = order.totalAmount - totalPaid;
 
         return JMCard(
@@ -261,7 +263,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         children: [
           Text(label),
           Text(
-            '\$${amount.toStringAsFixed(2)}',
+            'TSH ${amount.toStringAsFixed(2)}',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
@@ -321,7 +323,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         ),
       ),
       title: Text(
-        '\$${payment.amount.toStringAsFixed(2)}',
+        'TSH ${payment.amount.toStringAsFixed(2)}',
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       subtitle: Column(
@@ -331,13 +333,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           Text(
             'Date: ${DateFormat('MMM dd, yyyy HH:mm').format(payment.createdAt)}',
           ),
-          if (payment.notes != null && payment.notes!.isNotEmpty)
-            Text('Notes: ${payment.notes}'),
         ],
       ),
       trailing: payment.status == PaymentStatus.pending
           ? const Icon(Icons.pending, color: Colors.orange)
-          : payment.status == PaymentStatus.verified
+          : payment.status == PaymentStatus.verified ||
+                  payment.status == PaymentStatus.completed
               ? const Icon(Icons.check_circle, color: Colors.green)
               : const Icon(Icons.error, color: Colors.red),
     );
@@ -348,47 +349,18 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       case PaymentStatus.pending:
         return Colors.orange;
       case PaymentStatus.verified:
-        return Colors.green;
-      case PaymentStatus.rejected:
-        return Colors.red;
-      case PaymentStatus.cancelled:
-        return Colors.grey;
-      case PaymentStatus.processing:
-        return Colors.blue;
       case PaymentStatus.completed:
-        return Colors.green;
-      case PaymentStatus.failed:
-        return Colors.red;
-      case PaymentStatus.refunded:
-        return Colors.grey;
-      case PaymentStatus.partiallyRefunded:
-        return Colors.grey;
-      case PaymentStatus.awaitingVerification:
-        return Colors.orange;
-      case PaymentStatus.verificationFailed:
-        return Colors.red;
-      case PaymentStatus.disputed:
-        return Colors.red;
-      case PaymentStatus.chargeback:
-        return Colors.red;
-      case PaymentStatus.expired:
-        return Colors.grey;
-      case PaymentStatus.authorized:
-        return Colors.blue;
       case PaymentStatus.captured:
-        return Colors.green;
-      case PaymentStatus.voided:
-        return Colors.grey;
       case PaymentStatus.settled:
         return Colors.green;
-      case PaymentStatus.unsettled:
-        return Colors.orange;
-      case PaymentStatus.onHold:
-        return Colors.orange;
-      case PaymentStatus.unknown:
-        return Colors.grey;
+      case PaymentStatus.rejected:
+      case PaymentStatus.cancelled:
+      case PaymentStatus.failed:
+        return Colors.red;
+      case PaymentStatus.processing:
+        return Colors.blue;
       default:
-        return Colors.orange; // e.g., timeout or any new status
+        return Colors.grey;
     }
   }
 
@@ -447,18 +419,33 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       builder: (context, snapshot) {
         final payments = snapshot.data ?? [];
         final verifiedPayments = payments
-            .where((p) => p.status == PaymentStatus.verified)
+            .where((p) =>
+                p.status == PaymentStatus.verified ||
+                p.status == PaymentStatus.completed ||
+                p.status == PaymentStatus.settled)
             .toList();
-        
+
         final totalPaid = verifiedPayments.fold(
           0.0,
           (sum, payment) => sum + payment.amount,
         );
-        
+
         final remaining = order.totalAmount - totalPaid;
 
         return Column(
           children: [
+            ElevatedButton(
+              onPressed: () => _navigateToInvoice(order),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text(
+                'View Invoice',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+            const SizedBox(height: 12),
             if (remaining > 0)
               ElevatedButton(
                 onPressed: () => _navigateToPayment(order),
@@ -467,7 +454,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   minimumSize: const Size(double.infinity, 50),
                 ),
                 child: Text(
-                  'Make Payment (\$${remaining.toStringAsFixed(2)} remaining)',
+                  'Make Payment (TSH ${remaining.toStringAsFixed(2)} remaining)',
                   style: const TextStyle(fontSize: 16),
                 ),
               ),
@@ -486,11 +473,36 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
   }
 
+  void _navigateToInvoice(OrderModel order) async {
+    final invoiceService = Provider.of<InvoiceService>(context, listen: false);
+    try {
+      final orderId = order.id;
+      if (orderId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order ID is missing.')),
+        );
+        return;
+      }
+      final invoice = await invoiceService.getInvoiceByOrderId(orderId);
+      if (invoice != null && mounted) {
+        context.push(AppRouteBuilders.invoiceDetailsPath(invoice.id));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invoice not found for this order.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to retrieve invoice: $e')),
+      );
+    }
+  }
+
   void _navigateToPayment(OrderModel order) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PaymentScreen(orderId: order.id),
+        builder: (context) => PaymentScreen(orderId: order.id ?? ''),
       ),
     ).then((_) {
       _loadOrder(); // Refresh order data
@@ -514,7 +526,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 final updatedOrder = order.copyWith(
                   status: OrderStatus.cancelled,
                 );
-                await _databaseService.updateOrder(updatedOrder);
+                await _orderService.updateOrder(updatedOrder);
                 Navigator.pop(context);
                 _loadOrder();
               } catch (e) {

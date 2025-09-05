@@ -89,123 +89,146 @@ class _PhoneRegistrationScreenState extends State<PhoneRegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('Phone Registration'),
       ),
-      body: AdaptivePadding(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: JMCard(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Semantics(
-                      label: 'Phone registration icon',
-                      child: const Icon(
-                        Icons.phone_android,
-                        size: 64,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    const SizedBox(height: JMSpacing.lg),
-                    Semantics(
-                      header: true,
-                      child: const Text(
-                        'Register with Phone',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: AdaptivePadding(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 500),
+                        child: JMCard(
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Semantics(
+                                  label: 'Phone registration icon',
+                                  child: const Icon(
+                                    Icons.phone_android,
+                                    size: 64,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                                const SizedBox(height: JMSpacing.lg),
+                                Semantics(
+                                  header: true,
+                                  child: const Text(
+                                    'Register with Phone',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                const SizedBox(height: JMSpacing.md),
+                                const Text(
+                                  'We\'ll send you a verification code',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: JMSpacing.xl),
+                                Semantics(
+                                  label: 'Full name input field',
+                                  hint: 'Enter your full name as registered',
+                                  textField: true,
+                                  child: JMFormField(
+                                    controller: _nameController,
+                                    label: 'Full Name',
+                                    hint: 'Enter your full name',
+                                    validator: (value) => value?.isEmpty ?? true
+                                        ? 'Please enter your name'
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(height: JMSpacing.lg),
+                                JMFormField(
+                                  controller: _companyController,
+                                  label: 'Company/Organization (Optional)',
+                                  prefixIcon: const Icon(Icons.business),
+                                ),
+                                const SizedBox(height: JMSpacing.lg),
+                                DropdownButtonFormField<UserRole>(
+                                  value: _selectedRole,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Role',
+                                    prefixIcon: Icon(Icons.work),
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: UserRole.values.map((role) {
+                                    return DropdownMenuItem<UserRole>(
+                                      value: role,
+                                      child:
+                                          Text(role.toString().split('.').last),
+                                    );
+                                  }).toList(),
+                                  onChanged: (UserRole? newValue) {
+                                    if (newValue != null) {
+                                      setState(() {
+                                        _selectedRole = newValue;
+                                      });
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: JMSpacing.lg),
+                                Semantics(
+                                  label: 'Phone number input field',
+                                  hint:
+                                      'Enter your phone number including country code',
+                                  textField: true,
+                                  child: JMFormField(
+                                    controller: _phoneController,
+                                    label: 'Phone Number',
+                                    hint: '0712345678',
+                                    keyboardType: TextInputType.phone,
+                                    prefixIcon: const Icon(Icons.phone),
+                                    validator: _validatePhone,
+                                  ),
+                                ),
+                                const SizedBox(height: JMSpacing.xl),
+                                Semantics(
+                                  button: true,
+                                  label: 'Send one-time password via SMS',
+                                  child: JMButton(
+                                    onPressed: _isLoading ? null : _sendOtp,
+                                    isLoading: _isLoading,
+                                    child: const Text('Send OTP'),
+                                  ),
+                                ),
+                                const SizedBox(height: JMSpacing.lg),
+                                TextButton(
+                                  onPressed: () => context.go('/login'),
+                                  child: const Text(
+                                      'Already have an account? Sign in'),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
-                    const SizedBox(height: JMSpacing.md),
-                    const Text(
-                      'We\'ll send you a verification code',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: JMSpacing.xl),
-                    Semantics(
-                      label: 'Full name input field',
-                      hint: 'Enter your full name as registered',
-                      textField: true,
-                      child: JMFormField(
-                        controller: _nameController,
-                        label: 'Full Name',
-                        hint: 'Enter your full name',
-                        validator: (value) => value?.isEmpty ?? true ? 'Please enter your name' : null,
-                      ),
-                    ),
-                    const SizedBox(height: JMSpacing.lg),
-                    JMFormField(
-                      controller: _companyController,
-                      label: 'Company/Organization (Optional)',
-                      prefixIcon: const Icon(Icons.business),
-                    ),
-                    const SizedBox(height: JMSpacing.lg),
-                    DropdownButtonFormField<UserRole>(
-                      value: _selectedRole,
-                      decoration: const InputDecoration(
-                        labelText: 'Role',
-                        prefixIcon: Icon(Icons.work),
-                        border: OutlineInputBorder(),
-                      ),
-                      items: UserRole.values.map((role) {
-                        return DropdownMenuItem<UserRole>(
-                          value: role,
-                          child: Text(role.toString().split('.').last),
-                        );
-                      }).toList(),
-                      onChanged: (UserRole? newValue) {
-                        if (newValue != null) {
-                          setState(() {
-                            _selectedRole = newValue;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: JMSpacing.lg),
-                    Semantics(
-                      label: 'Phone number input field',
-                      hint: 'Enter your phone number including country code',
-                      textField: true,
-                      child: JMFormField(
-                        controller: _phoneController,
-                        label: 'Phone Number',
-                        hint: '0712345678',
-                        keyboardType: TextInputType.phone,
-                        prefixIcon: const Icon(Icons.phone),
-                        validator: _validatePhone,
-                      ),
-                    ),
-                    const SizedBox(height: JMSpacing.xl),
-                    Semantics(
-                      button: true,
-                      label: 'Send one-time password via SMS',
-                      child: JMButton(
-                        onPressed: _isLoading ? null : _sendOtp,
-                        isLoading: _isLoading,
-                        child: const Text('Send OTP'),
-                      ),
-                    ),
-                    const SizedBox(height: JMSpacing.lg),
-                    TextButton(
-                      onPressed: () => context.go('/login'),
-                      child: const Text('Already have an account? Sign in'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

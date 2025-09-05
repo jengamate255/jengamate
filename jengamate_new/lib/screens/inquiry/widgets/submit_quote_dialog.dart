@@ -1,3 +1,4 @@
+import 'package:jengamate/models/inquiry.dart';
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/inquiry_model.dart';
 import 'package:jengamate/models/quote_model.dart';
@@ -41,7 +42,8 @@ class _SubmitQuoteDialogState extends State<SubmitQuoteDialog> {
           children: [
             TextFormField(
               controller: _amountController,
-              decoration: const InputDecoration(labelText: 'Quote Amount (TSH)'),
+              decoration:
+                  const InputDecoration(labelText: 'Quote Amount (TSH)'),
               keyboardType: TextInputType.number,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -78,7 +80,9 @@ class _SubmitQuoteDialogState extends State<SubmitQuoteDialog> {
               if (currentUser == null) {
                 // Handle case where user is not logged in
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('You must be logged in to submit a quote.')),
+                  const SnackBar(
+                      content:
+                          Text('You must be logged in to submit a quote.')),
                 );
                 return;
               }
@@ -99,7 +103,8 @@ class _SubmitQuoteDialogState extends State<SubmitQuoteDialog> {
               if (mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Quote submitted successfully!')),
+                  const SnackBar(
+                      content: Text('Quote submitted successfully!')),
                 );
               }
             }
@@ -109,4 +114,4 @@ class _SubmitQuoteDialogState extends State<SubmitQuoteDialog> {
       ],
     );
   }
-} 
+}

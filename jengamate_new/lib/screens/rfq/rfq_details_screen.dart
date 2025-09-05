@@ -17,7 +17,6 @@ class RfqDetailsScreen extends StatefulWidget {
 }
 
 class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
-
   @override
   Widget build(BuildContext context) {
     final dbService = DatabaseService();
@@ -49,17 +48,21 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Product: ${rfq.productName}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('Product: ${rfq.productName}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text('Quantity: ${rfq.quantity}'),
                 const SizedBox(height: 8),
                 Text('Status: ${rfq.status}'),
                 const SizedBox(height: 16),
-                const Text('Submitted Quotes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text('Submitted Quotes',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Expanded(
                   child: StreamBuilder<List<QuoteModel>>(
-                    stream: dbService.streamQuotes(rfq.id),
+                    stream: dbService.streamQuotesForRFQ(rfq.id),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -69,7 +72,8 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                       }
                       final quotes = snapshot.data ?? [];
                       if (quotes.isEmpty) {
-                        return const Center(child: Text('No quotes submitted yet.'));
+                        return const Center(
+                            child: Text('No quotes submitted yet.'));
                       }
                       return ListView.builder(
                         itemCount: quotes.length,

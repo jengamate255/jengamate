@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:jengamate/models/inquiry_model.dart';
+import 'package:jengamate/models/inquiry.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/config/app_routes.dart';
-import 'package:jengamate/ui/design_system/components/responsive_wrapper.dart' hide AdaptivePadding;
+import 'package:jengamate/ui/design_system/components/responsive_wrapper.dart'
+    hide AdaptivePadding;
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
@@ -67,8 +68,9 @@ class _InquiryScreenState extends State<InquiryScreen> {
             ),
             const SizedBox(height: JMSpacing.md),
             Expanded(
-              child: StreamBuilder<List<InquiryModel>>(
-                stream: dbService.streamInquiriesForUser(currentUser?.uid ?? ''),
+              child: StreamBuilder<List<Inquiry>>(
+                stream:
+                    dbService.streamInquiriesForUser(currentUser?.uid ?? ''),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -82,7 +84,9 @@ class _InquiryScreenState extends State<InquiryScreen> {
 
                   final inquiries = snapshot.data!.where((inquiry) {
                     return _searchQuery.isEmpty ||
-                        inquiry.title.toLowerCase().contains(_searchQuery.toLowerCase());
+                        inquiry.subject
+                            .toLowerCase()
+                            .contains(_searchQuery.toLowerCase());
                   }).toList();
 
                   return ListView.builder(
@@ -94,7 +98,7 @@ class _InquiryScreenState extends State<InquiryScreen> {
                         padding: const EdgeInsets.only(bottom: JMSpacing.sm),
                         child: JMCard(
                           child: ListTile(
-                            title: Text(inquiry.title),
+                            title: Text(inquiry.subject),
                             subtitle: Text(inquiry.status),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {

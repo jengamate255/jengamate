@@ -10,10 +10,12 @@ class IdentityVerificationScreen extends StatefulWidget {
   const IdentityVerificationScreen({super.key});
 
   @override
-  State<IdentityVerificationScreen> createState() => _IdentityVerificationScreenState();
+  State<IdentityVerificationScreen> createState() =>
+      _IdentityVerificationScreenState();
 }
 
-class _IdentityVerificationScreenState extends State<IdentityVerificationScreen> {
+class _IdentityVerificationScreenState
+    extends State<IdentityVerificationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _picker = ImagePicker();
   XFile? _identityDocument;
@@ -63,14 +65,14 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final databaseService = DatabaseService();
-      
+
       final user = authService.currentUser;
       if (user == null) {
         throw Exception('User not found');
       }
 
       // Upload identity document
-      final documentUrl = await databaseService.uploadIdentityDocument(
+      final documentUrl = await databaseService.uploadIdentityDocumentBytes(
         await _identityDocument!.readAsBytes(),
         user.uid,
       );
@@ -243,7 +245,8 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Text(

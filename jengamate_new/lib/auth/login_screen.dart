@@ -1,3 +1,4 @@
+import 'package:jengamate/models/audit_log_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/services/auth_service.dart';
@@ -51,18 +52,22 @@ class _LoginScreenState extends State<LoginScreen> {
         // Log the login action for audit trail
         try {
           final databaseService = DatabaseService();
-          await databaseService.createAuditLog(
-            actorId: result.user!.uid,
-            actorName: result.user!.displayName ?? result.user!.email ?? 'Unknown User',
-            targetUserId: result.user!.uid,
-            targetUserName: result.user!.displayName ?? result.user!.email ?? 'Unknown User',
-            action: 'login',
-            details: {
-              'message': 'User logged into the system',
-              'email': result.user!.email,
-              'timestamp': DateTime.now().toIso8601String(),
-            },
-          );
+          final auditLog = AuditLogModel(
+              uid: 'audit_' + DateTime.now().millisecondsSinceEpoch.toString(),
+              actorId: result.user!.uid,
+              actorName: result.user!.displayName ??
+                  result.user!.email ??
+                  'Unknown User',
+              action: 'LOGIN',
+              targetType: 'USER',
+              targetId: result.user!.uid,
+              targetName: result.user!.displayName ??
+                  result.user!.email ??
+                  'Unknown User',
+              timestamp: DateTime.now(),
+              details: 'User logged into the system',
+              metadata: {'email': result.user!.email, 'loginMethod': 'email'});
+          await databaseService.createAuditLog(auditLog);
         } catch (e) {
           // Don't fail login if audit logging fails
           print('Failed to create login audit log: $e');
@@ -183,7 +188,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               ),
                             ),
                           )
@@ -241,8 +247,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     label: 'Register as engineer',
                     hint: 'Navigate to engineer registration',
                     child: TextButton(
-                      onPressed: () => context.go(AppRoutes.engineerRegistration),
-                      child: const Text('Register as Engineer', style: TextStyle(color: AppTheme.primaryColor)),
+                      onPressed: () =>
+                          context.go(AppRoutes.engineerRegistration),
+                      child: const Text('Register as Engineer',
+                          style: TextStyle(color: AppTheme.primaryColor)),
                     ),
                   ),
                 ],

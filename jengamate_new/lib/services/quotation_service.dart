@@ -1,31 +1,49 @@
+import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:jengamate/models/invoice_model.dart';
+import 'package:uuid/uuid.dart';
 import '../models/quotation_model.dart';
 import '../models/order_model.dart';
-import '../models/enums/order_enums.dart'; // Import OrderStatus and OrderType
+import '../models/order_item_model.dart';
 
 class QuotationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Create a new quotation
   Future<void> createQuotation(Quotation quotation) async {
-    await _firestore.collection('quotations').doc(quotation.id).set(quotation.toFirestore());
+    await _firestore
+        .collection('quotations')
+        .doc(quotation.id)
+        .set(quotation.toFirestore());
   }
 
   // Get a quotation by ID
   Stream<Quotation> getQuotation(String quotationId) {
-    return _firestore.collection('quotations').doc(quotationId).snapshots().map((doc) => Quotation.fromFirestore(doc));
+    return _firestore
+        .collection('quotations')
+        .doc(quotationId)
+        .snapshots()
+        .map((doc) => Quotation.fromFirestore(doc));
   }
 
   // Get quotations for a specific engineer
   Stream<List<Quotation>> getEngineerQuotations(String engineerId) {
-    return _firestore.collection('quotations').where('engineerId', isEqualTo: engineerId).snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => Quotation.fromFirestore(doc)).toList());
+    return _firestore
+        .collection('quotations')
+        .where('engineerId', isEqualTo: engineerId)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Quotation.fromFirestore(doc)).toList());
   }
 
   // Get quotations for a specific supplier
   Stream<List<Quotation>> getSupplierQuotations(String supplierId) {
-    return _firestore.collection('quotations').where('supplierId', isEqualTo: supplierId).snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => Quotation.fromFirestore(doc)).toList());
+    return _firestore
+        .collection('quotations')
+        .where('supplierId', isEqualTo: supplierId)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Quotation.fromFirestore(doc)).toList());
   }
 
   // Update quotation status
@@ -40,6 +58,7 @@ class QuotationService {
   Future<String> confirmQuotation(String quotationId) async {
     final quotationRef = _firestore.collection('quotations').doc(quotationId);
     final orderRef = _firestore.collection('orders');
+    final invoiceRef = _firestore.collection('invoices');
 
     return _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(quotationRef);
@@ -51,27 +70,62 @@ class QuotationService {
 
       // Generate unique order number (e.g., SO2025-xxxx)
       final now = DateTime.now();
-      final orderNumber = 'SO${now.year}-${now.millisecondsSinceEpoch.toString().substring(8)}';
+      final orderNumber =
+          'SO${now.year}-${now.millisecondsSinceEpoch.toString().substring(8)}';
 
+      final newOrderId = orderRef.doc().id;
       final newOrder = OrderModel(
-        id: orderRef.doc().id, // Firestore will generate a unique ID
+        id: newOrderId, // Firestore will generate a unique ID
         orderNumber: orderNumber, // Add the generated order number
-        buyerId: quotation.engineerId, // Assuming engineer is the user placing the order
+        buyerId: quotation
+            .engineerId, // Assuming engineer is the user placing the order
         supplierId: quotation.supplierId,
         totalAmount: quotation.totalAmount,
         status: OrderStatus.pending, // Use the enum
-        type: OrderType.product, // Default to product type for now
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        customerId: quotation.engineerId,
+        customerName: '', // Will need to be populated from user data
+        supplierName: '', // Will need to be populated from user data
+        items: quotation.products
+            .map((product) => OrderItem.fromMap(product))
+            .toList(),
+        paymentMethod: 'pending',
       );
 
-      transaction.set(orderRef.doc(newOrder.id), newOrder.toMap());
+      transaction.set(orderRef.doc(newOrderId), newOrder.toMap());
+
+      // Create and save the invoice
+      final newInvoice = InvoiceModel(
+        id: invoiceRef.doc().id,
+        orderId: newOrderId,
+        invoiceNumber: 'INV-${newOrder.orderNumber}',
+        customerId: newOrder.customerId,
+        customerName: newOrder.customerName,
+        customerEmail: '', // Populate from user data
+        issueDate: DateTime.now(),
+        status: 'draft',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        dueDate: DateTime.now().add(const Duration(days: 30)),
+        items: newOrder.items
+            .map((item) => InvoiceItem(
+                  id: const Uuid().v4(),
+                  productId: item.productId,
+                  description: item.productName,
+                  quantity: item.quantity,
+                  unitPrice: item.price,
+                ))
+            .toList(),
+      );
+      transaction.set(invoiceRef.doc(newInvoice.id), newInvoice.toMap());
+
       transaction.update(quotationRef, {
         'status': 'confirmed',
         'updatedAt': Timestamp.now(),
       });
 
-      return newOrder.id;
+      return newOrderId;
     });
   }
 }

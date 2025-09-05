@@ -1,3 +1,4 @@
+import 'package:jengamate/models/content_report_model.dart';
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/content_moderation_dashboard_model.dart';
 import 'package:jengamate/services/database_service.dart';
@@ -9,23 +10,38 @@ class ContentModerationDashboard extends StatefulWidget {
   const ContentModerationDashboard({super.key});
 
   @override
-  State<ContentModerationDashboard> createState() => _ContentModerationDashboardState();
+  State<ContentModerationDashboard> createState() =>
+      _ContentModerationDashboardState();
 }
 
-class _ContentModerationDashboardState extends State<ContentModerationDashboard> with TickerProviderStateMixin {
+class _ContentModerationDashboardState extends State<ContentModerationDashboard>
+    with TickerProviderStateMixin {
   final DatabaseService _databaseService = DatabaseService();
   late TabController _tabController;
-  
+
   List<ContentModerationModel> _pendingContent = [];
   List<ContentModerationModel> _reviewedContent = [];
   bool _isLoading = true;
-  
+
   final TextEditingController _searchController = TextEditingController();
   String _selectedContentType = 'all';
   String _selectedSeverity = 'all';
-  
-  final List<String> _contentTypes = ['all', 'product', 'review', 'message', 'profile', 'inquiry'];
-  final List<String> _severityLevels = ['all', 'low', 'medium', 'high', 'critical'];
+
+  final List<String> _contentTypes = [
+    'all',
+    'product',
+    'review',
+    'message',
+    'profile',
+    'inquiry'
+  ];
+  final List<String> _severityLevels = [
+    'all',
+    'low',
+    'medium',
+    'high',
+    'critical'
+  ];
 
   @override
   void initState() {
@@ -41,38 +57,45 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
       final dbService = DatabaseService();
 
       // Get pending content reports
-      final pendingReports = await dbService.getContentReports(status: 'pending');
-      _pendingContent = pendingReports.map((report) => ContentModerationModel(
-        id: report['id'] ?? '',
-        contentType: report['contentType'] ?? 'unknown',
-        contentId: report['contentId'] ?? '',
-        reportedBy: report['reportedBy'] ?? '',
-        reporterName: report['reporterName'] ?? 'Unknown User',
-        reason: report['reason'] ?? 'No reason provided',
-        description: report['description'] ?? '',
-        severity: report['severity'] ?? 'low',
-        status: report['status'] ?? 'pending',
-        createdAt: report['createdAt'] ?? DateTime.now(),
-        content: report['content'] ?? {},
-      )).toList();
+      final pendingReports =
+          await dbService.getContentReports(status: 'pending');
+      _pendingContent = pendingReports
+          .map((report) => ContentModerationModel(
+                id: report.uid,
+                contentType: report.contentType,
+                contentId: report.contentId,
+                reportedBy: report.reportedBy,
+                reporterName: report.reporterName,
+                reason: report.reason,
+                description: report.description,
+                severity: report.severity,
+                status: report.status,
+                createdAt: report.createdAt,
+                content: report.content,
+              ))
+          .toList();
 
       // Get reviewed content reports
-      final reviewedReports = await dbService.getContentReports(status: 'reviewed');
-      _reviewedContent = reviewedReports.map((report) => ContentModerationModel(
-        id: report['id'] ?? '',
-        contentType: report['contentType'] ?? 'unknown',
-        contentId: report['contentId'] ?? '',
-        reportedBy: report['reportedBy'] ?? '',
-        reporterName: report['reporterName'] ?? 'Unknown User',
-        reason: report['reason'] ?? 'No reason provided',
-        description: report['description'] ?? '',
-        severity: report['severity'] ?? 'low',
-        status: report['status'] ?? 'reviewed',
-        createdAt: report['createdAt'] ?? DateTime.now(),
-        content: report['content'] ?? {},
-      )).toList();
+      final reviewedReports =
+          await dbService.getContentReports(status: 'reviewed');
+      _reviewedContent = reviewedReports
+          .map((report) => ContentModerationModel(
+                id: report.uid,
+                contentType: report.contentType,
+                contentId: report.contentId,
+                reportedBy: report.reportedBy,
+                reporterName: report.reporterName,
+                reason: report.reason,
+                description: report.description,
+                severity: report.severity,
+                status: report.status,
+                createdAt: report.createdAt,
+                content: report.content,
+              ))
+          .toList();
 
-      Logger.log('Loaded ${_pendingContent.length} pending and ${_reviewedContent.length} reviewed items');
+      Logger.log(
+          'Loaded ${_pendingContent.length} pending and ${_reviewedContent.length} reviewed items');
     } catch (e) {
       Logger.logError('Error loading moderation data', e, StackTrace.current);
       // Set empty lists instead of fallback sample data
@@ -91,10 +114,6 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +272,9 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
           items: _severityLevels.map((severity) {
             return DropdownMenuItem(
               value: severity,
-              child: Text(severity == 'all' ? 'All Severities' : severity.toUpperCase()),
+              child: Text(severity == 'all'
+                  ? 'All Severities'
+                  : severity.toUpperCase()),
             );
           }).toList(),
           onChanged: (value) {
@@ -265,13 +286,14 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
   }
 
   Widget _buildStatsBar(List<ContentModerationModel> items) {
-    final criticalCount = items.where((item) => item.severity == 'critical').length;
+    final criticalCount =
+        items.where((item) => item.severity == 'critical').length;
     final highCount = items.where((item) => item.severity == 'high').length;
     final todayCount = items.where((item) {
       final today = DateTime.now();
       return item.createdAt.year == today.year &&
-             item.createdAt.month == today.month &&
-             item.createdAt.day == today.day;
+          item.createdAt.month == today.month &&
+          item.createdAt.day == today.day;
     }).length;
 
     return Container(
@@ -308,7 +330,8 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
     );
   }
 
-  Widget _buildContentList(List<ContentModerationModel> items, {required bool isPending}) {
+  Widget _buildContentList(List<ContentModerationModel> items,
+      {required bool isPending}) {
     final filteredItems = items.where((item) {
       if (_searchController.text.isNotEmpty) {
         final searchTerm = _searchController.text.toLowerCase();
@@ -318,15 +341,16 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
           return false;
         }
       }
-      
-      if (_selectedContentType != 'all' && item.contentType != _selectedContentType) {
+
+      if (_selectedContentType != 'all' &&
+          item.contentType != _selectedContentType) {
         return false;
       }
-      
+
       if (_selectedSeverity != 'all' && item.severity != _selectedSeverity) {
         return false;
       }
-      
+
       return true;
     }).toList();
 
@@ -337,7 +361,8 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
           children: [
             Icon(Icons.content_paste_off, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text('No content found', style: TextStyle(fontSize: 18, color: Colors.grey)),
+            Text('No content found',
+                style: TextStyle(fontSize: 18, color: Colors.grey)),
           ],
         ),
       );
@@ -353,10 +378,11 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
     );
   }
 
-  Widget _buildContentCard(ContentModerationModel item, {required bool isPending}) {
+  Widget _buildContentCard(ContentModerationModel item,
+      {required bool isPending}) {
     final severityColor = _getSeverityColor(item.severity);
     final contentIcon = _getContentTypeIcon(item.contentType);
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ExpansionTile(
@@ -388,16 +414,22 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildDetailRow('Content ID', item.contentId),
-                _buildDetailRow('Reporter', '${item.reporterName} (${item.reportedBy})'),
-                _buildDetailRow('Created', DateFormat('yyyy-MM-dd HH:mm:ss').format(item.createdAt)),
+                _buildDetailRow(
+                    'Reporter', '${item.reporterName} (${item.reportedBy})'),
+                _buildDetailRow('Created',
+                    DateFormat('yyyy-MM-dd HH:mm:ss').format(item.createdAt)),
                 if (!isPending && item.reviewedAt != null) ...[
-                  _buildDetailRow('Reviewed', DateFormat('yyyy-MM-dd HH:mm:ss').format(item.reviewedAt!)),
+                  _buildDetailRow(
+                      'Reviewed',
+                      DateFormat('yyyy-MM-dd HH:mm:ss')
+                          .format(item.reviewedAt!)),
                   _buildDetailRow('Reviewer', item.reviewerName ?? 'Unknown'),
                   if (item.reviewNotes != null)
                     _buildDetailRow('Review Notes', item.reviewNotes!),
                 ],
                 const SizedBox(height: 16),
-                const Text('Content Preview:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Content Preview:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -407,7 +439,8 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
                   ),
                   child: Text(
                     item.content.toString(),
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    style:
+                        const TextStyle(fontFamily: 'monospace', fontSize: 12),
                   ),
                 ),
                 if (isPending) ...[
@@ -419,7 +452,8 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
                           onPressed: () => _approveContent(item),
                           icon: const Icon(Icons.check),
                           label: const Text('Approve'),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -428,7 +462,8 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
                           onPressed: () => _rejectContent(item),
                           icon: const Icon(Icons.close),
                           label: const Text('Reject'),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red),
                         ),
                       ),
                     ],
@@ -495,7 +530,7 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
 
   Widget _buildSeverityChip(String severity) {
     final color = _getSeverityColor(severity);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
@@ -517,8 +552,8 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
     return Text(
       title,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.bold,
-      ),
+            fontWeight: FontWeight.bold,
+          ),
     );
   }
 
@@ -529,21 +564,37 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
             spacing: Responsive.getResponsiveSpacing(context),
             runSpacing: Responsive.getResponsiveSpacing(context),
             children: _buildAnalyticsCardsList()
-                .map((card) => SizedBox(width: Responsive.getResponsiveCardWidth(context), child: card))
+                .map((card) => SizedBox(
+                    width: Responsive.getResponsiveCardWidth(context),
+                    child: card))
                 .toList(),
           );
   }
 
   List<Widget> _buildAnalyticsCardsList() {
     return [
-      _buildAnalyticsCard('Total Reports', '${_pendingContent.length + _reviewedContent.length}', Icons.report, Colors.blue),
-      _buildAnalyticsCard('Pending Review', '${_pendingContent.length}', Icons.pending, Colors.orange),
-      _buildAnalyticsCard('Approved', '${_reviewedContent.where((item) => item.status == 'approved').length}', Icons.check_circle, Colors.green),
-      _buildAnalyticsCard('Rejected', '${_reviewedContent.where((item) => item.status == 'rejected').length}', Icons.cancel, Colors.red),
+      _buildAnalyticsCard(
+          'Total Reports',
+          '${_pendingContent.length + _reviewedContent.length}',
+          Icons.report,
+          Colors.blue),
+      _buildAnalyticsCard('Pending Review', '${_pendingContent.length}',
+          Icons.pending, Colors.orange),
+      _buildAnalyticsCard(
+          'Approved',
+          '${_reviewedContent.where((item) => item.status == 'approved').length}',
+          Icons.check_circle,
+          Colors.green),
+      _buildAnalyticsCard(
+          'Rejected',
+          '${_reviewedContent.where((item) => item.status == 'rejected').length}',
+          Icons.cancel,
+          Colors.red),
     ];
   }
 
-  Widget _buildAnalyticsCard(String title, String value, IconData icon, Color color) {
+  Widget _buildAnalyticsCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -554,9 +605,9 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
             Text(
               value,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
             ),
             Text(
               title,
@@ -578,7 +629,8 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
           children: [
             const Text('Content Type Distribution'),
             const SizedBox(height: 16),
-            ...['product', 'review', 'message', 'profile', 'inquiry'].map((type) {
+            ...['product', 'review', 'message', 'profile', 'inquiry']
+                .map((type) {
               final count = (_pendingContent + _reviewedContent)
                   .where((item) => item.contentType == type)
                   .length;
@@ -596,7 +648,8 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
 
   Widget _buildRecentActivityList() {
     final recentItems = (_pendingContent + _reviewedContent)
-        .where((item) => item.createdAt.isAfter(DateTime.now().subtract(const Duration(days: 7))))
+        .where((item) => item.createdAt
+            .isAfter(DateTime.now().subtract(const Duration(days: 7))))
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
@@ -606,14 +659,15 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Recent Activity (Last 7 days)', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Recent Activity (Last 7 days)',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ...recentItems.take(5).map((item) => ListTile(
-              leading: Icon(_getContentTypeIcon(item.contentType)),
-              title: Text(item.reason),
-              subtitle: Text('by ${item.reporterName}'),
-              trailing: Text(DateFormat('MMM dd').format(item.createdAt)),
-            )),
+                  leading: Icon(_getContentTypeIcon(item.contentType)),
+                  title: Text(item.reason),
+                  subtitle: Text('by ${item.reporterName}'),
+                  trailing: Text(DateFormat('MMM dd').format(item.createdAt)),
+                )),
           ],
         ),
       ),
@@ -625,7 +679,8 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Approve Content'),
-        content: const Text('Are you sure you want to approve this content? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to approve this content? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -649,7 +704,7 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
 
   void _rejectContent(ContentModerationModel item) {
     final notesController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

@@ -1,9 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:jengamate/models/payment_model.dart';
 import 'package:jengamate/services/auth_service.dart';
-import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/services/payment_service.dart';
+import 'package:jengamate/services/storage_service.dart';
 import 'package:jengamate/models/enums/payment_enums.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -17,12 +18,13 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   final AuthService _authService = AuthService();
-  final DatabaseService _databaseService = DatabaseService();
+  final PaymentService _paymentService = PaymentService();
+  final StorageService _storageService = StorageService();
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
-  
-  List<File> _paymentProofs = [];
+
+  List<XFile> _paymentProofs = [];
   PaymentMethod _selectedMethod = PaymentMethod.bankTransfer;
   bool _isLoading = false;
 
@@ -39,7 +41,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     if (pickedFile != null) {
       setState(() {
-        _paymentProofs.add(File(pickedFile.path));
+        _paymentProofs.add(pickedFile);
       });
     }
   }
@@ -50,7 +52,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     if (pickedFile != null) {
       setState(() {
-        _paymentProofs.add(File(pickedFile.path));
+        _paymentProofs.add(pickedFile);
       });
     }
   }
@@ -66,7 +68,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
-    if (_paymentProof == null) {
+    if (_paymentProofs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please upload payment proof')),
       );
@@ -79,16 +81,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     try {
       // Upload payment proof
-      final proofUrl = await _databaseService.uploadPaymentProof(
-        _paymentProof!.path,
-        widget.orderId,
+      final proofFile = _paymentProofs.first;
+      final proofBytes = await proofFile.readAsBytes();
+      final proofUrl = await _storageService.uploadImage(
+        bytes: proofBytes,
+        folder: 'payment_proofs/${widget.orderId}',
+        fileName: proofFile.name,
       );
+
 
       final userId = _authService.currentUser?.uid;
       if (userId == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('User not authenticated. Please log in again.')),
+            SnackBar(
+                content: Text('User not authenticated. Please log in again.')),
           );
         }
         setState(() {
@@ -99,17 +106,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       // Create payment
       final payment = PaymentModel(
-        id: '', // Firestore will generate this
+        id: '',
         orderId: widget.orderId,
         userId: userId,
         amount: double.parse(_amountController.text),
-        method: _selectedMethod,
-        proofUrl: proofUrl,
         status: PaymentStatus.pending,
-        notes: _notesController.text,
+        paymentMethod: _selectedMethod.name,
+        transactionId: null,
+        paymentProofUrl: proofUrl,
+        createdAt: DateTime.now(),
+        completedAt: null,
+        metadata: {'notes': _notesController.text},
       );
 
-      await _databaseService.createPayment(payment);
+      await _paymentService.createPayment(payment);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -299,7 +309,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            if (_paymentProof != null)
+            if (_paymentProofs.isNotEmpty)
               Container(
                 height: 200,
                 decoration: BoxDecoration(
@@ -308,8 +318,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    _paymentProof!,
+                  child: Image.network(
+                    _paymentProofs.first.path,
                     fit: BoxFit.cover,
                     width: double.infinity,
                   ),

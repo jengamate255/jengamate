@@ -79,8 +79,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                   value: _sortOption,
                   items: const [
                     DropdownMenuItem(value: 'name', child: Text('Name')),
-                    DropdownMenuItem(value: 'priceAsc', child: Text('Price Asc')),
-                    DropdownMenuItem(value: 'priceDesc', child: Text('Price Desc')),
+                    DropdownMenuItem(
+                        value: 'priceAsc', child: Text('Price Asc')),
+                    DropdownMenuItem(
+                        value: 'priceDesc', child: Text('Price Desc')),
                     DropdownMenuItem(value: 'newest', child: Text('Newest')),
                   ],
                   onChanged: (value) {
@@ -97,103 +99,109 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
               stream: _databaseService.streamProducts(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No products found.'));
-          }
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No products found.'));
+                }
 
-          var products = snapshot.data!;
+                var products = snapshot.data!;
 
-          products = products.where((product) {
-            return _searchQuery.isEmpty ||
-                product.name.toLowerCase().contains(_searchQuery.toLowerCase());
-          }).toList();
+                products = products.where((product) {
+                  return _searchQuery.isEmpty ||
+                      product.name
+                          .toLowerCase()
+                          .contains(_searchQuery.toLowerCase());
+                }).toList();
 
-          products.sort((a, b) {
-            switch (_sortOption) {
-              case 'name':
-                return a.name.compareTo(b.name);
-              case 'priceAsc':
-                return a.price.compareTo(b.price);
-              case 'priceDesc':
-                return b.price.compareTo(a.price);
-              default:
-                return 0;
-            }
-          });
+                products.sort((a, b) {
+                  switch (_sortOption) {
+                    case 'name':
+                      return a.name.compareTo(b.name);
+                    case 'priceAsc':
+                      return a.price.compareTo(b.price);
+                    case 'priceDesc':
+                      return b.price.compareTo(a.price);
+                    default:
+                      return 0;
+                  }
+                });
 
-          return Column(
-            children: [
-              if (_selectedProducts.isNotEmpty)
-                Container(
-                  color: Colors.grey[200],
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('${_selectedProducts.length} selected'),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Delete Products'),
-                              content: Text(
-                                  'Are you sure you want to delete ${_selectedProducts.length} products?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    final productsToDelete = products
-                                        .where((p) => _selectedProducts.contains(p.id))
-                                        .toList();
-                                    _databaseService.deleteProducts(productsToDelete);
-                                    setState(() {
-                                      _selectedProducts.clear();
-                                    });
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: const Text('Delete'),
-                                ),
-                              ],
+                return Column(
+                  children: [
+                    if (_selectedProducts.isNotEmpty)
+                      Container(
+                        color: Colors.grey[200],
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('${_selectedProducts.length} selected'),
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Delete Products'),
+                                    content: Text(
+                                        'Are you sure you want to delete ${_selectedProducts.length} products?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          final idsToDelete = products
+                                              .where((p) => _selectedProducts
+                                                  .contains(p.id))
+                                              .map((p) => p.id)
+                                              .toList();
+                                          _databaseService
+                                              .deleteProducts(idsToDelete);
+                                          setState(() {
+                                            _selectedProducts.clear();
+                                          });
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
+                          ],
+                        ),
+                      ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: products.length,
+                        itemBuilder: (context, index) {
+                          final product = products[index];
+                          return ProductCard(
+                            product: product,
+                            onEdit: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      AddEditProductScreen(product: product),
+                                ),
+                              );
+                            },
                           );
                         },
                       ),
-                    ],
-                  ),
-                ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final product = products[index];
-                    return ProductCard(
-                      product: product,
-                      onEdit: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                AddEditProductScreen(product: product),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),

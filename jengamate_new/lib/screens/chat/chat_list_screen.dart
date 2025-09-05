@@ -1,3 +1,4 @@
+import 'package:jengamate/models/chat_room_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/models/chat_room_model.dart';
@@ -37,14 +38,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
       appBar: AppBar(
         title: const Text('Conversations'),
       ),
-      body: StreamBuilder<List<ChatRoomModel>>(
+      body: StreamBuilder<List<ChatRoom>>(
         stream: _dbService.streamChatRoomsForUser(currentUser.uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return AdaptivePadding(
               child: ListView.separated(
                 itemCount: 8,
-                separatorBuilder: (_, __) => const SizedBox(height: JMSpacing.md),
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: JMSpacing.md),
                 itemBuilder: (context, index) => const JMCard(
                   child: Row(
                     children: [
@@ -88,8 +90,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: JMSpacing.sm),
               itemBuilder: (context, index) {
                 final chatRoom = chatRooms[index];
-                final otherUserId = chatRoom.participants
-                    .firstWhere((id) => id != currentUser.uid, orElse: () => '');
+                final otherUserId = chatRoom.participants.firstWhere(
+                    (id) => id != currentUser.uid,
+                    orElse: () => '');
 
                 if (otherUserId.isEmpty) {
                   return const SizedBox.shrink(); // Or some error widget
@@ -120,7 +123,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     }
 
                     final otherUser = userSnapshot.data!;
-                    final lastMessageTime = chatRoom.lastMessageTimestamp ?? chatRoom.createdAt;
+                    final lastMessageTime =
+                        chatRoom.lastMessageAt ?? chatRoom.createdAt;
 
                     return ListTile(
                       leading: AvatarWidget(
@@ -139,9 +143,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
                       onTap: () {
                         context.go(
-                          AppRouteBuilders.chatConversationPath(chatRoom.id),
+                          AppRouteBuilders.chatConversationPath(chatRoom.uid),
                           extra: {
-                            'chatRoomId': chatRoom.id,
+                            'chatRoomId': chatRoom.uid,
                             'otherUserName': otherUser.displayName,
                             'otherUserId': otherUser.uid,
                             'currentUserId': currentUser.uid,

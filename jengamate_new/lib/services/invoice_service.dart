@@ -12,7 +12,8 @@ class InvoiceService {
   // Create a new invoice
   Future<InvoiceModel> createInvoice(InvoiceModel invoice) async {
     try {
-      final docRef = await _firestore.collection(_collectionName).add(invoice.toMap());
+      final docRef =
+          await _firestore.collection(_collectionName).add(invoice.toMap());
       return invoice.copyWith(id: docRef.id);
     } catch (e) {
       throw Exception('Failed to create invoice: $e');
@@ -28,6 +29,23 @@ class InvoiceService {
           .update(invoice.toMap());
     } catch (e) {
       throw Exception('Failed to update invoice: $e');
+    }
+  }
+
+  // Get a single invoice by Order ID
+  Future<InvoiceModel?> getInvoiceByOrderId(String orderId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection(_collectionName)
+          .where('orderId', isEqualTo: orderId)
+          .limit(1)
+          .get();
+      if (querySnapshot.docs.isNotEmpty) {
+        return InvoiceModel.fromFirestore(querySnapshot.docs.first);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get invoice by orderId: $e');
     }
   }
 
@@ -80,7 +98,8 @@ class InvoiceService {
   }
 
   // Mark invoice as paid
-  Future<void> markAsPaid(String invoiceId, {String? paymentMethod, String? referenceNumber}) async {
+  Future<void> markAsPaid(String invoiceId,
+      {String? paymentMethod, String? referenceNumber}) async {
     try {
       await _firestore.collection(_collectionName).doc(invoiceId).update({
         'status': 'paid',
@@ -108,24 +127,24 @@ class InvoiceService {
     try {
       // Generate PDF file
       final pdfFile = await PdfService.generateInvoice(invoice);
-      
+
       // Upload to Firebase Storage
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('invoices')
           .child('${invoice.id}.pdf');
-      
+
       await storageRef.putFile(pdfFile);
-      
+
       // Get download URL
       final downloadUrl = await storageRef.getDownloadURL();
-      
+
       // Update invoice with PDF URL
       await _firestore.collection(_collectionName).doc(invoice.id).update({
         'pdfUrl': downloadUrl,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       return downloadUrl;
     } catch (e) {
       print('Error generating PDF: $e');
@@ -141,13 +160,13 @@ class InvoiceService {
       if (pdfUrl.isEmpty) {
         pdfUrl = await generatePdf(invoice);
       }
-      
+
       // Get the current user's email if not provided
       final recipientEmail = email ?? invoice.customerEmail;
       if (recipientEmail.isEmpty) {
         throw Exception('No email address provided for the recipient');
       }
-      
+
       // In a real app, you would integrate with an email service here
       // For now, we'll use a mailto link as a fallback
       final subject = 'Invoice #${invoice.invoiceNumber} from JengaMate';
@@ -156,7 +175,7 @@ Hello ${invoice.customerName},
 
 Please find attached your invoice #${invoice.invoiceNumber} for ${invoice.items.map((item) => item.description).join(', ')}.
 
-Amount Due: KSh ${invoice.totalAmount.toStringAsFixed(2)}
+Amount Due: TSH ${invoice.totalAmount.toStringAsFixed(2)}
 Due Date: ${invoice.dueDate.toString().split(' ')[0]}
 
 You can view and download the invoice here: $pdfUrl
@@ -166,16 +185,17 @@ Thank you for your business!
 Best regards,
 JengaMate Team
       ''';
-      
-      final mailtoLink = 'mailto:$recipientEmail?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
-      
+
+      final mailtoLink =
+          'mailto:$recipientEmail?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}';
+
       // Update last sent date
       await _firestore.collection(_collectionName).doc(invoice.id).update({
         'lastSentAt': FieldValue.serverTimestamp(),
         'status': 'sent',
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      
+
       // Open default email client
       // Note: This will only work on mobile/desktop, not web
       // For web, you'd need a different approach
@@ -183,7 +203,7 @@ JengaMate Team
       // if (await canLaunch(mailtoLink)) {
       //   await launch(mailtoLink);
       // }
-      
+
       return true;
     } catch (e) {
       print('Error sending email: $e');

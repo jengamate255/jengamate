@@ -25,16 +25,16 @@ class NotificationService {
   bool _notificationsEnabled = true;
 
   NotificationService._internal();
-  
+
   Future<void> initialize() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    
+
     const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
     );
-    
+
     await _notificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
@@ -42,7 +42,7 @@ class NotificationService {
       },
     );
   }
-  
+
   Future<void> showNotification({
     required String title,
     required String body,
@@ -57,10 +57,10 @@ class NotificationService {
       priority: Priority.high,
       showWhen: false,
     );
-    
+
     const NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
-    
+
     await _notificationsPlugin.show(
       0,
       title,
@@ -69,17 +69,17 @@ class NotificationService {
       payload: payload,
     );
   }
-  
+
   Future<void> requestPermission() async {
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
         _notificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-    
+
     if (androidImplementation != null) {
       await androidImplementation.requestNotificationsPermission();
     }
   }
-  
+
   Future<void> scheduleNotification({
     required String title,
     required String body,
@@ -94,16 +94,16 @@ class NotificationService {
       importance: Importance.max,
       priority: Priority.high,
     );
-    
+
     const NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
-    
+
     // Convert DateTime to TZDateTime for zonedSchedule
     final tz.TZDateTime scheduledTZDate = tz.TZDateTime.from(
       scheduledDate,
       tz.local,
     );
-    
+
     await _notificationsPlugin.zonedSchedule(
       0,
       title,
@@ -117,11 +117,11 @@ class NotificationService {
       payload: payload,
     );
   }
-  
+
   Future<void> cancelNotification(int id) async {
     await _notificationsPlugin.cancel(id);
   }
-  
+
   Future<void> cancelAllNotifications() async {
     await _notificationsPlugin.cancelAll();
   }
@@ -139,19 +139,18 @@ class NotificationService {
     await prefs.setBool(_notificationPreferenceKey, enabled);
   }
 
-  Future<void> sendNewRfqNotification(
-      RFQModel rfq, UserModel supplier) async {
+  Future<void> sendNewRfqNotification(RFQModel rfq, UserModel supplier) async {
     try {
       final notification = NotificationModel(
-        id: FirebaseFirestore.instance.collection('notifications').doc().id,
+        uid: FirebaseFirestore.instance.collection('notifications').doc().id,
         userId: supplier.uid,
         title: 'New RFQ Received',
         message:
             'You have a new RFQ for ${rfq.productName} from ${rfq.customerName}.',
         type: 'rfq',
         relatedId: rfq.id,
+        isRead: false,
         createdAt: DateTime.now(),
-        timestamp: DateTime.now(),
       );
 
       await _databaseService.createNotification(notification);

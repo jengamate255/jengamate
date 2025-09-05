@@ -60,20 +60,18 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
                       return;
                     }
                     final amount = double.parse(_amountController.text);
-                    final withdrawal = WithdrawalModel(
-                      id: '',
-                      amount: amount,
-                      status: 'Pending',
-                      createdAt: Timestamp.now(),
-                      userId: currentUser.uid,
-                    );
                     final dbService = DatabaseService();
-                    dbService.requestWithdrawal(withdrawal);
+                    dbService.requestWithdrawal({
+                      'userId': currentUser.uid,
+                      'amount': amount,
+                      'status': 'Pending',
+                      'createdAt': Timestamp.now(),
+                    });
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content:
-                              Text('Withdrawal request submitted successfully!')),
+                          content: Text(
+                              'Withdrawal request submitted successfully!')),
                     );
                   }
                 },
@@ -85,4 +83,4 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
       ),
     );
   }
-} 
+}

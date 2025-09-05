@@ -1,5 +1,5 @@
+import 'package:jengamate/models/inquiry.dart';
 import 'package:flutter/material.dart';
-import 'package:jengamate/models/inquiry_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/screens/inquiry/inquiry_details_screen.dart';
 import 'package:provider/provider.dart';
@@ -22,13 +22,14 @@ class InquiryListScreen extends StatelessWidget {
         title: const Text('My Inquiries'),
       ),
       body: StreamBuilder<List<Inquiry>>(
-        stream: dbService.streamInquiries(currentUser?.uid ?? ''),
+        stream: dbService.streamInquiriesForUser(currentUser?.uid ?? ''),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return AdaptivePadding(
               child: ListView.separated(
                 itemCount: 6,
-                separatorBuilder: (_, __) => const SizedBox(height: JMSpacing.md),
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: JMSpacing.md),
                 itemBuilder: (context, index) => const JMCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,7 +49,8 @@ class InquiryListScreen extends StatelessWidget {
           final inquiries = snapshot.data ?? [];
           if (inquiries.isEmpty) {
             return const AdaptivePadding(
-              child: Center(child: Text('You have not made any inquiries yet.')),
+              child:
+                  Center(child: Text('You have not made any inquiries yet.')),
             );
           }
           return AdaptivePadding(
@@ -59,9 +61,9 @@ class InquiryListScreen extends StatelessWidget {
                 final inquiry = inquiries[index];
                 return JMCard(
                   child: ListTile(
-                    title: Text('Inquiry #${inquiry.id.substring(0, 8)}'),
+                    title: Text('Inquiry #${inquiry.uid.substring(0, 8)}'),
                     subtitle: Text(
-                        '${inquiry.products.length} products - ${inquiry.status}'),
+                        '${inquiry.products?.length ?? 0} products - ${inquiry.status}'),
                     trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () {
                       Navigator.of(context).push(

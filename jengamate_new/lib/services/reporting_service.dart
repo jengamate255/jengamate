@@ -33,7 +33,7 @@ class ReportingService {
     return snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList();
   }
 
-  Future<List<FinancialTransaction>> getFinancialTransactionsReport(
+  Future<List<FinancialTransactionModel>> getFinancialTransactionsReport(
       {DateTime? startDate, DateTime? endDate}) async {
     Query query = _db.collection('transactions');
     if (startDate != null) {
@@ -44,7 +44,7 @@ class ReportingService {
     }
     final snapshot = await query.get();
     return snapshot.docs
-        .map((doc) => FinancialTransaction.fromFirestore(doc))
+        .map((doc) => FinancialTransactionModel.fromFirestore(doc))
         .toList();
   }
 

@@ -21,6 +21,9 @@ class QuoteModel {
     required this.updatedAt,
   });
 
+  // Add uid getter for compatibility
+  String get uid => id;
+
   factory QuoteModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return QuoteModel(

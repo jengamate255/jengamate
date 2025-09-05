@@ -270,3 +270,5 @@ class UserModel {
 
   bool get isVerified => identityVerificationApproved;
 }
+
+

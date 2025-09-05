@@ -12,14 +12,16 @@ class CommissionManagementScreen extends StatefulWidget {
   const CommissionManagementScreen({super.key});
 
   @override
-  State<CommissionManagementScreen> createState() => _CommissionManagementScreenState();
+  State<CommissionManagementScreen> createState() =>
+      _CommissionManagementScreenState();
 }
 
-class _CommissionManagementScreenState extends State<CommissionManagementScreen> {
+class _CommissionManagementScreenState
+    extends State<CommissionManagementScreen> {
   final DatabaseService _dbService = DatabaseService();
   final _commissionRateController = TextEditingController();
   final _minPayoutController = TextEditingController();
-  
+
   @override
   void initState() {
     super.initState();
@@ -28,8 +30,9 @@ class _CommissionManagementScreenState extends State<CommissionManagementScreen>
 
   Future<void> _loadCommissionSettings() async {
     try {
-      final commission = await _dbService.streamCommissionRules().first;
-      if (commission != null) {
+      final commissionList = await _dbService.streamCommissionRules().first;
+      if (commissionList.isNotEmpty) {
+        final commission = commissionList.first;
         _commissionRateController.text = commission.direct.toString();
         _minPayoutController.text = commission.minPayoutThreshold.toString();
       }
@@ -42,15 +45,14 @@ class _CommissionManagementScreenState extends State<CommissionManagementScreen>
     try {
       final rate = double.tryParse(_commissionRateController.text) ?? 0.0;
       final minPayout = double.tryParse(_minPayoutController.text) ?? 0.0;
-      
+
       await _dbService.updateCommissionRules(
-        commissionRate: rate,
-        minPayoutThreshold: minPayout,
-      );
-      
+          {'commissionRate': rate, 'minPayoutThreshold': minPayout});
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Commission settings updated successfully')),
+          const SnackBar(
+              content: Text('Commission settings updated successfully')),
         );
       }
     } catch (e) {
@@ -65,7 +67,7 @@ class _CommissionManagementScreenState extends State<CommissionManagementScreen>
   @override
   Widget build(BuildContext context) {
     final currentUser = Provider.of<UserModel?>(context);
-    
+
     if (currentUser?.role != 'admin') {
       return Scaffold(
         appBar: AppBar(title: const Text('Commission Management')),
@@ -132,18 +134,19 @@ class _CommissionManagementScreenState extends State<CommissionManagementScreen>
               ),
             ),
             const SizedBox(height: JMSpacing.lg),
-            
+
             // Commission Overview
             Text(
               'Commission Overview',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: JMSpacing.md),
-            
+
             // User Commissions List - Temporarily disabled
             // StreamBuilder<List<UserModel>>(
             //   stream: _dbService.streamUsers(),
-            const Center(child: Text('Commission management temporarily unavailable'))
+            const Center(
+                child: Text('Commission management temporarily unavailable'))
             // builder: (context, snapshot) {
             //   if (snapshot.connectionState == ConnectionState.waiting) {
             //     return const Center(child: CircularProgressIndicator());
@@ -262,8 +265,8 @@ class _CommissionManagementScreenState extends State<CommissionManagementScreen>
         Text(
           value,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         Text(
           label,

@@ -1,7 +1,6 @@
+import 'package:jengamate/models/financial_transaction_model.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:jengamate/models/financial_transaction_model.dart';
-import 'package:jengamate/models/enums/transaction_enums.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/utils/logger.dart';
@@ -11,12 +10,13 @@ class FinancialDashboardScreen extends StatefulWidget {
   const FinancialDashboardScreen({super.key});
 
   @override
-  State<FinancialDashboardScreen> createState() => _FinancialDashboardScreenState();
+  State<FinancialDashboardScreen> createState() =>
+      _FinancialDashboardScreenState();
 }
 
 class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   final DatabaseService _databaseService = DatabaseService();
-  List<FinancialTransaction> _transactions = [];
+  List<FinancialTransactionModel> _transactions = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _hasMoreData = true;
@@ -50,7 +50,8 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
 
     try {
       // Use the database service method for paginated transactions
-      final newTransactions = await _databaseService.getPaginatedFinancialTransactions(
+      final newTransactions =
+          await _databaseService.getPaginatedFinancialTransactions(
         limit: _pageSize,
         startAfter: loadMore ? _lastDocument : null,
       );
@@ -71,9 +72,11 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
         }
       }
 
-      Logger.log('Loaded ${newTransactions.length} financial transactions from database');
+      Logger.log(
+          'Loaded ${newTransactions.length} financial transactions from database');
     } catch (e) {
-      Logger.logError('Error loading financial transactions', e, StackTrace.current);
+      Logger.logError(
+          'Error loading financial transactions', e, StackTrace.current);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -98,24 +101,27 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   }
 
   /// Validates transaction data for consistency and accuracy
-  bool _validateTransaction(FinancialTransaction transaction) {
+  bool _validateTransaction(FinancialTransactionModel transaction) {
     try {
       // Basic validation
       if (transaction.id.isEmpty) {
-        Logger.logError('Invalid transaction: empty ID', transaction.toMap(), StackTrace.current);
+        Logger.logError('Invalid transaction: empty ID', transaction.toMap(),
+            StackTrace.current);
         return false;
       }
-      
+
       if (transaction.amount <= 0) {
-        Logger.logError('Invalid transaction: non-positive amount', transaction.toMap(), StackTrace.current);
+        Logger.logError('Invalid transaction: non-positive amount',
+            transaction.toMap(), StackTrace.current);
         return false;
       }
-      
+
       if (transaction.userId.isEmpty) {
-        Logger.logError('Invalid transaction: empty user ID', transaction.toMap(), StackTrace.current);
+        Logger.logError('Invalid transaction: empty user ID',
+            transaction.toMap(), StackTrace.current);
         return false;
       }
-      
+
       // Validate transaction type and status combination
       if (transaction.type == TransactionType.withdrawal &&
           transaction.status == TransactionStatus.completed &&
@@ -123,7 +129,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
         // Withdrawal amounts should be negative for accounting
         // This is a data consistency check
       }
-      
+
       return true;
     } catch (e) {
       Logger.logError('Error validating transaction', e, StackTrace.current);
@@ -132,71 +138,68 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   }
 
   /// Sanitizes and processes transaction data for display
-  FinancialTransaction _sanitizeTransaction(FinancialTransaction transaction) {
-    // Ensure description is not null or empty
-    String sanitizedDescription = transaction.description?.trim() ??
+  FinancialTransactionModel _sanitizeTransaction(
+      FinancialTransactionModel transaction) {
+    final fallbackDesc =
         'Transaction ${transaction.type.toString().split('.').last} #${transaction.id.substring(0, 8)}';
-    
+    final descRaw = transaction.description.trim();
+    final sanitizedDescription = descRaw.isEmpty ? fallbackDesc : descRaw;
+
     // Ensure proper amount formatting
-    double sanitizedAmount = double.parse(transaction.amount.toStringAsFixed(2));
-    
-    return FinancialTransaction(
-      id: transaction.id,
-      amount: sanitizedAmount,
-      type: transaction.type,
-      userId: transaction.userId,
-      relatedId: transaction.relatedId,
+    final sanitizedAmount = double.parse(transaction.amount.toStringAsFixed(2));
+
+    return transaction.copyWith(
       description: sanitizedDescription,
-      status: transaction.status,
-      createdAt: transaction.createdAt,
-      updatedAt: transaction.updatedAt,
-      referenceNumber: transaction.referenceNumber?.trim(),
-      metadata: transaction.metadata,
+      amount: sanitizedAmount,
     );
   }
 
-  List<FinancialTransaction> get _filteredTransactions {
+  List<FinancialTransactionModel> get _filteredTransactions {
     var filtered = _transactions
         .where(_validateTransaction) // Validate each transaction
         .map(_sanitizeTransaction) // Sanitize data
         .where((transaction) {
-          // Status filter
-          if (_statusFilter != null && transaction.status != _statusFilter) {
-            return false;
-          }
-          
-          // Type filter
-          if (_typeFilter != null && transaction.type != _typeFilter) {
-            return false;
-          }
-          
-          // Date range filter with proper validation
-          if (_dateRange != null) {
-            final transactionDate = transaction.createdAt;
-            final startDate = _dateRange!.start;
-            final endDate = _dateRange!.end.add(const Duration(hours: 23, minutes: 59, seconds: 59));
-            
-            if (transactionDate.isBefore(startDate) || transactionDate.isAfter(endDate)) {
-              return false;
-            }
-          }
-          
-          // Enhanced search filter with multiple criteria
-          if (_searchController.text.isNotEmpty) {
-            final searchTerm = _searchController.text.toLowerCase().trim();
-            if (searchTerm.isEmpty) return true;
-            
-            return transaction.description?.toLowerCase().contains(searchTerm) == true ||
-                   transaction.id.toLowerCase().contains(searchTerm) ||
-                   transaction.referenceNumber?.toLowerCase().contains(searchTerm) == true ||
-                   transaction.type.toString().toLowerCase().contains(searchTerm) ||
-                   transaction.status.toString().toLowerCase().contains(searchTerm) ||
-                   transaction.amount.toString().contains(searchTerm);
-          }
-          
-          return true;
-        }).toList();
-    
+      // Status filter
+      if (_statusFilter != null && transaction.status != _statusFilter) {
+        return false;
+      }
+
+      // Type filter
+      if (_typeFilter != null && transaction.type != _typeFilter) {
+        return false;
+      }
+
+      // Date range filter with proper validation
+      if (_dateRange != null) {
+        final transactionDate = transaction.createdAt;
+        final startDate = _dateRange!.start;
+        final endDate = _dateRange!.end
+            .add(const Duration(hours: 23, minutes: 59, seconds: 59));
+
+        if (transactionDate.isBefore(startDate) ||
+            transactionDate.isAfter(endDate)) {
+          return false;
+        }
+      }
+
+      // Enhanced search filter with multiple criteria
+      if (_searchController.text.isNotEmpty) {
+        final searchTerm = _searchController.text.toLowerCase().trim();
+        if (searchTerm.isEmpty) return true;
+
+        return transaction.description?.toLowerCase().contains(searchTerm) ==
+                true ||
+            transaction.id.toLowerCase().contains(searchTerm) ||
+            transaction.referenceNumber?.toLowerCase().contains(searchTerm) ==
+                true ||
+            transaction.type.toString().toLowerCase().contains(searchTerm) ||
+            transaction.status.toString().toLowerCase().contains(searchTerm) ||
+            transaction.amount.toString().contains(searchTerm);
+      }
+
+      return true;
+    }).toList();
+
     // Optimized sorting with null safety
     try {
       filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -204,7 +207,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
       Logger.logError('Error sorting transactions', e, StackTrace.current);
       // If sorting fails, return unsorted list rather than crashing
     }
-    
+
     return filtered;
   }
 
@@ -243,11 +246,12 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     double totalIncome = 0.0;
     double totalWithdrawals = 0.0;
     double pendingAmount = 0.0;
-    
+
     try {
       // Validate and sanitize transactions before calculations
-      final validTransactions = _transactions.where(_validateTransaction).map(_sanitizeTransaction);
-      
+      final validTransactions =
+          _transactions.where(_validateTransaction).map(_sanitizeTransaction);
+
       for (var transaction in validTransactions) {
         switch (transaction.status) {
           case TransactionStatus.completed:
@@ -264,37 +268,47 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
             break;
         }
       }
-      
-      Logger.log('Summary calculations: Income=$totalIncome, Withdrawals=$totalWithdrawals, Pending=$pendingAmount');
+
+      Logger.log(
+          'Summary calculations: Income=$totalIncome, Withdrawals=$totalWithdrawals, Pending=$pendingAmount');
     } catch (e) {
-      Logger.logError('Error calculating summary metrics', e, StackTrace.current);
+      Logger.logError(
+          'Error calculating summary metrics', e, StackTrace.current);
       // Display error state but don't crash
     }
 
     return Container(
       padding: Responsive.getResponsivePadding(context),
       child: Responsive.isMobile(context)
-          ? Column(children: _buildSummaryCardsList(totalIncome, totalWithdrawals, pendingAmount))
+          ? Column(
+              children: _buildSummaryCardsList(
+                  totalIncome, totalWithdrawals, pendingAmount))
           : Row(
-              children: _buildSummaryCardsList(totalIncome, totalWithdrawals, pendingAmount)
+              children: _buildSummaryCardsList(
+                      totalIncome, totalWithdrawals, pendingAmount)
                   .map((card) => Expanded(child: card))
                   .toList(),
             ),
     );
   }
 
-  List<Widget> _buildSummaryCardsList(double totalIncome, double totalWithdrawals, double pendingAmount) {
+  List<Widget> _buildSummaryCardsList(
+      double totalIncome, double totalWithdrawals, double pendingAmount) {
     final spacing = Responsive.getResponsiveSpacing(context);
     return [
-      _buildSummaryCard('Total Income', totalIncome, Colors.green, Icons.trending_up),
+      _buildSummaryCard(
+          'Total Income', totalIncome, Colors.green, Icons.trending_up),
       SizedBox(width: spacing, height: spacing),
-      _buildSummaryCard('Total Withdrawals', totalWithdrawals, Colors.blue, Icons.account_balance_wallet),
+      _buildSummaryCard('Total Withdrawals', totalWithdrawals, Colors.blue,
+          Icons.account_balance_wallet),
       SizedBox(width: spacing, height: spacing),
-      _buildSummaryCard('Pending Amount', pendingAmount, Colors.orange, Icons.pending),
+      _buildSummaryCard(
+          'Pending Amount', pendingAmount, Colors.orange, Icons.pending),
     ];
   }
 
-  Widget _buildSummaryCard(String title, double amount, Color color, IconData icon) {
+  Widget _buildSummaryCard(
+      String title, double amount, Color color, IconData icon) {
     return Card(
       elevation: Responsive.getResponsiveElevation(context),
       child: Padding(
@@ -314,8 +328,9 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontSize: Responsive.getResponsiveFontSize(context, mobile: 12, tablet: 14, desktop: 16),
-                    ),
+                          fontSize: Responsive.getResponsiveFontSize(context,
+                              mobile: 12, tablet: 14, desktop: 16),
+                        ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -325,10 +340,11 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
             Text(
               '\$${amount.toStringAsFixed(2)}',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: Responsive.getResponsiveFontSize(context, mobile: 18, tablet: 20, desktop: 24),
-              ),
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: Responsive.getResponsiveFontSize(context,
+                        mobile: 18, tablet: 20, desktop: 24),
+                  ),
             ),
           ],
         ),
@@ -373,25 +389,32 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     _typeFilter = null;
                   });
                 }),
-                _buildFilterChip('Completed', _statusFilter == TransactionStatus.completed, () {
+                _buildFilterChip(
+                    'Completed', _statusFilter == TransactionStatus.completed,
+                    () {
                   setState(() {
                     _selectedFilter = 'completed';
                     _statusFilter = TransactionStatus.completed;
                   });
                 }),
-                _buildFilterChip('Pending', _statusFilter == TransactionStatus.pending, () {
+                _buildFilterChip(
+                    'Pending', _statusFilter == TransactionStatus.pending, () {
                   setState(() {
                     _selectedFilter = 'pending';
                     _statusFilter = TransactionStatus.pending;
                   });
                 }),
-                _buildFilterChip('Commissions', _typeFilter == TransactionType.commission, () {
+                _buildFilterChip(
+                    'Commissions', _typeFilter == TransactionType.commission,
+                    () {
                   setState(() {
                     _selectedFilter = 'commission';
                     _typeFilter = TransactionType.commission;
                   });
                 }),
-                _buildFilterChip('Withdrawals', _typeFilter == TransactionType.withdrawal, () {
+                _buildFilterChip(
+                    'Withdrawals', _typeFilter == TransactionType.withdrawal,
+                    () {
                   setState(() {
                     _selectedFilter = 'withdrawal';
                     _typeFilter = TransactionType.withdrawal;
@@ -427,7 +450,8 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
           children: [
             Icon(Icons.receipt_long, size: 64, color: Colors.grey),
             SizedBox(height: 16),
-            Text('No transactions found', style: TextStyle(fontSize: 18, color: Colors.grey)),
+            Text('No transactions found',
+                style: TextStyle(fontSize: 18, color: Colors.grey)),
           ],
         ),
       );
@@ -462,10 +486,10 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     );
   }
 
-  Widget _buildTransactionCard(FinancialTransaction transaction) {
+  Widget _buildTransactionCard(FinancialTransactionModel transaction) {
     final isIncome = transaction.type == TransactionType.commission;
     final color = _getTransactionColor(transaction);
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -481,9 +505,10 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('ID: ${transaction.id}'),
-            Text(DateFormat('MMM dd, yyyy HH:mm').format(transaction.createdAt)),
-            if (transaction.referenceNumber != null)
-              Text('Ref: ${transaction.referenceNumber}'),
+            Text(
+                DateFormat('MMM dd, yyyy HH:mm').format(transaction.createdAt)),
+            if (transaction.referenceId != null)
+              Text('Ref: ${transaction.referenceId}'),
           ],
         ),
         trailing: Column(
@@ -506,10 +531,12 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     );
   }
 
-  Color _getTransactionColor(FinancialTransaction transaction) {
+  Color _getTransactionColor(FinancialTransactionModel transaction) {
     switch (transaction.status) {
       case TransactionStatus.completed:
-        return transaction.type == TransactionType.commission ? Colors.green : Colors.blue;
+        return transaction.type == TransactionType.commission
+            ? Colors.green
+            : Colors.blue;
       case TransactionStatus.pending:
         return Colors.orange;
       case TransactionStatus.failed:
@@ -573,7 +600,8 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -600,7 +628,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
     );
   }
 
-  void _showTransactionDetails(FinancialTransaction transaction) {
+  void _showTransactionDetails(FinancialTransactionModel transaction) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -610,10 +638,14 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow('ID', transaction.id),
-            _buildDetailRow('Amount', '\$${transaction.amount.toStringAsFixed(2)}'),
-            _buildDetailRow('Type', transaction.type.toString().split('.').last),
-            _buildDetailRow('Status', transaction.status.toString().split('.').last),
-            _buildDetailRow('Date', DateFormat('MMM dd, yyyy HH:mm').format(transaction.createdAt)),
+            _buildDetailRow(
+                'Amount', '\$${transaction.amount.toStringAsFixed(2)}'),
+            _buildDetailRow(
+                'Type', transaction.type.toString().split('.').last),
+            _buildDetailRow(
+                'Status', transaction.status.toString().split('.').last),
+            _buildDetailRow('Date',
+                DateFormat('MMM dd, yyyy HH:mm').format(transaction.createdAt)),
             if (transaction.description != null)
               _buildDetailRow('Description', transaction.description!),
             if (transaction.referenceNumber != null)

@@ -5,6 +5,7 @@ import 'package:jengamate/services/invoice_service.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:jengamate/screens/order/payment_screen.dart';
 
 class InvoiceDetailsScreen extends StatefulWidget {
   final String invoiceId;
@@ -18,7 +19,6 @@ class InvoiceDetailsScreen extends StatefulWidget {
 class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   bool _isLoading = true;
   InvoiceModel? _invoice;
-  bool _isPaying = false;
 
   @override
   void initState() {
@@ -47,36 +47,20 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     }
   }
 
-  Future<void> _markAsPaid() async {
-    if (_invoice == null) return;
 
-    setState(() => _isPaying = true);
-    
-    try {
-      final invoiceService = Provider.of<InvoiceService>(context, listen: false);
-      await invoiceService.markAsPaid(
-        _invoice!.id,
-        paymentMethod: 'Bank Transfer',
-        referenceNumber: 'REF-${DateTime.now().millisecondsSinceEpoch}',
+  void _navigateToPayment(InvoiceModel invoice) {
+    if (invoice.orderId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order ID not found for this invoice.')),
       );
-      
-      if (mounted) {
-        await _loadInvoice(); // Refresh the invoice
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invoice marked as paid')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to mark as paid: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isPaying = false);
-      }
+      return;
     }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(orderId: invoice.orderId!),
+      ),
+    ).then((_) => _loadInvoice()); // Refresh invoice data after payment attempt
   }
 
   Future<void> _sendInvoice() async {
@@ -495,34 +479,13 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
         children: [
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: _isPaying ? null : _markAsPaid,
-              icon: _isPaying
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.check_circle, size: 20),
-              label: Text(_isPaying ? 'Processing...' : 'Mark as Paid'),
+              onPressed: () => _navigateToPayment(invoice),
+              icon: const Icon(Icons.payment, size: 20),
+              label: const Text('Pay for Order'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _sendInvoice,
-              icon: const Icon(Icons.email, size: 20),
-              label: const Text('Send'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                side: BorderSide(color: Theme.of(context).primaryColor),
               ),
             ),
           ),

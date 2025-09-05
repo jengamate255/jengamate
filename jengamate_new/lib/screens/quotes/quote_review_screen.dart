@@ -3,10 +3,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/models/quote_model.dart';
 import 'package:jengamate/models/rfq_model.dart';
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/services/order_service.dart';
 import 'package:intl/intl.dart';
 import 'package:jengamate/models/order_model.dart';
-import 'package:jengamate/models/enums/order_enums.dart'; // Added import for OrderStatus and OrderType
+import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/utils/logger.dart'; // Import Logger
+import 'package:jengamate/models/order_item_model.dart';
 
 class QuoteReviewScreen extends StatelessWidget {
   final QuoteModel quote;
@@ -17,6 +19,7 @@ class QuoteReviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dbService = DatabaseService();
+    final orderService = OrderService();
 
     return Scaffold(
       appBar: AppBar(
@@ -37,7 +40,7 @@ class QuoteReviewScreen extends StatelessWidget {
                 const Divider(height: 32),
                 _buildFooter(context),
                 const SizedBox(height: 32),
-                _buildActionButtons(context, dbService),
+                _buildActionButtons(context, dbService, orderService),
               ],
             ),
           ),
@@ -85,8 +88,10 @@ class QuoteReviewScreen extends StatelessWidget {
             DataRow(cells: [
               DataCell(Text(rfq.productName)),
               DataCell(Text(rfq.quantity.toString())),
-              DataCell(Text(NumberFormat.currency(symbol: 'TSh ').format(quote.price))),
-              DataCell(Text(NumberFormat.currency(symbol: 'TSh ').format(quote.price * rfq.quantity))),
+              DataCell(Text(
+                  NumberFormat.currency(symbol: 'TSh ').format(quote.price))),
+              DataCell(Text(NumberFormat.currency(symbol: 'TSh ')
+                  .format(quote.price * rfq.quantity))),
             ]),
           ],
         ),
@@ -117,7 +122,8 @@ class QuoteReviewScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, DatabaseService dbService) {
+  Widget _buildActionButtons(
+      BuildContext context, DatabaseService dbService, OrderService orderService) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -130,17 +136,18 @@ class QuoteReviewScreen extends StatelessWidget {
         const SizedBox(width: 16),
         ElevatedButton(
           onPressed: () async {
-            await _confirmQuote(context, dbService);
+            await _confirmQuote(context, dbService, orderService);
           },
           child: const Text('Confirm Quote'),
         ),
       ],
     );
   }
-  
-  Future<void> _requestModification(BuildContext context, DatabaseService dbService) async {
+
+  Future<void> _requestModification(
+      BuildContext context, DatabaseService dbService) async {
     final TextEditingController messageController = TextEditingController();
-    
+
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -187,12 +194,20 @@ class QuoteReviewScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text('Product: ${rfq.productName}', style: TextStyle(color: Colors.blue.shade700)),
-                      Text('Quantity: ${rfq.quantity}', style: TextStyle(color: Colors.blue.shade700)),
-                      Text('Quoted Price: TSh ${quote.price.toStringAsFixed(2)}', style: TextStyle(color: Colors.blue.shade700)),
-                      Text('Total: TSh ${(quote.price * rfq.quantity).toStringAsFixed(2)}', style: TextStyle(color: Colors.blue.shade700)),
+                      Text('Product: ${rfq.productName}',
+                          style: TextStyle(color: Colors.blue.shade700)),
+                      Text('Quantity: ${rfq.quantity}',
+                          style: TextStyle(color: Colors.blue.shade700)),
+                      Text(
+                          'Quoted Price: TSh ${quote.price.toStringAsFixed(2)}',
+                          style: TextStyle(color: Colors.blue.shade700)),
+                      Text(
+                          'Total: TSh ${(quote.price * rfq.quantity).toStringAsFixed(2)}',
+                          style: TextStyle(color: Colors.blue.shade700)),
                       if (quote.deliveryDate != null)
-                        Text('Delivery Date: ${quote.deliveryDate!.toLocal().toString().split(' ')[0]}', style: TextStyle(color: Colors.blue.shade700)),
+                        Text(
+                            'Delivery Date: ${quote.deliveryDate!.toLocal().toString().split(' ')[0]}',
+                            style: TextStyle(color: Colors.blue.shade700)),
                     ],
                   ),
                 ),
@@ -201,7 +216,8 @@ class QuoteReviewScreen extends StatelessWidget {
                   controller: messageController,
                   decoration: const InputDecoration(
                     labelText: 'Modification Request',
-                    hintText: 'e.g., "Could you adjust the price to TSh 15,000 per unit?" or "Can you deliver 2 weeks earlier?"',
+                    hintText:
+                        'e.g., "Could you adjust the price to TSh 15,000 per unit?" or "Can you deliver 2 weeks earlier?"',
                     border: OutlineInputBorder(),
                     alignLabelWithHint: true,
                   ),
@@ -220,24 +236,29 @@ class QuoteReviewScreen extends StatelessWidget {
               onPressed: () async {
                 if (messageController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter your modification request')),
+                    const SnackBar(
+                        content:
+                            Text('Please enter your modification request')),
                   );
                   return;
                 }
-                
+
                 try {
                   // Update RFQ status to indicate modification requested
-                  await dbService.updateRFQStatus(rfq.id, 'modification_requested');
-                  
+                  await dbService.updateRFQStatus(
+                      rfq.id, 'modification_requested');
+
                   // Here you could also create a message/notification to the supplier
-                  Logger.log('Modification requested for quote ${quote.id}: ${messageController.text}');
-                  
+                  Logger.log(
+                      'Modification requested for quote ${quote.id}: ${messageController.text}');
+
                   Navigator.of(context).pop(); // Close dialog
-                  
+
                   // Show success message
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Modification request sent to supplier'),
+                      content:
+                          const Text('Modification request sent to supplier'),
                       backgroundColor: Colors.green,
                       action: SnackBarAction(
                         label: 'OK',
@@ -246,13 +267,14 @@ class QuoteReviewScreen extends StatelessWidget {
                       ),
                     ),
                   );
-                  
+
                   // Go back to previous screen
                   Navigator.of(context).pop();
-                  
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to send modification request: $e')),
+                    SnackBar(
+                        content:
+                            Text('Failed to send modification request: $e')),
                   );
                 }
               },
@@ -267,8 +289,9 @@ class QuoteReviewScreen extends StatelessWidget {
       },
     );
   }
-  
-  Future<void> _confirmQuote(BuildContext context, DatabaseService dbService) async {
+
+  Future<void> _confirmQuote(
+      BuildContext context, DatabaseService dbService, OrderService orderService) async {
     // Create a local variable to hold the quote that might be updated
     QuoteModel currentQuote = quote;
 
@@ -281,30 +304,40 @@ class QuoteReviewScreen extends StatelessWidget {
       Logger.log('Quote price: ${currentQuote.price}');
       Logger.log('Quote notes: ${currentQuote.notes}');
       Logger.log('Quote delivery date: ${currentQuote.deliveryDate}');
-      Logger.log('Quote supplierId: "${currentQuote.supplierId}" (Type: ${currentQuote.supplierId.runtimeType})');
-      Logger.log('Quote supplierId isEmpty: ${currentQuote.supplierId?.isEmpty ?? "null"}');
+      Logger.log(
+          'Quote supplierId: "${currentQuote.supplierId}" (Type: ${currentQuote.supplierId.runtimeType})');
+      Logger.log(
+          'Quote supplierId isEmpty: ${currentQuote.supplierId?.isEmpty ?? "null"}');
       Logger.log('RFQ ID: ${rfq.id}');
-      Logger.log('RFQ Buyer ID: "${rfq.userId}" (Type: ${rfq.userId.runtimeType})');
+      Logger.log(
+          'RFQ Buyer ID: "${rfq.userId}" (Type: ${rfq.userId.runtimeType})');
       Logger.log('RFQ userId isEmpty: ${rfq.userId?.isEmpty ?? "null"}');
       Logger.log('=====================================');
 
       // Enhanced validation with detailed error messages
       if (rfq.userId == null || rfq.userId!.isEmpty) {
-        Logger.logError('Quote confirmation failed: RFQ buyer ID is missing', {
-          'rfqId': rfq.id,
-          'rfqUserId': rfq.userId,
-          'quoteId': currentQuote.id,
-        }, StackTrace.current);
-        throw Exception('RFQ buyer ID is missing. This quote cannot be confirmed without a valid buyer.');
+        Logger.logError(
+            'Quote confirmation failed: RFQ buyer ID is missing',
+            {
+              'rfqId': rfq.id,
+              'rfqUserId': rfq.userId,
+              'quoteId': currentQuote.id,
+            },
+            StackTrace.current);
+        throw Exception(
+            'RFQ buyer ID is missing. This quote cannot be confirmed without a valid buyer.');
       }
 
       if (currentQuote.supplierId == null || currentQuote.supplierId!.isEmpty) {
-        Logger.logError('Quote confirmation failed: Quote supplier ID is missing', {
-          'rfqId': rfq.id,
-          'quoteId': currentQuote.id,
-          'quoteSupplierId': currentQuote.supplierId,
-          'quoteCreatedAt': currentQuote.createdAt.toIso8601String(),
-        }, StackTrace.current);
+        Logger.logError(
+            'Quote confirmation failed: Quote supplier ID is missing',
+            {
+              'rfqId': rfq.id,
+              'quoteId': currentQuote.id,
+              'quoteSupplierId': currentQuote.supplierId,
+              'quoteCreatedAt': currentQuote.createdAt.toIso8601String(),
+            },
+            StackTrace.current);
 
         // Try to find the supplier from the database by looking for quotes with the same RFQ ID
         try {
@@ -316,9 +349,12 @@ class QuoteReviewScreen extends StatelessWidget {
               .get();
 
           if (quotesForRFQ.docs.isNotEmpty) {
-            final validQuote = QuoteModel.fromFirestore(quotesForRFQ.docs.first);
-            if (validQuote.supplierId != null && validQuote.supplierId!.isNotEmpty) {
-              Logger.log('Found valid supplier ID from another quote: ${validQuote.supplierId}');
+            final validQuote =
+                QuoteModel.fromFirestore(quotesForRFQ.docs.first);
+            if (validQuote.supplierId != null &&
+                validQuote.supplierId!.isNotEmpty) {
+              Logger.log(
+                  'Found valid supplier ID from another quote: ${validQuote.supplierId}');
               // Update the quote with the correct supplier ID
               await FirebaseFirestore.instance
                   .collection('quotes')
@@ -340,11 +376,14 @@ class QuoteReviewScreen extends StatelessWidget {
               Logger.log('Quote supplier ID updated successfully');
             }
           } else {
-            throw Exception('No valid supplier found for this RFQ. Please contact the supplier to resubmit their quote.');
+            throw Exception(
+                'No valid supplier found for this RFQ. Please contact the supplier to resubmit their quote.');
           }
         } catch (updateError) {
-          Logger.logError('Failed to update quote supplier ID', updateError, StackTrace.current);
-          throw Exception('Quote supplier ID is missing and could not be recovered. Please contact the supplier to resubmit their quote.');
+          Logger.logError('Failed to update quote supplier ID', updateError,
+              StackTrace.current);
+          throw Exception(
+              'Quote supplier ID is missing and could not be recovered. Please contact the supplier to resubmit their quote.');
         }
       }
 
@@ -356,20 +395,30 @@ class QuoteReviewScreen extends StatelessWidget {
       // 2. Create an order based on the accepted quote
       Logger.log('Creating order from quote...');
       final newOrder = OrderModel(
-        id: '', // Firestore will generate this
-        buyerId: rfq.userId, // Assuming RFQ userId is the buyer
-        supplierId: currentQuote.supplierId,
-        rfqId: rfq.id,
+        id: '',
+        customerId: rfq.userId ?? '',
+        customerName: '',
+        supplierId: currentQuote.supplierId ?? '',
+        supplierName: '',
+        items: [
+          OrderItem(
+            productId: rfq.productId,
+            productName: rfq.productName,
+            quantity: rfq.quantity,
+            price: currentQuote.price,
+          ),
+        ],
         totalAmount: currentQuote.price * rfq.quantity,
-        status: OrderStatus.pending, // Initial status
-        type: OrderType.product, // Assuming it's a product order
+        status: OrderStatus.pending,
+        paymentMethod: 'unknown',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        rfqId: rfq.id,
         orderNumber: 'ORD-${DateTime.now().millisecondsSinceEpoch}',
       );
 
       Logger.log('Order data prepared: ${newOrder.toMap()}');
-      await dbService.createOrder(newOrder);
+      await orderService.createOrder(newOrder);
       Logger.log('Order created successfully');
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -381,7 +430,8 @@ class QuoteReviewScreen extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to confirm quote: $e'),
-          duration: const Duration(seconds: 5), // Show longer for detailed error messages
+          duration: const Duration(
+              seconds: 5), // Show longer for detailed error messages
         ),
       );
     }

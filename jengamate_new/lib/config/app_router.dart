@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/auth/login_screen.dart';
@@ -47,7 +46,8 @@ import 'package:provider/provider.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/screens/admin/product_management_screen.dart';
 import 'package:jengamate/screens/admin/category_management_screen.dart';
-import 'package:jengamate/screens/admin/analytics_screen.dart' as admin_analytics;
+import 'package:jengamate/screens/admin/analytics_screen.dart'
+    as admin_analytics;
 import 'package:jengamate/screens/admin/commission_list_screen.dart';
 import 'package:jengamate/screens/finance/financial_dashboard_screen.dart';
 import 'package:jengamate/screens/referral/referral_dashboard_screen.dart';
@@ -66,6 +66,8 @@ import 'package:jengamate/screens/admin/rfq_management_test.dart';
 import 'package:jengamate/screens/invoices/invoices_screen.dart';
 import 'package:jengamate/screens/invoices/invoice_details_screen.dart';
 import 'package:jengamate/screens/invoices/create_invoice_screen.dart';
+import 'package:jengamate/screens/order/orders_management_screen.dart';
+import 'package:jengamate/screens/order/order_details_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -149,7 +151,8 @@ class AppRouter {
             name: 'adminAuditLog',
             builder: (context, state) {
               final args = state.extra as Map<String, String>;
-              return AuditLogScreen(userId: args['userId']!, userName: args['userName']!);
+              return AuditLogScreen(
+                  userId: args['userId']!, userName: args['userName']!);
             },
           ),
           GoRoute(
@@ -165,7 +168,8 @@ class AppRouter {
           GoRoute(
             path: 'analytics-reporting',
             name: 'adminAnalyticsReporting',
-            builder: (context, state) => const admin_analytics.AnalyticsScreen(),
+            builder: (context, state) =>
+                const admin_analytics.AnalyticsScreen(),
           ),
           GoRoute(
             path: 'commission-tools',
@@ -186,7 +190,6 @@ class AppRouter {
           ),
         ],
       ),
-
 
       GoRoute(
         path: AppRoutes.addEditProduct,
@@ -392,7 +395,8 @@ class AppRouter {
       ),
       GoRoute(
         path: '/admin-support',
-        builder: (context, state) => const SupportDashboardScreen(isAdminView: true),
+        builder: (context, state) =>
+            const SupportDashboardScreen(isAdminView: true),
       ),
       // Invoice Routes
       GoRoute(
@@ -408,6 +412,18 @@ class AppRouter {
         builder: (context, state) {
           final invoiceId = state.pathParameters['invoiceId']!;
           return InvoiceDetailsScreen(invoiceId: invoiceId);
+        },
+      ),
+      // Order Routes
+      GoRoute(
+        path: AppRoutes.orders,
+        builder: (context, state) => const OrdersManagementScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.orderDetails,
+        builder: (context, state) {
+          final orderId = state.pathParameters['orderId']!;
+          return OrderDetailsScreen(orderId: orderId);
         },
       ),
     ],

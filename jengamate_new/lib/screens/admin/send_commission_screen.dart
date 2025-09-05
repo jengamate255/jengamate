@@ -29,7 +29,8 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
   bool _submitting = false;
   double? _appliedRate; // from auto-calc
   String? _appliedTierId; // from auto-calc
-  bool _lockAmount = false; // prevents manual edits after auto-calc until unlocked
+  bool _lockAmount =
+      false; // prevents manual edits after auto-calc until unlocked
 
   @override
   void dispose() {
@@ -52,11 +53,11 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
           setState(() => loading = true);
           try {
             final list = await _db.searchUsers(
-              roleName: _recipientRole.name,
-              nameQuery: searchCtrl.text,
+              searchCtrl.text.isEmpty ? '' : searchCtrl.text,
               limit: 25,
             );
-            setState(() => results = list);
+            setState(() =>
+                results = list.map((m) => UserModel.fromJson(m)).toList());
           } finally {
             setState(() => loading = false);
           }
@@ -73,15 +74,16 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
               try {
                 setBSState(() => loading = true);
                 final list = await _db.searchUsers(
-                  roleName: _recipientRole.name,
-                  nameQuery: null,
+                  '',
                   limit: 25,
                 );
-                setBSState(() => results = list);
+                setBSState(() =>
+                    results = list.map((m) => UserModel.fromJson(m)).toList());
               } finally {
                 setBSState(() => loading = false);
               }
             }
+
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -96,7 +98,12 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
                       builder: (_, __) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: 8),
-                    Container(height: 4, width: 40, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                    Container(
+                        height: 4,
+                        width: 40,
+                        decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(2))),
                     const SizedBox(height: 12),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -135,7 +142,8 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
                         itemBuilder: (context, index) {
                           final u = results[index];
                           return ListTile(
-                            leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                            leading: const CircleAvatar(
+                                child: Icon(Icons.person_outline)),
                             title: Text(u.displayName),
                             subtitle: Text(u.email ?? ''),
                             trailing: Text(u.role.name),
@@ -249,11 +257,13 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
                   child: TextFormField(
                     controller: _userIdCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Recipient User ID',
-                      border: OutlineInputBorder(),
-                      helperText: 'Enter the target userId (supplier or engineer)'
-                    ),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'User ID is required' : null,
+                        labelText: 'Recipient User ID',
+                        border: OutlineInputBorder(),
+                        helperText:
+                            'Enter the target userId (supplier or engineer)'),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'User ID is required'
+                        : null,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -272,8 +282,10 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(value: UserRole.engineer, child: Text('Engineer')),
-                DropdownMenuItem(value: UserRole.supplier, child: Text('Supplier')),
+                DropdownMenuItem(
+                    value: UserRole.engineer, child: Text('Engineer')),
+                DropdownMenuItem(
+                    value: UserRole.supplier, child: Text('Supplier')),
               ],
               onChanged: (val) => setState(() {
                 _recipientRole = val ?? UserRole.engineer;
@@ -297,7 +309,8 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
                 DropdownMenuItem(value: 'Referral', child: Text('Referral')),
                 DropdownMenuItem(value: 'Active', child: Text('Active')),
               ],
-              onChanged: (val) => setState(() => _commissionType = val ?? 'Direct'),
+              onChanged: (val) =>
+                  setState(() => _commissionType = val ?? 'Direct'),
             ),
             const SizedBox(height: 12),
             Row(
@@ -306,7 +319,8 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _baseAmountCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
                       labelText: 'Base Amount (Order/Quote Total)',
                       border: OutlineInputBorder(),
@@ -322,18 +336,23 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
                       final base = double.tryParse(_baseAmountCtrl.text.trim());
                       if (base == null || base <= 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Enter a valid Base Amount to auto-calc')),
+                          const SnackBar(
+                              content: Text(
+                                  'Enter a valid Base Amount to auto-calc')),
                         );
                         return;
                       }
                       // Get live tiers; fallback to defaults
-                      final tiers = await _tierService.getTiers(_recipientRole.name).catchError((_) => <CommissionTier>[]);
+                      final tiers = await _tierService
+                          .getTiers(_recipientRole.name)
+                          .catchError((_) => <CommissionTier>[]);
                       final used = tiers.isNotEmpty
                           ? tiers
                           : (_recipientRole == UserRole.engineer
                               ? CommissionTierService.engineerTiers
                               : CommissionTierService.supplierTiers);
-                      final tier = _tierService.findTierForAmount(base, _recipientRole.name, used);
+                      final tier = _tierService.findTierForAmount(
+                          base, _recipientRole.name, used);
                       final rate = tier?.ratePercent ?? 0.0;
                       final calc = base * rate;
                       setState(() {
@@ -343,7 +362,9 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
                         _lockAmount = true;
                       });
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Applied tier rate ${(rate * 100).toStringAsFixed(1)}% -> Amount ${calc.toStringAsFixed(2)}')),
+                        SnackBar(
+                            content: Text(
+                                'Applied tier rate ${(rate * 100).toStringAsFixed(1)}% -> Amount ${calc.toStringAsFixed(2)}')),
                       );
                     },
                     icon: const Icon(Icons.auto_fix_high),
@@ -364,7 +385,8 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
             ),
             TextFormField(
               controller: _amountCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
                 labelText: 'Amount (TSh)',
                 border: OutlineInputBorder(),
@@ -381,13 +403,15 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.info_outline, size: 16, color: Colors.blueGrey),
+                  const Icon(Icons.info_outline,
+                      size: 16, color: Colors.blueGrey),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
                       'Applied from tiers: ${_appliedRate != null ? ((_appliedRate! * 100).toStringAsFixed(1) + '%') : ''}'
                       '${_appliedTierId != null ? ' • Tier ID: ' + _appliedTierId! : ''}',
-                      style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.blueGrey),
                     ),
                   ),
                 ],
@@ -408,7 +432,10 @@ class _SendCommissionScreenState extends State<SendCommissionScreen> {
               child: ElevatedButton.icon(
                 onPressed: _submitting ? null : _submit,
                 icon: _submitting
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.send),
                 label: const Text('Send Commission'),
               ),

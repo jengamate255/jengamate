@@ -1,5 +1,13 @@
 connectorId: default
 generate:
   dartSdk:
-    outputDir: ..\..\dataconnect-generated\dart\default_connector
-    package: default_connector
+    - outputDir: ..\..\dataconnect-generated\dart\default_connector
+      package: default_connector
+    - outputDir: ..\..\lib\dataconnect_generated
+      package: dataconnect_generated
+  javascriptSdk:
+    - outputDir: ..\..\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..
+      react: false
+      angular: false

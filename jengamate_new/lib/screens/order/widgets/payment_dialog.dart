@@ -59,7 +59,8 @@ class _PaymentDialogState extends State<PaymentDialog> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError || !snapshot.hasData) {
-                  return const Center(child: Text('Error loading order details.'));
+                  return const Center(
+                      child: Text('Error loading order details.'));
                 }
                 final order = snapshot.data!;
                 return Text(
@@ -105,13 +106,16 @@ class _PaymentDialogState extends State<PaymentDialog> {
               if (bytes == null) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to read file bytes. Please try again.')),
+                    const SnackBar(
+                        content: Text(
+                            'Failed to read file bytes. Please try again.')),
                   );
                 }
                 return;
               } else {
                 proofOfPaymentUrl = await _dbService.uploadFile(
-                  bytes, 'proof_of_payment/${widget.orderId}/${_pickedFile!.name}',
+                  bytes,
+                  'proof_of_payment/${widget.orderId}/${_pickedFile!.name}',
                 );
               }
             }
@@ -146,4 +150,4 @@ class _PaymentDialogState extends State<PaymentDialog> {
       ],
     );
   }
-} 
+}

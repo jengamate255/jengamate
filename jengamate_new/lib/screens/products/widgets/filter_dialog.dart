@@ -32,8 +32,10 @@ class _FilterDialogState extends State<FilterDialog> {
   void initState() {
     super.initState();
     _isHot = widget.initialIsHot;
-    _minPriceController = TextEditingController(text: widget.initialMinPrice?.toString() ?? '');
-    _maxPriceController = TextEditingController(text: widget.initialMaxPrice?.toString() ?? '');
+    _minPriceController =
+        TextEditingController(text: widget.initialMinPrice?.toString() ?? '');
+    _maxPriceController =
+        TextEditingController(text: widget.initialMaxPrice?.toString() ?? '');
     _selectedCategory = widget.initialCategory;
   }
 
@@ -80,7 +82,7 @@ class _FilterDialogState extends State<FilterDialog> {
           ),
           const SizedBox(height: 16),
           StreamBuilder<List<CategoryModel>>(
-            stream: _dbService.getCategories(),
+            stream: _dbService.streamCategories(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const CircularProgressIndicator();
@@ -147,4 +149,4 @@ class _FilterDialogState extends State<FilterDialog> {
       ],
     );
   }
-} 
+}

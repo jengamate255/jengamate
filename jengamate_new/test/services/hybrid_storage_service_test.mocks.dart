@@ -1038,7 +1038,7 @@ class MockStorageService extends _i1.Mock implements _i8.StorageService {
   }
 
   @override
-  _i4.Future<String> uploadImage({
+  _i4.Future<String?> uploadImage({
     required String? fileName,
     required String? folder,
     _i7.Uint8List? bytes,
@@ -1055,20 +1055,8 @@ class MockStorageService extends _i1.Mock implements _i8.StorageService {
             #file: file,
           },
         ),
-        returnValue: _i4.Future<String>.value(_i5.dummyValue<String>(
-          this,
-          Invocation.method(
-            #uploadImage,
-            [],
-            {
-              #fileName: fileName,
-              #folder: folder,
-              #bytes: bytes,
-              #file: file,
-            },
-          ),
-        )),
-      ) as _i4.Future<String>);
+        returnValue: _i4.Future<String?>.value(),
+      ) as _i4.Future<String?>);
 
   @override
   _i4.Future<bool> deleteImage(String? url) => (super.noSuchMethod(

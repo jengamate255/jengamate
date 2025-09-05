@@ -48,7 +48,7 @@ class WithdrawalsScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final withdrawal = withdrawals[index];
               return ListTile(
-                title: Text('KES ${withdrawal.amount.toStringAsFixed(2)}'),
+                title: Text('TSH ${withdrawal.amount.toStringAsFixed(2)}'),
                 subtitle: Text(withdrawal.createdAt.toString()),
                 trailing: Text(withdrawal.status),
               );

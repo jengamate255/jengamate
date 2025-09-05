@@ -2,10 +2,7 @@ import 'package:jengamate/models/rfq_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
 
-
 class SupplierMatchingService {
-
-
   Future<List<UserModel>> findMatchingSuppliers(RFQModel rfq) async {
     final dbService = DatabaseService();
 
@@ -18,13 +15,16 @@ class SupplierMatchingService {
     final categoryId = product.categoryId;
 
     // 2. Get all approved suppliers.
-    final allSuppliers = await dbService.getApprovedSuppliers();
+    final supplierMaps = await dbService.getApprovedSuppliers();
 
     // 3. Filter suppliers who are subscribed to the product's category.
-    final matchedSuppliers = allSuppliers.where((supplier) {
-      return supplier.subscribedCategoryIds.contains(categoryId);
+    final matched = supplierMaps.where((s) {
+      final list = (s['subscribedCategoryIds'] as List?)?.cast<String>() ??
+          const <String>[];
+      return list.contains(categoryId);
     }).toList();
 
-    return matchedSuppliers;
+    // Map to lightweight UserModel instances
+    return matched.map((m) => UserModel.fromJson(m)).toList();
   }
 }

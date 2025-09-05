@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jengamate/models/inquiry_model.dart';
+import 'package:jengamate/models/inquiry.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
 import 'package:jengamate/models/user_model.dart';
@@ -51,20 +51,27 @@ class _InquirySubmissionScreenState extends State<InquirySubmissionScreen> {
     if (_formKey.currentState!.validate()) {
       final currentUser = Provider.of<UserModel?>(context, listen: false);
       final now = Timestamp.now();
-      final inquiry = InquiryModel(
-        id: FirebaseFirestore.instance.collection('inquiries').doc().id,
+      final inquiry = Inquiry(
+        uid: FirebaseFirestore.instance.collection('inquiries').doc().id,
         userId: currentUser?.uid ?? '',
-        title: _projectNameController.text, // Added title
-        products: _products,
+        userName: currentUser?.displayName ?? '',
+        userEmail: currentUser?.email ?? '',
+        subject: _projectNameController.text,
+        description: '',
+        category: 'quotation',
+        priority: 'medium',
+        status: 'open',
+        createdAt: now.toDate(),
+        updatedAt: now.toDate(),
+        tags: const ['quotation'],
         projectInfo: {
           'projectName': _projectNameController.text,
           'deliveryAddress': _deliveryAddressController.text,
           'expectedDeliveryDate': _expectedDeliveryDateController.text,
           'transportNeeded': _transportNeeded,
         },
-        attachments: _attachments,
-        status: 'Pending',
-        createdAt: now,
+        products: const [],
+        metadata: null,
       );
 
       await DatabaseService().addInquiry(inquiry);

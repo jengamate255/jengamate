@@ -12,7 +12,7 @@ class CommissionRulesScreen extends StatefulWidget {
 class _CommissionRulesScreenState extends State<CommissionRulesScreen> {
   final _formKey = GlobalKey<FormState>();
   final _dbService = DatabaseService();
-  late Future<CommissionModel?> _commissionFuture;
+  late Future<List<CommissionModel>> _commissionFuture;
 
   final _totalController = TextEditingController();
   final _directController = TextEditingController();
@@ -24,13 +24,15 @@ class _CommissionRulesScreenState extends State<CommissionRulesScreen> {
   void initState() {
     super.initState();
     _commissionFuture = _dbService.getCommissionRules();
-    _commissionFuture.then((commission) {
-      if (commission != null) {
+    _commissionFuture.then((commissions) {
+      if (commissions.isNotEmpty) {
+        final commission = commissions.first;
         _totalController.text = commission.total.toString();
         _directController.text = commission.direct.toString();
         _referralController.text = commission.referral.toString();
         _activeController.text = commission.active.toString();
-        _minPayoutThresholdController.text = commission.minPayoutThreshold.toString();
+        _minPayoutThresholdController.text =
+            commission.minPayoutThreshold.toString();
       }
     });
   }
@@ -57,7 +59,11 @@ class _CommissionRulesScreenState extends State<CommissionRulesScreen> {
         userId: '',
         minPayoutThreshold: double.parse(_minPayoutThresholdController.text),
       );
-      _dbService.updateCommissionRules(newCommission).then((_) {
+      _dbService.updateCommissionRules({
+        'commissionRate':
+            newCommission.direct, // Assuming direct is the main rate
+        'minPayoutThreshold': newCommission.minPayoutThreshold,
+      }).then((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Commission rules saved successfully')),
         );
@@ -75,7 +81,7 @@ class _CommissionRulesScreenState extends State<CommissionRulesScreen> {
       appBar: AppBar(
         title: const Text('Commission Rules'),
       ),
-      body: FutureBuilder<CommissionModel?>(
+      body: FutureBuilder<List<CommissionModel>>(
         future: _commissionFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

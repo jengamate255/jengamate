@@ -30,8 +30,17 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
   DateTimeRange? _dateRange;
 
   final List<String> _actionTypes = [
-    'all', 'login', 'logout', 'create', 'update', 'delete',
-    'approve', 'reject', 'payment', 'withdrawal', 'system'
+    'all',
+    'login',
+    'logout',
+    'create',
+    'update',
+    'delete',
+    'approve',
+    'reject',
+    'payment',
+    'withdrawal',
+    'system'
   ];
 
   @override
@@ -63,7 +72,8 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListTile(
                   title: Text('${log.actorName} ${log.action}'),
-                  subtitle: Text(DateFormat.yMMMd().add_jm().format(log.timestamp.toDate())),
+                  subtitle:
+                      Text(DateFormat.yMMMd().add_jm().format(log.timestamp)),
                   onTap: () {
                     if (log.details != null) {
                       showDialog(

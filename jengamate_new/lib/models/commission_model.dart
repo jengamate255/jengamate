@@ -27,6 +27,9 @@ class CommissionModel {
     this.metadata,
   }) : createdAt = createdAt ?? DateTime.now();
 
+  // Add uid getter for compatibility
+  String get uid => id;
+
   factory CommissionModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data()! as Map<String, dynamic>;
     return CommissionModel.fromMap(data, doc.id);
@@ -44,7 +47,9 @@ class CommissionModel {
       status: data['status'] ?? 'Pending',
       minPayoutThreshold: (data['minPayoutThreshold'] ?? 0).toDouble(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      metadata: data['metadata'] is Map ? Map<String, dynamic>.from(data['metadata']) : null,
+      metadata: data['metadata'] is Map
+          ? Map<String, dynamic>.from(data['metadata'])
+          : null,
     );
   }
 

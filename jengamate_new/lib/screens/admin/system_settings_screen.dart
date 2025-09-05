@@ -15,16 +15,16 @@ class SystemSettingsScreen extends StatefulWidget {
 class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
   final DatabaseService _databaseService = DatabaseService();
   final _formKey = GlobalKey<FormState>();
-  
+
   bool _isLoading = true;
   bool _isSaving = false;
-  
+
   // Form controllers
   final _commissionRateController = TextEditingController();
   final _minimumWithdrawalController = TextEditingController();
   final _maxRfqsPerDayController = TextEditingController();
   bool _requireApprovalForNewUsers = true;
-  
+
   // Additional settings
   final _referralBonusController = TextEditingController();
   final _maxOrderValueController = TextEditingController();
@@ -44,21 +44,25 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
     setState(() => _isLoading = true);
     try {
       final config = await _databaseService.getSystemConfig();
-      
-      _commissionRateController.text = (config.commissionRate * 100).toStringAsFixed(1);
-      _minimumWithdrawalController.text = config.minimumWithdrawal.toStringAsFixed(2);
-      _maxRfqsPerDayController.text = config.maxRfqsPerDay.toString();
-      _requireApprovalForNewUsers = config.requireApprovalForNewUsers;
+      if (config != null) {
+        _commissionRateController.text =
+            (config.commissionRate * 100).toStringAsFixed(1);
+        _minimumWithdrawalController.text =
+            config.minimumWithdrawal.toStringAsFixed(2);
+        _maxRfqsPerDayController.text = config.maxRfqsPerDay.toString();
+        _requireApprovalForNewUsers = config.requireApprovalForNewUsers;
+      }
 
       // Load additional settings from database or use sensible defaults
-      _referralBonusController.text = config.referralBonus?.toStringAsFixed(2) ?? '25.00';
-      _maxOrderValueController.text = config.maxOrderValue?.toStringAsFixed(2) ?? '10000.00';
-      _systemMaintenanceController.text = config.maintenanceMessage ?? 'System maintenance in progress. Please check back later.';
-      _enableReferralProgram = config.enableReferralProgram ?? true;
-      _enableNotifications = config.enableNotifications ?? true;
-      _enableAutoApproval = config.enableAutoApproval ?? false;
-      _maintenanceMode = config.maintenanceMode ?? false;
-      
+      _referralBonusController.text = '25.00';
+      _maxOrderValueController.text = '10000.00';
+      _systemMaintenanceController.text =
+          'System maintenance in progress. Please check back later.';
+      _enableReferralProgram = true;
+      _enableNotifications = true;
+      _enableAutoApproval = false;
+      _maintenanceMode = false;
+
       Logger.log('System configuration loaded successfully');
     } catch (e) {
       Logger.logError('Error loading system config', e, StackTrace.current);
@@ -74,18 +78,22 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
 
   Future<void> _saveSystemConfig() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isSaving = true);
     try {
+      final now = DateTime.now();
       final config = SystemConfig(
+        uid: 'main',
         commissionRate: double.parse(_commissionRateController.text) / 100,
         minimumWithdrawal: double.parse(_minimumWithdrawalController.text),
         maxRfqsPerDay: int.parse(_maxRfqsPerDayController.text),
         requireApprovalForNewUsers: _requireApprovalForNewUsers,
+        createdAt: now,
+        updatedAt: now,
       );
-      
+
       await _databaseService.updateSystemConfig(config);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -94,7 +102,7 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
           ),
         );
       }
-      
+
       Logger.log('System configuration saved successfully');
     } catch (e) {
       Logger.logError('Error saving system config', e, StackTrace.current);
@@ -182,15 +190,19 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                         const SizedBox(height: 16),
                         _buildSwitchTile(
                           title: 'Require Approval for New Users',
-                          subtitle: 'New users must be approved before they can place orders',
+                          subtitle:
+                              'New users must be approved before they can place orders',
                           value: _requireApprovalForNewUsers,
-                          onChanged: (value) => setState(() => _requireApprovalForNewUsers = value),
+                          onChanged: (value) => setState(
+                              () => _requireApprovalForNewUsers = value),
                         ),
                         _buildSwitchTile(
                           title: 'Enable Auto-Approval',
-                          subtitle: 'Automatically approve users after identity verification',
+                          subtitle:
+                              'Automatically approve users after identity verification',
                           value: _enableAutoApproval,
-                          onChanged: (value) => setState(() => _enableAutoApproval = value),
+                          onChanged: (value) =>
+                              setState(() => _enableAutoApproval = value),
                         ),
                       ],
                     ),
@@ -201,15 +213,18 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                       [
                         _buildSwitchTile(
                           title: 'Enable Referral Program',
-                          subtitle: 'Allow users to refer friends and earn bonuses',
+                          subtitle:
+                              'Allow users to refer friends and earn bonuses',
                           value: _enableReferralProgram,
-                          onChanged: (value) => setState(() => _enableReferralProgram = value),
+                          onChanged: (value) =>
+                              setState(() => _enableReferralProgram = value),
                         ),
                         _buildSwitchTile(
                           title: 'Enable Push Notifications',
                           subtitle: 'Send push notifications to users',
                           value: _enableNotifications,
-                          onChanged: (value) => setState(() => _enableNotifications = value),
+                          onChanged: (value) =>
+                              setState(() => _enableNotifications = value),
                         ),
                       ],
                     ),
@@ -220,16 +235,19 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                       [
                         _buildSwitchTile(
                           title: 'Maintenance Mode',
-                          subtitle: 'Enable maintenance mode to restrict access',
+                          subtitle:
+                              'Enable maintenance mode to restrict access',
                           value: _maintenanceMode,
-                          onChanged: (value) => setState(() => _maintenanceMode = value),
+                          onChanged: (value) =>
+                              setState(() => _maintenanceMode = value),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _systemMaintenanceController,
                           decoration: const InputDecoration(
                             labelText: 'Maintenance Message',
-                            hintText: 'Enter message to display during maintenance',
+                            hintText:
+                                'Enter message to display during maintenance',
                             border: OutlineInputBorder(),
                           ),
                           maxLines: 3,
@@ -260,8 +278,8 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -427,7 +445,8 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reset to Defaults'),
-        content: const Text('Are you sure you want to reset all settings to their default values? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to reset all settings to their default values? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -449,21 +468,24 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
   void _setDefaultValues() {
     setState(() {
       // Set reasonable default values for a construction marketplace
-      _commissionRateController.text = '5.0';  // 5% commission rate
-      _minimumWithdrawalController.text = '100.00';  // TSh 100 minimum withdrawal
-      _maxRfqsPerDayController.text = '10';  // 10 RFQs per day limit
-      _referralBonusController.text = '50.00';  // TSh 50 referral bonus
-      _maxOrderValueController.text = '50000.00';  // TSh 50,000 max order value
+      _commissionRateController.text = '5.0'; // 5% commission rate
+      _minimumWithdrawalController.text =
+          '100.00'; // TSh 100 minimum withdrawal
+      _maxRfqsPerDayController.text = '10'; // 10 RFQs per day limit
+      _referralBonusController.text = '50.00'; // TSh 50 referral bonus
+      _maxOrderValueController.text = '50000.00'; // TSh 50,000 max order value
       _requireApprovalForNewUsers = true;
       _enableReferralProgram = true;
       _enableNotifications = true;
       _enableAutoApproval = false;
       _maintenanceMode = false;
-      _systemMaintenanceController.text = 'System maintenance in progress. Please check back later.';
+      _systemMaintenanceController.text =
+          'System maintenance in progress. Please check back later.';
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings reset to recommended default values')),
+      const SnackBar(
+          content: Text('Settings reset to recommended default values')),
     );
   }
 

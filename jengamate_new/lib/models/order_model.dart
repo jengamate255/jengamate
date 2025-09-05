@@ -1,224 +1,230 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
-
+import 'package:jengamate/models/order_item_model.dart';
 
 class OrderModel {
-  final String id;
-  final String orderNumber; // Added orderNumber field
-  final String? buyerId;
-  final String? supplierId;
+  final String? id;
+  final String customerId;
+  final String customerName;
+  final String supplierId;
+  final String supplierName;
+  final List<OrderItem> items;
   final double totalAmount;
   final OrderStatus status;
-  final OrderType type;
-  final String currency;
-  final String? quotationId;
-  final String? rfqId;
-  final bool isLocked;
-  final DateTime? expectedDeliveryDate;
-  final Map<String, dynamic>? deliveryAddress;
-  final String? notes;
-  final Map<String, dynamic>? metadata;
-  final List<Map<String, dynamic>>? paymentProofs; // New field for payment proofs
-  final double? amountPaid; // New field to track total amount paid
+  final String paymentMethod;
+  final String? platformFee;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String? cancelledBy;
-  final String? cancellationReason;
-  final DateTime? cancelledAt;
+  final Map<String, dynamic>? metadata;
+
+  // Additional properties
+  final String? buyerId;
+  final String currency;
+  final double? amountPaid;
+  final String? orderNumber;
+  final String? quotationId;
+  final String? rfqId;
+  final List<String>? paymentProofs;
+  final DateTime? expectedDeliveryDate;
+  final String? notes;
+  final bool isLocked;
+  final bool isDelivered;
+  final bool isCancelled;
 
   OrderModel({
-    required this.id,
-    required this.orderNumber, // Added orderNumber to constructor
-    this.buyerId,
-    this.supplierId,
+    this.id,
+    required this.customerId,
+    required this.customerName,
+    required this.supplierId,
+    required this.supplierName,
+    required this.items,
     required this.totalAmount,
     required this.status,
-    required this.type,
-    this.currency = 'TSH',
+    required this.paymentMethod,
+    this.platformFee,
+    required this.createdAt,
+    required this.updatedAt,
+    this.metadata,
+    this.buyerId,
+    this.currency = 'TSh',
+    this.amountPaid,
+    this.orderNumber,
     this.quotationId,
     this.rfqId,
-    this.isLocked = false,
-    this.expectedDeliveryDate,
-    this.deliveryAddress,
-    this.notes,
-    this.metadata,
     this.paymentProofs,
-    this.amountPaid,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    this.cancelledBy,
-    this.cancellationReason,
-    this.cancelledAt,
-  })  : createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now();
+    this.expectedDeliveryDate,
+    this.notes,
+    this.isLocked = false,
+    this.isDelivered = false,
+    this.isCancelled = false,
+  });
+
+  String get uid => id ?? '';
+
+  // Computed properties
+  double get amountDue => totalAmount - (amountPaid ?? 0.0);
+  String get statusDisplayName => status.displayName;
+  String get typeDisplayName => 'Standard';
+
+  factory OrderModel.fromMap(Map<String, dynamic> map, {String? docId}) {
+    return OrderModel(
+      id: docId ?? map['id'],
+      customerId: map['customerId'] ?? '',
+      customerName: map['customerName'] ?? 'Unknown Customer',
+      supplierId: map['supplierId'] ?? '',
+      supplierName: map['supplierName'] ?? 'Unknown Supplier',
+      items: (map['items'] as List<dynamic>?)
+              ?.map((item) => OrderItem.fromMap(item as Map<String, dynamic>))
+              .toList() ??
+          [],
+      totalAmount: (map['totalAmount'] ?? 0).toDouble(),
+      status: _parseOrderStatus(map['status']),
+      paymentMethod: map['paymentMethod'] ?? 'unknown',
+      platformFee: map['platformFee'],
+      createdAt: _parseTimestamp(map['createdAt'], fallbackToNow: true),
+      updatedAt: _parseTimestamp(map['updatedAt'], fallbackToNow: false),
+      metadata: map['metadata'] as Map<String, dynamic>?,
+      buyerId: map['buyerId'],
+      currency: map['currency'] ?? 'TSh',
+      amountPaid: map['amountPaid']?.toDouble(),
+      orderNumber: map['orderNumber'],
+      quotationId: map['quotationId'],
+      rfqId: map['rfqId'],
+      paymentProofs: map['paymentProofs'] != null
+          ? List<String>.from(map['paymentProofs'])
+          : null,
+      expectedDeliveryDate:
+          _parseOptionalTimestamp(map['expectedDeliveryDate']),
+      notes: map['notes'],
+      isLocked: map['isLocked'] ?? false,
+      isDelivered: map['isDelivered'] ?? false,
+      isCancelled: map['isCancelled'] ?? false,
+    );
+  }
+
+  static OrderStatus _parseOrderStatus(dynamic statusValue) {
+    if (statusValue == null) return OrderStatus.pending;
+    if (statusValue is String) {
+      return OrderStatus.values.firstWhere(
+        (e) => e.name == statusValue,
+        orElse: () => OrderStatus.pending,
+      );
+    } else if (statusValue is int) {
+      return OrderStatus.values[statusValue];
+    }
+    return OrderStatus.pending;
+  }
+
+  static DateTime _parseTimestamp(dynamic timestamp, {bool fallbackToNow = true}) {
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    }
+    if (fallbackToNow) {
+      return DateTime.now();
+    }
+    return DateTime.now();
+  }
+
+  static DateTime? _parseOptionalTimestamp(dynamic timestamp) {
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    }
+    return null;
+  }
 
   factory OrderModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    
-    // Parse order status
-    OrderStatus orderStatus = OrderStatus.values.firstWhere(
-      (e) => e.toString().split('.').last == (data['status'] as String? ?? '').toLowerCase(),
-      orElse: () => OrderStatus.pending,
-    );
-    
-    // Parse order type
-    OrderType orderType = OrderType.values.firstWhere(
-      (e) => e.toString().split('.').last == (data['type'] as String? ?? '').toLowerCase(),
-      orElse: () => OrderType.product, // Default to product as per new enum
-    );
-
-    return OrderModel(
-      id: doc.id,
-      orderNumber: data['orderNumber'] ?? '', // Added orderNumber from Firestore
-      buyerId: data['buyerId'],
-      supplierId: data['supplierId'],
-      totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0.0,
-      status: orderStatus,
-      type: orderType,
-      currency: data['currency'] ?? 'TSH',
-      quotationId: data['quotationId'],
-      rfqId: data['rfqId'],
-      isLocked: data['isLocked'] ?? false,
-      expectedDeliveryDate: data['expectedDeliveryDate']?.toDate(),
-      deliveryAddress: data['deliveryAddress'] as Map<String, dynamic>?,
-      notes: data['notes'],
-      metadata: data['metadata'] as Map<String, dynamic>?,
-      paymentProofs: (data['paymentProofs'] as List?)?.map((e) => e as Map<String, dynamic>).toList(),
-      amountPaid: (data['amountPaid'] as num?)?.toDouble(),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      cancelledBy: data['cancelledBy'],
-      cancellationReason: data['cancellationReason'],
-      cancelledAt: data['cancelledAt']?.toDate(),
-    );
+    final data = doc.data() as Map<String, dynamic>;
+    return OrderModel.fromMap(data, docId: doc.id);
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'buyerId': buyerId,
+      'customerId': customerId,
+      'customerName': customerName,
       'supplierId': supplierId,
+      'supplierName': supplierName,
+      'items': items.map((item) => item.toMap()).toList(),
       'totalAmount': totalAmount,
-      'status': status.toString().split('.').last,
-      'type': type.toString().split('.').last,
-      'currency': currency,
-      'quotationId': quotationId,
-      'rfqId': rfqId,
-      'isLocked': isLocked,
-      'expectedDeliveryDate': expectedDeliveryDate != null ? Timestamp.fromDate(expectedDeliveryDate!) : null,
-      'deliveryAddress': deliveryAddress,
-      'notes': notes,
-      'metadata': metadata,
+      'status': status.name,
+      'paymentMethod': paymentMethod,
+      'platformFee': platformFee,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
-      'cancelledBy': cancelledBy,
-      'cancellationReason': cancellationReason,
-      'cancelledAt': cancelledAt != null ? Timestamp.fromDate(cancelledAt!) : null,
+      'metadata': metadata,
+      'buyerId': buyerId,
+      'currency': currency,
+      'amountPaid': amountPaid,
+      'orderNumber': orderNumber,
+      'quotationId': quotationId,
+      'rfqId': rfqId,
+      'paymentProofs': paymentProofs,
+      'expectedDeliveryDate': expectedDeliveryDate != null
+          ? Timestamp.fromDate(expectedDeliveryDate!)
+          : null,
+      'notes': notes,
+      'isLocked': isLocked,
+      'isDelivered': isDelivered,
+      'isCancelled': isCancelled,
     };
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return toMap();
   }
 
   OrderModel copyWith({
     String? id,
-    String? orderNumber, // Added orderNumber to copyWith
-    String? buyerId,
+    String? customerId,
+    String? customerName,
     String? supplierId,
+    String? supplierName,
+    List<OrderItem>? items,
     double? totalAmount,
     OrderStatus? status,
-    OrderType? type,
-    String? currency,
-    String? quotationId,
-    String? rfqId,
-    bool? isLocked,
-    DateTime? expectedDeliveryDate,
-    Map<String, dynamic>? deliveryAddress,
-    String? notes,
-    Map<String, dynamic>? metadata,
-    List<Map<String, dynamic>>? paymentProofs,
-    double? amountPaid,
+    String? paymentMethod,
+    String? platformFee,
     DateTime? createdAt,
     DateTime? updatedAt,
-    String? cancelledBy,
-    String? cancellationReason,
-    DateTime? cancelledAt,
+    Map<String, dynamic>? metadata,
+    String? buyerId,
+    String? currency,
+    double? amountPaid,
+    String? orderNumber,
+    String? quotationId,
+    String? rfqId,
+    List<String>? paymentProofs,
+    DateTime? expectedDeliveryDate,
+    String? notes,
+    bool? isLocked,
+    bool? isDelivered,
+    bool? isCancelled,
   }) {
     return OrderModel(
       id: id ?? this.id,
-      orderNumber: orderNumber ?? this.orderNumber, // Added orderNumber to copyWith
-      buyerId: buyerId ?? this.buyerId,
+      customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
       supplierId: supplierId ?? this.supplierId,
+      supplierName: supplierName ?? this.supplierName,
+      items: items ?? this.items,
       totalAmount: totalAmount ?? this.totalAmount,
       status: status ?? this.status,
-      type: type ?? this.type,
-      currency: currency ?? this.currency,
-      quotationId: quotationId ?? this.quotationId,
-      rfqId: rfqId ?? this.rfqId,
-      isLocked: isLocked ?? this.isLocked,
-      expectedDeliveryDate: expectedDeliveryDate ?? this.expectedDeliveryDate,
-      deliveryAddress: deliveryAddress ?? this.deliveryAddress,
-      notes: notes ?? this.notes,
-      metadata: metadata ?? this.metadata,
-      paymentProofs: paymentProofs ?? this.paymentProofs,
-      amountPaid: amountPaid ?? this.amountPaid,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      platformFee: platformFee ?? this.platformFee,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      cancelledBy: cancelledBy ?? this.cancelledBy,
-      cancellationReason: cancellationReason ?? this.cancellationReason,
-      cancelledAt: cancelledAt ?? this.cancelledAt,
+      metadata: metadata ?? this.metadata,
+      buyerId: buyerId ?? this.buyerId,
+      currency: currency ?? this.currency,
+      amountPaid: amountPaid ?? this.amountPaid,
+      orderNumber: orderNumber ?? this.orderNumber,
+      quotationId: quotationId ?? this.quotationId,
+      rfqId: rfqId ?? this.rfqId,
+      paymentProofs: paymentProofs ?? this.paymentProofs,
+      expectedDeliveryDate: expectedDeliveryDate ?? this.expectedDeliveryDate,
+      notes: notes ?? this.notes,
+      isLocked: isLocked ?? this.isLocked,
+      isDelivered: isDelivered ?? this.isDelivered,
+      isCancelled: isCancelled ?? this.isCancelled,
     );
   }
-
-  // Helper methods
-  bool get isPending => status == OrderStatus.pending;
-  bool get isConfirmed => status == OrderStatus.confirmed;
-  bool get isProcessing => status == OrderStatus.processing;
-  bool get isShipped => status == OrderStatus.shipped;
-  bool get isDelivered => status == OrderStatus.delivered;
-  bool get isCancelled => status == OrderStatus.cancelled;
-  bool get isDisputed => status == OrderStatus.disputed;
-  bool get isRefunded => status == OrderStatus.refunded;
-
-  String get statusDisplayName {
-    switch (status) {
-      case OrderStatus.pending:
-        return 'Pending';
-      case OrderStatus.confirmed:
-        return 'Confirmed';
-      case OrderStatus.processing:
-        return 'Processing';
-      case OrderStatus.completed:
-        return 'Completed';
-      case OrderStatus.shipped:
-        return 'Shipped';
-      case OrderStatus.delivered:
-        return 'Delivered';
-      case OrderStatus.cancelled:
-        return 'Cancelled';
-      case OrderStatus.disputed:
-        return 'Disputed';
-      case OrderStatus.refunded:
-        return 'Refunded';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  String get typeDisplayName {
-    switch (type) {
-      case OrderType.product:
-        return 'Product';
-      case OrderType.standard:
-        return 'Standard';
-      case OrderType.urgent:
-        return 'Urgent';
-      case OrderType.bulk:
-        return 'Bulk';
-      case OrderType.custom:
-        return 'Custom';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  // Lock management
-  OrderModel lock() => copyWith(isLocked: true);
-  OrderModel unlock() => copyWith(isLocked: false);
 }

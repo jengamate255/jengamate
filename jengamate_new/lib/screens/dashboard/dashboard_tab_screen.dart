@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/stat_item.dart';
-import 'package:jengamate/utils/sentry_test.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/screens/dashboard/widgets/balance_card.dart';
@@ -121,7 +120,9 @@ class DashboardTabScreen extends StatelessWidget {
     final dbService = DatabaseService();
 
     return StreamBuilder<CommissionModel?>(
-      stream: dbService.streamCommissionRules(),
+      stream: dbService
+          .streamCommissionRules()
+          .map((list) => list.isNotEmpty ? list.first : null),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -170,7 +171,9 @@ class DashboardTabScreen extends StatelessWidget {
     final dbService = DatabaseService();
 
     return StreamBuilder<Map<String, int>>(
-      stream: dbService.streamOrderStats(currentUser.uid),
+      stream: dbService
+          .streamOrderStats(currentUser.uid)
+          .map((m) => m.map((k, v) => MapEntry(k, (v as num).toInt()))),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -243,72 +246,84 @@ class DashboardTabScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: AdaptivePadding(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Custom Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (currentUser == null)
-                          const Text(
-                            'Loading...',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        else
-                          Text(
-                            'Welcome back, ${currentUser.displayName}!',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Custom Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (currentUser == null)
+                                  const Text(
+                                    'Loading...',
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    'Welcome back, ${currentUser.displayName}!',
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                Text(
+                                  currentUser == null
+                                      ? ''
+                                      : '@${(currentUser.email?.split('@').first ?? 'user')}',
+                                  style: const TextStyle(
+                                      color: AppTheme.subTextColor),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
+                          IconButton(
+                            icon: const Icon(Icons.notifications_none_rounded,
+                                size: 28),
+                            onPressed: () {},
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Role-specific UI
+                      if (currentUser == null)
+                        const Center(child: CircularProgressIndicator())
+                      else if (currentUser.role == UserRole.engineer)
+                        _buildEngineerUI(context, currentUser)
+                      else if (currentUser.role == UserRole.supplier)
+                        _buildSupplierUI(context, currentUser)
+                      else if (currentUser.role == UserRole.admin)
+                        _buildAdminUI(context)
+                      else // Default or other roles
                         Text(
-                          currentUser == null
-                              ? ''
-                              : '@${(currentUser.email?.split('@').first ?? 'user')}',
-                          style: const TextStyle(color: AppTheme.subTextColor),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon:
-                          const Icon(Icons.notifications_none_rounded, size: 28),
-                      onPressed: () {},
-                    ),
-                  ],
+                            'Welcome! Your role: ${currentUser.role.toString().split('.').last}'),
+
+                      // Sentry test widget removed.
+
+                      // Add bottom padding to prevent overflow
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: JMSpacing.xl),
-
-              // Role-specific UI
-              if (currentUser == null)
-                const Center(child: CircularProgressIndicator())
-              else if (currentUser.role == UserRole.engineer)
-                _buildEngineerUI(context, currentUser)
-              else if (currentUser.role == UserRole.supplier)
-                _buildSupplierUI(context, currentUser)
-              else if (currentUser.role == UserRole.admin)
-                _buildAdminUI(context)
-              else // Default or other roles
-                Text(
-                    'Welcome! Your role: ${currentUser.role.toString().split('.').last}'),
-
-              // Sentry Test Widget (Debug Mode Only)
-              if (kDebugMode) ...[
-                const SizedBox(height: JMSpacing.xl),
-                const SentryTestWidget(),
-              ],
-            ],
-          ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

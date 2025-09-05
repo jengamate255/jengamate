@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:jengamate/models/enums/message_enums.dart';
-import 'package:jengamate/models/message_model.dart';
+import 'package:jengamate/models/chat_message_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/widgets/avatar_widget.dart';
@@ -56,13 +55,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       return;
     }
 
-    final message = Message(
-      id: '',
-      chatId: widget.chatRoomId,
+    final message = ChatMessage(
+      uid: '',
+      chatRoomId: widget.chatRoomId,
       senderId: currentUser.uid,
-      receiverId: widget.otherUserId,
+      senderName: currentUser.displayName,
       content: _messageController.text.trim(),
+      messageType: 'text',
       timestamp: DateTime.now(),
+      isRead: false,
     );
 
     await _dbService.addMessage(message);
@@ -97,7 +98,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder<List<Message>>(
+            child: StreamBuilder<List<ChatMessage>>(
               stream: _dbService.streamMessages(widget.chatRoomId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -120,22 +121,31 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     final message = messages[index];
                     final isMe = message.senderId == currentUser.uid;
                     return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
                         margin: const EdgeInsets.symmetric(vertical: 4.0),
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12.0, vertical: 8.0),
                         decoration: BoxDecoration(
-                          color: isMe ? Colors.blue.shade200 : Colors.grey.shade300,
+                          color: isMe
+                              ? Colors.blue.shade200
+                              : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(12.0),
                         ),
                         child: Column(
-                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          crossAxisAlignment: isMe
+                              ? CrossAxisAlignment.end
+                              : CrossAxisAlignment.start,
                           children: [
-                            Text(message.content, style: const TextStyle(fontSize: 16)),
+                            Text(message.content,
+                                style: const TextStyle(fontSize: 16)),
                             const SizedBox(height: 4),
                             Text(
-                              DateFormat('hh:mm a').format(message.timestamp.toLocal()),
-                              style: TextStyle(fontSize: 10, color: Colors.black54),
+                              DateFormat('hh:mm a')
+                                  .format(message.timestamp.toLocal()),
+                              style: TextStyle(
+                                  fontSize: 10, color: Colors.black54),
                             ),
                           ],
                         ),
@@ -161,7 +171,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.grey.shade200,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 16.0),
                     ),
                   ),
                 ),
@@ -178,4 +189,4 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       ),
     );
   }
-} 
+}

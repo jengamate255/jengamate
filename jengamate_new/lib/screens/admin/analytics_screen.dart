@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/models/product_model.dart';
 import 'package:fl_chart/fl_chart.dart'; // Import fl_chart
 import 'package:intl/intl.dart'; // Import for date formatting
 
@@ -21,11 +22,14 @@ class AnalyticsScreen extends StatelessWidget {
           children: [
             Text(
               'Sales Overview',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             FutureBuilder<Map<DateTime, double>>(
-              future: dbService.getSalesOverTime(),
+              future: dbService.getSalesOverTimeMap(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -36,11 +40,13 @@ class AnalyticsScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                          const Icon(Icons.error_outline,
+                              color: Colors.red, size: 48),
                           const SizedBox(height: 8),
                           const Text(
                             'Sales Analytics Unavailable',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -68,11 +74,13 @@ class AnalyticsScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
-                          const Icon(Icons.trending_up, color: Colors.grey, size: 48),
+                          const Icon(Icons.trending_up,
+                              color: Colors.grey, size: 48),
                           const SizedBox(height: 8),
                           const Text(
                             'No Sales Data Available',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -87,8 +95,10 @@ class AnalyticsScreen extends StatelessWidget {
                 }
 
                 // Prepare data for the line chart
-                final sortedDates = salesData.keys.toList()..sort((a, b) => a.compareTo(b));
-                final List<FlSpot> spots = sortedDates.asMap().entries.map((entry) {
+                final sortedDates = salesData.keys.toList()
+                  ..sort((a, b) => a.compareTo(b));
+                final List<FlSpot> spots =
+                    sortedDates.asMap().entries.map((entry) {
                   final index = entry.key;
                   final date = entry.value;
                   final value = salesData[date]!;
@@ -96,7 +106,8 @@ class AnalyticsScreen extends StatelessWidget {
                 }).toList();
 
                 double maxY = salesData.values.reduce((a, b) => a > b ? a : b);
-                if (maxY == 0) maxY = 100; // Prevent division by zero if all sales are 0
+                if (maxY == 0)
+                  maxY = 100; // Prevent division by zero if all sales are 0
 
                 return Card(
                   child: Padding(
@@ -104,7 +115,8 @@ class AnalyticsScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Daily Sales Trend', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                        const Text('Daily Sales Trend',
+                            style: TextStyle(fontSize: 16, color: Colors.grey)),
                         const SizedBox(height: 16),
                         SizedBox(
                           height: 200,
@@ -115,14 +127,21 @@ class AnalyticsScreen extends StatelessWidget {
                                 bottomTitles: AxisTitles(
                                   sideTitles: SideTitles(
                                     showTitles: true,
-                                    interval: (sortedDates.length / 5).ceil().toDouble(), // Show around 5 labels
+                                    interval: (sortedDates.length / 5)
+                                        .ceil()
+                                        .toDouble(), // Show around 5 labels
                                     getTitlesWidget: (value, meta) {
                                       final index = value.toInt();
-                                      if (index >= 0 && index < sortedDates.length) {
+                                      if (index >= 0 &&
+                                          index < sortedDates.length) {
                                         final date = sortedDates[index];
                                         return Padding(
-                                          padding: const EdgeInsets.only(top: 8.0),
-                                          child: Text(DateFormat('MMM dd').format(date), style: const TextStyle(fontSize: 10)),
+                                          padding:
+                                              const EdgeInsets.only(top: 8.0),
+                                          child: Text(
+                                              DateFormat('MMM dd').format(date),
+                                              style: const TextStyle(
+                                                  fontSize: 10)),
                                         );
                                       }
                                       return const Text('');
@@ -133,18 +152,24 @@ class AnalyticsScreen extends StatelessWidget {
                                   sideTitles: SideTitles(
                                     showTitles: true,
                                     getTitlesWidget: (value, meta) {
-                                      return Text('${value.toInt()}', style: const TextStyle(fontSize: 10));
+                                      return Text('${value.toInt()}',
+                                          style: const TextStyle(fontSize: 10));
                                     },
-                                    interval: (maxY / 4).ceil().toDouble() > 0 ? (maxY / 4).ceil().toDouble() : 100, // Show around 4 labels
+                                    interval: (maxY / 4).ceil().toDouble() > 0
+                                        ? (maxY / 4).ceil().toDouble()
+                                        : 100, // Show around 4 labels
                                     reservedSize: 40,
                                   ),
                                 ),
-                                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                rightTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false)),
+                                topTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false)),
                               ),
                               borderData: FlBorderData(
                                 show: true,
-                                border: Border.all(color: const Color(0xff37434d), width: 1),
+                                border: Border.all(
+                                    color: const Color(0xff37434d), width: 1),
                               ),
                               lineBarsData: [
                                 LineChartBarData(
@@ -156,12 +181,14 @@ class AnalyticsScreen extends StatelessWidget {
                                   dotData: const FlDotData(show: false),
                                   belowBarData: BarAreaData(
                                     show: true,
-                                    color: Colors.blueAccent.withValues(alpha: 0.3),
+                                    color: Colors.blueAccent
+                                        .withValues(alpha: 0.3),
                                   ),
                                 ),
                               ],
                               minY: 0,
-                              maxY: maxY * 1.2, // Add some padding above the max value
+                              maxY: maxY *
+                                  1.2, // Add some padding above the max value
                             ),
                           ),
                         ),
@@ -174,7 +201,10 @@ class AnalyticsScreen extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'Order Status Distribution',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             FutureBuilder<Map<String, int>>(
@@ -188,15 +218,18 @@ class AnalyticsScreen extends StatelessWidget {
                 }
                 final statusCounts = snapshot.data ?? {};
                 if (statusCounts.isEmpty) {
-                  return const Center(child: Text('No order status data available.'));
+                  return const Center(
+                      child: Text('No order status data available.'));
                 }
-                
+
                 // Convert map to PieChartSectionData
-                final List<PieChartSectionData> sections = statusCounts.entries.map((entry) {
+                final List<PieChartSectionData> sections =
+                    statusCounts.entries.map((entry) {
                   final isTouched = false; // For now, no touch interaction
                   final double fontSize = isTouched ? 18 : 14;
                   final double radius = isTouched ? 60 : 50;
-                  final Color color = _getColorForStatus(entry.key); // Helper to get distinct colors
+                  final Color color = _getColorForStatus(
+                      entry.key); // Helper to get distinct colors
 
                   return PieChartSectionData(
                     color: color,
@@ -208,7 +241,8 @@ class AnalyticsScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: const Color(0xffffffff),
                     ),
-                    badgeWidget: _buildBadge(entry.key, isTouched), // Optional badge
+                    badgeWidget:
+                        _buildBadge(entry.key, isTouched), // Optional badge
                     badgePositionPercentageOffset: .99,
                   );
                 }).toList();
@@ -222,7 +256,8 @@ class AnalyticsScreen extends StatelessWidget {
                           height: 200,
                           child: PieChart(
                             PieChartData(
-                              pieTouchData: PieTouchData(enabled: false), // Disable touch for now
+                              pieTouchData: PieTouchData(
+                                  enabled: false), // Disable touch for now
                               borderData: FlBorderData(show: false),
                               sectionsSpace: 0,
                               centerSpaceRadius: 40,
@@ -236,7 +271,8 @@ class AnalyticsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: statusCounts.keys.map((status) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 2.0),
                               child: Row(
                                 children: [
                                   Container(
@@ -245,7 +281,8 @@ class AnalyticsScreen extends StatelessWidget {
                                     color: _getColorForStatus(status),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(status, style: const TextStyle(fontSize: 14)),
+                                  Text(status,
+                                      style: const TextStyle(fontSize: 14)),
                                 ],
                               ),
                             );
@@ -260,10 +297,13 @@ class AnalyticsScreen extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'Top Selling Products',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            FutureBuilder<List<Map<String, dynamic>>>(
+            FutureBuilder<List<ProductModel>>(
               future: dbService.getTopSellingProducts(5),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -274,7 +314,8 @@ class AnalyticsScreen extends StatelessWidget {
                 }
                 final topProducts = snapshot.data ?? [];
                 if (topProducts.isEmpty) {
-                  return const Center(child: Text('No top selling products data available.'));
+                  return const Center(
+                      child: Text('No top selling products data available.'));
                 }
                 return Card(
                   child: Padding(
@@ -285,7 +326,7 @@ class AnalyticsScreen extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0),
                           child: Text(
-                            '${product['name']} (Price: TSH ${product['price'] != null ? product['price'].toStringAsFixed(2) : '0.00'}) ', // Assuming 'name' and 'price' fields
+                            '${product?.name ?? 'Unknown'} (Price: TSH ${product?.price.toStringAsFixed(2) ?? '0.00'})',
                             style: const TextStyle(fontSize: 16),
                           ),
                         );
@@ -320,7 +361,8 @@ class AnalyticsScreen extends StatelessWidget {
   Widget _buildBadge(String text, bool isTouched) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      padding: EdgeInsets.all(isTouched ? 16.0 : 8.0), // Adjust padding based on touch
+      padding: EdgeInsets.all(
+          isTouched ? 16.0 : 8.0), // Adjust padding based on touch
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -331,7 +373,8 @@ class AnalyticsScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Text(text,
+      child: Text(
+        text,
         style: TextStyle(
           color: _getColorForStatus(text),
           fontWeight: FontWeight.bold,
@@ -340,4 +383,4 @@ class AnalyticsScreen extends StatelessWidget {
       ),
     );
   }
-} 
+}

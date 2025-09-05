@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/financial_transaction_model.dart';
-import 'package:jengamate/models/enums/transaction_enums.dart';
 import 'package:jengamate/models/commission_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:intl/intl.dart';
@@ -37,12 +36,15 @@ class _FinancialOversightScreenState extends State<FinancialOversightScreen> {
               if (snapshot.hasError) {
                 return Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Center(child: Text('Error loading commissions: ${snapshot.error}')),
+                  child: Center(
+                      child:
+                          Text('Error loading commissions: ${snapshot.error}')),
                 );
               }
               final allCommissions = snapshot.data ?? [];
               double totalEarned = 0.0;
-              double totalPaidOut = 0.0; // Assuming a way to track paid out commissions
+              double totalPaidOut =
+                  0.0; // Assuming a way to track paid out commissions
               double totalPendingPayout = 0.0;
 
               for (var comm in allCommissions) {
@@ -63,11 +65,13 @@ class _FinancialOversightScreenState extends State<FinancialOversightScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Commission Summary', style: Theme.of(context).textTheme.titleLarge),
+                      Text('Commission Summary',
+                          style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 10),
                       _buildSummaryRow('Total Earned:', totalEarned),
                       _buildSummaryRow('Total Paid Out:', totalPaidOut),
-                      _buildSummaryRow('Total Pending Payout:', totalPendingPayout),
+                      _buildSummaryRow(
+                          'Total Pending Payout:', totalPendingPayout),
                     ],
                   ),
                 ),
@@ -76,7 +80,7 @@ class _FinancialOversightScreenState extends State<FinancialOversightScreen> {
           ),
           // Financial Transactions List
           Expanded(
-            child: StreamBuilder<List<FinancialTransaction>>(
+            child: StreamBuilder<List<FinancialTransactionModel>>(
               stream: _dbService.getFinancialTransactions(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -87,7 +91,8 @@ class _FinancialOversightScreenState extends State<FinancialOversightScreen> {
                 }
                 final transactions = snapshot.data ?? [];
                 if (transactions.isEmpty) {
-                  return const Center(child: Text('No financial transactions found.'));
+                  return const Center(
+                      child: Text('No financial transactions found.'));
                 }
                 return ListView.builder(
                   itemCount: transactions.length,
@@ -100,7 +105,7 @@ class _FinancialOversightScreenState extends State<FinancialOversightScreen> {
                         title: Text(
                             '${transaction.type.toString().split('.').last} - ${NumberFormat.currency(symbol: 'TSh ').format(transaction.amount)}'),
                         subtitle: Text(
-                            'User: ${transaction.userId} - ${DateFormat.yMd().add_jm().format(transaction.createdAt)}'),
+                            'User: ${transaction.userId} - ${DateFormat.yMd().add_jm().format(transaction.timestamp)}'),
                       ),
                     );
                   },
@@ -120,7 +125,11 @@ class _FinancialOversightScreenState extends State<FinancialOversightScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: Theme.of(context).textTheme.titleMedium),
-          Text(NumberFormat.currency(symbol: 'TSh ').format(amount), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(NumberFormat.currency(symbol: 'TSh ').format(amount),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold)),
         ],
       ),
     );

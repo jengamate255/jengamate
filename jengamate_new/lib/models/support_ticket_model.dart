@@ -1,23 +1,29 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 class SupportTicket {
-  final String id;
+  final String uid;
   final String userId;
   final String userName;
   final String userEmail;
   final String subject;
   final String description;
-  final String category;
-  final String priority;
-  final String status;
+  final String
+      category; // 'technical', 'billing', 'account', 'feature_request', 'bug_report', 'general'
+  final String priority; // 'low', 'medium', 'high', 'urgent'
+  final String
+      status; // 'open', 'in_progress', 'waiting_for_user', 'resolved', 'closed'
   final DateTime createdAt;
+  final DateTime updatedAt;
   final DateTime? resolvedAt;
   final String? assignedTo;
   final String? assignedToName;
-  final List<TicketMessage> messages;
+  final String? resolution;
+  final List<String> tags;
+  final Map<String, dynamic>? metadata;
 
   SupportTicket({
-    required this.id,
+    required this.uid,
     required this.userId,
     required this.userName,
     required this.userEmail,
@@ -27,56 +33,47 @@ class SupportTicket {
     required this.priority,
     required this.status,
     required this.createdAt,
+    required this.updatedAt,
     this.resolvedAt,
     this.assignedTo,
     this.assignedToName,
-    required this.messages,
+    this.resolution,
+    required this.tags,
+    this.metadata,
   });
 
-  factory SupportTicket.fromJson(Map<String, dynamic> json) {
+  factory SupportTicket.fromMap(Map<String, dynamic> map) {
     return SupportTicket(
-      id: json['id'] ?? '',
-      userId: json['userId'] ?? '',
-      userName: json['userName'] ?? '',
-      userEmail: json['userEmail'] ?? '',
-      subject: json['subject'] ?? '',
-      description: json['description'] ?? '',
-      category: json['category'] ?? '',
-      priority: json['priority'] ?? '',
-      status: json['status'] ?? '',
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      resolvedAt: json['resolvedAt'] != null ? DateTime.parse(json['resolvedAt']) : null,
-      assignedTo: json['assignedTo'],
-      assignedToName: json['assignedToName'],
-      messages: (json['messages'] as List<dynamic>?)
-          ?.map((m) => TicketMessage.fromJson(m))
-          .toList() ?? [],
+      uid: map['uid'] ?? '',
+      userId: map['userId'] ?? '',
+      userName: map['userName'] ?? '',
+      userEmail: map['userEmail'] ?? '',
+      subject: map['subject'] ?? '',
+      description: map['description'] ?? '',
+      category: map['category'] ?? 'general',
+      priority: map['priority'] ?? 'medium',
+      status: map['status'] ?? 'open',
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
+      resolvedAt: map['resolvedAt'] != null
+          ? (map['resolvedAt'] as Timestamp).toDate()
+          : null,
+      assignedTo: map['assignedTo'],
+      assignedToName: map['assignedToName'],
+      resolution: map['resolution'],
+      tags: List<String>.from(map['tags'] ?? []),
+      metadata: map['metadata'] as Map<String, dynamic>?,
     );
   }
 
-  factory SupportTicket.fromMap(Map<String, dynamic> data, String id) {
-    return SupportTicket(
-      id: id,
-      userId: data['userId'] ?? '',
-      userName: data['userName'] ?? '',
-      userEmail: data['userEmail'] ?? '',
-      subject: data['subject'] ?? '',
-      description: data['description'] ?? '',
-      category: data['category'] ?? '',
-      priority: data['priority'] ?? '',
-      status: data['status'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      resolvedAt: (data['resolvedAt'] as Timestamp?)?.toDate(),
-      assignedTo: data['assignedTo'],
-      assignedToName: data['assignedToName'],
-      messages: (data['messages'] as List<dynamic>?)
-          ?.map((m) => TicketMessage.fromMap(m))
-          .toList() ?? [],
-    );
+  factory SupportTicket.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return SupportTicket.fromMap(data);
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'uid': uid,
       'userId': userId,
       'userName': userName,
       'userEmail': userEmail,
@@ -85,147 +82,223 @@ class SupportTicket {
       'category': category,
       'priority': priority,
       'status': status,
-      'createdAt': createdAt,
-      'resolvedAt': resolvedAt,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+      'resolvedAt': resolvedAt != null ? Timestamp.fromDate(resolvedAt!) : null,
       'assignedTo': assignedTo,
       'assignedToName': assignedToName,
-      'messages': messages.map((m) => m.toMap()).toList(),
+      'resolution': resolution,
+      'tags': tags,
+      'metadata': metadata,
     };
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'userId': userId,
-      'userName': userName,
-      'userEmail': userEmail,
-      'subject': subject,
-      'description': description,
-      'category': category,
-      'priority': priority,
-      'status': status,
-      'createdAt': createdAt.toIso8601String(),
-      'resolvedAt': resolvedAt?.toIso8601String(),
-      'assignedTo': assignedTo,
-      'assignedToName': assignedToName,
-      'messages': messages.map((m) => m.toJson()).toList(),
-    };
+  Map<String, dynamic> toFirestore() {
+    return toMap();
   }
-}
 
-class TicketMessage {
-  final String id;
-  final String senderId;
-  final String senderName;
-  final String message;
-  final DateTime timestamp;
-  final bool isFromUser;
-
-  TicketMessage({
-    required this.id,
-    required this.senderId,
-    required this.senderName,
-    required this.message,
-    required this.timestamp,
-    required this.isFromUser,
-  });
-
-  factory TicketMessage.fromMap(Map<String, dynamic> data) {
-    return TicketMessage(
-      id: data['id'] ?? '',
-      senderId: data['senderId'] ?? '',
-      senderName: data['senderName'] ?? '',
-      message: data['message'] ?? '',
-      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      isFromUser: data['isFromUser'] ?? true,
+  SupportTicket copyWith({
+    String? uid,
+    String? userId,
+    String? userName,
+    String? userEmail,
+    String? subject,
+    String? description,
+    String? category,
+    String? priority,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? resolvedAt,
+    String? assignedTo,
+    String? assignedToName,
+    String? resolution,
+    List<String>? tags,
+    Map<String, dynamic>? metadata,
+  }) {
+    return SupportTicket(
+      uid: uid ?? this.uid,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userEmail: userEmail ?? this.userEmail,
+      subject: subject ?? this.subject,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      priority: priority ?? this.priority,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
+      assignedTo: assignedTo ?? this.assignedTo,
+      assignedToName: assignedToName ?? this.assignedToName,
+      resolution: resolution ?? this.resolution,
+      tags: tags ?? this.tags,
+      metadata: metadata ?? this.metadata,
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'senderId': senderId,
-      'senderName': senderName,
-      'message': message,
-      'timestamp': timestamp,
-      'isFromUser': isFromUser,
-    };
+  // Computed properties
+  bool get isOpen => status == 'open';
+  bool get isInProgress => status == 'in_progress';
+  bool get isResolved => status == 'resolved';
+  bool get isClosed => status == 'closed';
+  bool get isWaitingForUser => status == 'waiting_for_user';
+
+  bool get isUrgent => priority == 'urgent';
+  bool get isHighPriority => priority == 'high';
+
+  String get statusDisplayName {
+    switch (status) {
+      case 'open':
+        return 'Open';
+      case 'in_progress':
+        return 'In Progress';
+      case 'waiting_for_user':
+        return 'Waiting for User';
+      case 'resolved':
+        return 'Resolved';
+      case 'closed':
+        return 'Closed';
+      default:
+        return 'Unknown';
+    }
   }
 
-  factory TicketMessage.fromJson(Map<String, dynamic> json) {
-    return TicketMessage(
-      id: json['id'] ?? '',
-      senderId: json['senderId'] ?? '',
-      senderName: json['senderName'] ?? '',
-      message: json['message'] ?? '',
-      timestamp: DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),
-      isFromUser: json['isFromUser'] ?? true,
+  String get priorityDisplayName {
+    switch (priority) {
+      case 'low':
+        return 'Low';
+      case 'medium':
+        return 'Medium';
+      case 'high':
+        return 'High';
+      case 'urgent':
+        return 'Urgent';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  String get categoryDisplayName {
+    switch (category) {
+      case 'technical':
+        return 'Technical Issue';
+      case 'billing':
+        return 'Billing';
+      case 'account':
+        return 'Account';
+      case 'feature_request':
+        return 'Feature Request';
+      case 'bug_report':
+        return 'Bug Report';
+      case 'general':
+        return 'General';
+      default:
+        return category.replaceAll('_', ' ').toLowerCase();
+    }
+  }
+
+  Color get statusColor {
+    switch (status) {
+      case 'open':
+        return Colors.red;
+      case 'in_progress':
+        return Colors.orange;
+      case 'waiting_for_user':
+        return Colors.yellow;
+      case 'resolved':
+        return Colors.green;
+      case 'closed':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color get priorityColor {
+    switch (priority) {
+      case 'low':
+        return Colors.green;
+      case 'medium':
+        return Colors.yellow;
+      case 'high':
+        return Colors.orange;
+      case 'urgent':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // Helper methods
+  Duration get timeToResolution {
+    if (resolvedAt == null) return Duration.zero;
+    return resolvedAt!.difference(createdAt);
+  }
+
+  bool get isOverdue {
+    if (isResolved || isClosed) return false;
+
+    final daysOpen = DateTime.now().difference(createdAt).inDays;
+    switch (priority) {
+      case 'urgent':
+        return daysOpen > 1;
+      case 'high':
+        return daysOpen > 3;
+      case 'medium':
+        return daysOpen > 7;
+      case 'low':
+        return daysOpen > 14;
+      default:
+        return false;
+    }
+  }
+
+  // Static factory methods for common ticket types
+  static SupportTicket createTechnicalIssue({
+    required String userId,
+    required String userName,
+    required String userEmail,
+    required String subject,
+    required String description,
+    String priority = 'medium',
+  }) {
+    return SupportTicket(
+      uid: '',
+      userId: userId,
+      userName: userName,
+      userEmail: userEmail,
+      subject: subject,
+      description: description,
+      category: 'technical',
+      priority: priority,
+      status: 'open',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      tags: ['technical'],
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'senderId': senderId,
-      'senderName': senderName,
-      'message': message,
-      'timestamp': timestamp.toIso8601String(),
-      'isFromUser': isFromUser,
-    };
-  }
-}
-
-class FAQItem {
-  final String id;
-  final String question;
-  final String answer;
-  final String category;
-  final bool isPopular;
-
-  FAQItem({
-    required this.id,
-    required this.question,
-    required this.answer,
-    required this.category,
-    required this.isPopular,
-  });
-
-  factory FAQItem.fromMap(Map<String, dynamic> data, String id) {
-    return FAQItem(
-      id: id,
-      question: data['question'] ?? '',
-      answer: data['answer'] ?? '',
-      category: data['category'] ?? '',
-      isPopular: data['isPopular'] ?? false,
+  static SupportTicket createBillingIssue({
+    required String userId,
+    required String userName,
+    required String userEmail,
+    required String subject,
+    required String description,
+  }) {
+    return SupportTicket(
+      uid: '',
+      userId: userId,
+      userName: userName,
+      userEmail: userEmail,
+      subject: subject,
+      description: description,
+      category: 'billing',
+      priority: 'high',
+      status: 'open',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      tags: ['billing'],
     );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'question': question,
-      'answer': answer,
-      'category': category,
-      'isPopular': isPopular,
-    };
-  }
-
-  factory FAQItem.fromJson(Map<String, dynamic> json) {
-    return FAQItem(
-      id: json['id'] ?? '',
-      question: json['question'] ?? '',
-      answer: json['answer'] ?? '',
-      category: json['category'] ?? '',
-      isPopular: json['isPopular'] ?? false,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'question': question,
-      'answer': answer,
-      'category': category,
-      'isPopular': isPopular,
-    };
   }
 }

@@ -19,10 +19,12 @@ class EnhancedAnalyticsDashboard extends StatefulWidget {
   const EnhancedAnalyticsDashboard({super.key});
 
   @override
-  State<EnhancedAnalyticsDashboard> createState() => _EnhancedAnalyticsDashboardState();
+  State<EnhancedAnalyticsDashboard> createState() =>
+      _EnhancedAnalyticsDashboardState();
 }
 
-class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard> {
+class _EnhancedAnalyticsDashboardState
+    extends State<EnhancedAnalyticsDashboard> {
   final DatabaseService _databaseService = DatabaseService();
   Map<String, dynamic> _analyticsData = {};
   bool _isLoading = true;
@@ -40,7 +42,7 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
     try {
       final analytics = await _databaseService.getAdminAnalytics();
       final withdrawalStats = await _databaseService.getWithdrawalStats();
-      
+
       if (mounted) {
         setState(() {
           _analyticsData = {
@@ -49,9 +51,9 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
           };
         });
       }
-      
+
       await _loadUserGrowthData();
-      
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -69,66 +71,71 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
     }
   }
 
-  Widget _buildMetricCard(String title, dynamic value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+      String title, dynamic value, IconData icon, Color color) {
     return JMCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 30),
-                const SizedBox(width: JMSpacing.sm),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 30),
+              const SizedBox(width: JMSpacing.sm),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
-            ),
-            const SizedBox(height: JMSpacing.sm),
-            Text(
-              value.toString(),
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
               ),
+            ],
+          ),
+          const SizedBox(height: JMSpacing.sm),
+          Text(
+            value.toString(),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildWithdrawalStats() {
     final withdrawalStats = _analyticsData['withdrawalStats'] ?? {};
-    
+
     return JMCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Withdrawal Statistics',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: JMSpacing.lg),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem('Pending', withdrawalStats['pending'] ?? 0, Colors.orange),
-                _buildStatItem('Approved', withdrawalStats['approved'] ?? 0, Colors.blue),
-                _buildStatItem('Rejected', withdrawalStats['rejected'] ?? 0, Colors.red),
-                _buildStatItem('Completed', withdrawalStats['completed'] ?? 0, Colors.green),
-              ],
-            ),
-            const SizedBox(height: JMSpacing.lg),
-            Text(
-              'Total Processed: TSh ${NumberFormat('#,##0').format(withdrawalStats['totalAmount'] ?? 0)}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Withdrawal Statistics',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: JMSpacing.lg),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem(
+                  'Pending', withdrawalStats['pending'] ?? 0, Colors.orange),
+              _buildStatItem(
+                  'Approved', withdrawalStats['approved'] ?? 0, Colors.blue),
+              _buildStatItem(
+                  'Rejected', withdrawalStats['rejected'] ?? 0, Colors.red),
+              _buildStatItem(
+                  'Completed', withdrawalStats['completed'] ?? 0, Colors.green),
+            ],
+          ),
+          const SizedBox(height: JMSpacing.lg),
+          Text(
+            'Total Processed: TSh ${NumberFormat('#,##0').format(withdrawalStats['totalAmount'] ?? 0)}',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
     );
   }
 
@@ -152,7 +159,7 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
     try {
       final now = DateTime.now();
       DateTime startDate;
-      
+
       switch (_selectedTimeRange) {
         case TimeRange.last7Days:
           startDate = now.subtract(const Duration(days: 7));
@@ -167,7 +174,7 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
           startDate = DateTime(now.year - 1, now.month, now.day);
           break;
       }
-       
+
       final users = await _databaseService.getUsersCreatedAfter(startDate);
 
       // Filter out users without createdAt and group by date
@@ -179,20 +186,21 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
           return '${c.year}-${c.month.toString().padLeft(2, '0')}-${c.day.toString().padLeft(2, '0')}';
         },
       );
-      
+
       // Create a map with all dates in the range
       final dateMap = <String, int>{};
       for (var i = 0; i <= now.difference(startDate).inDays; i++) {
         final date = startDate.add(Duration(days: i));
-        final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        final dateKey =
+            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
         dateMap[dateKey] = 0;
       }
-      
+
       // Fill in the actual user counts
       groupedUsers.forEach((date, users) {
         dateMap[date] = users.length;
       });
-      
+
       // Convert to list and sort by date
       final growthData = dateMap.entries
           .map((e) => {
@@ -201,15 +209,16 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
                 'cumulative': 0, // Will be calculated next
               })
           .toList()
-        ..sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
-      
+        ..sort(
+            (a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
+
       // Calculate cumulative values
       int runningTotal = 0;
       for (var i = 0; i < growthData.length; i++) {
         runningTotal += growthData[i]['count'] as int;
         growthData[i]['cumulative'] = runningTotal;
       }
-      
+
       if (mounted) {
         setState(() {
           _userGrowthData = growthData;
@@ -223,7 +232,7 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
       }
     }
   }
-  
+
   Widget _buildTimeRangeSelector() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -256,161 +265,163 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
       ),
     );
   }
-  
+
   Widget _buildUserGrowthChart() {
     if (_userGrowthData.isEmpty) {
       return const Center(child: Text('No user growth data available'));
     }
-    
+
     return JMCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'User Growth',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(_showUserGrowthChart 
-                      ? Icons.visibility_off 
-                      : Icons.visibility),
-                  onPressed: () {
-                    setState(() {
-                      _showUserGrowthChart = !_showUserGrowthChart;
-                    });
-                  },
-                ),
-              ],
-            ),
-            _buildTimeRangeSelector(),
-            if (_showUserGrowthChart) ...[
-              const SizedBox(height: JMSpacing.lg),
-              SizedBox(
-                height: 300,
-                child: LineChart(
-                  LineChartData(
-                    gridData: FlGridData(show: true),
-                    titlesData: FlTitlesData(
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            if (value.toInt() % 5 != 0) return const SizedBox();
-                            final date = _userGrowthData[value.toInt()]['date'] as DateTime;
-                            return Text(DateFormat('MMM d').format(date));
-                          },
-                          reservedSize: 30,
-                        ),
-                      ),
-                      leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            return Text(value.toInt().toString());
-                          },
-                          reservedSize: 40,
-                        ),
-                      ),
-                      rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                    ),
-                    borderData: FlBorderData(show: true),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: _userGrowthData.asMap().entries.map((entry) {
-                          return FlSpot(
-                            entry.key.toDouble(),
-                            (entry.value['cumulative'] as int).toDouble(),
-                          );
-                        }).toList(),
-                        isCurved: true,
-                        color: Colors.blue,
-                        barWidth: 3,
-                        isStrokeCapRound: true,
-                        dotData: const FlDotData(show: false),
-                        belowBarData: BarAreaData(
-                          show: true,
-                          color: Colors.blue.withValues(alpha: 0.1),
-                        ),
-                      ),
-                    ],
-                  ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'User Growth',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  'Total Users: ${_userGrowthData.last['cumulative']}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              IconButton(
+                icon: Icon(_showUserGrowthChart
+                    ? Icons.visibility_off
+                    : Icons.visibility),
+                onPressed: () {
+                  setState(() {
+                    _showUserGrowthChart = !_showUserGrowthChart;
+                  });
+                },
               ),
             ],
+          ),
+          _buildTimeRangeSelector(),
+          if (_showUserGrowthChart) ...[
+            const SizedBox(height: JMSpacing.lg),
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.4,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(show: true),
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() % 5 != 0) return const SizedBox();
+                          final date = _userGrowthData[value.toInt()]['date']
+                              as DateTime;
+                          return Text(DateFormat('MMM d').format(date));
+                        },
+                        reservedSize: 30,
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          return Text(value.toInt().toString());
+                        },
+                        reservedSize: 40,
+                      ),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: true),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: _userGrowthData.asMap().entries.map((entry) {
+                        return FlSpot(
+                          entry.key.toDouble(),
+                          (entry.value['cumulative'] as int).toDouble(),
+                        );
+                      }).toList(),
+                      isCurved: true,
+                      color: Colors.blue,
+                      barWidth: 3,
+                      isStrokeCapRound: true,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: Colors.blue.withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Total Users: ${_userGrowthData.last['cumulative']}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ],
-        ),
-      );
-    }
+        ],
+      ),
+    );
+  }
 
   Widget _buildOrderStatusChart() {
     return JMCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Order Status Distribution',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: JMSpacing.lg),
-            SizedBox(
-              height: 200,
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('orders').snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Order Status Distribution',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: JMSpacing.lg),
+          SizedBox(
+            height: 200,
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance.collection('orders').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                  final orders = snapshot.data!.docs;
-                  final statusCounts = <String, int>{};
-                  
-                  for (var order in orders) {
-                    final data = order.data() as Map<String, dynamic>;
-                    final status = data['status'] ?? 'Unknown';
-                    statusCounts[status] = (statusCounts[status] ?? 0) + 1;
-                  }
+                final orders = snapshot.data!.docs;
+                final statusCounts = <String, int>{};
 
-                  return PieChart(
-                    PieChartData(
-                      sections: statusCounts.entries.map((entry) {
-                        return PieChartSectionData(
-                          color: _getStatusColor(entry.key),
-                          value: entry.value.toDouble(),
-                          title: '${entry.key}\n${entry.value}',
-                          radius: 50,
-                        );
-                      }).toList(),
-                      sectionsSpace: 2,
-                      centerSpaceRadius: 40,
-                    ),
-                  );
-                },
-              ),
+                for (var order in orders) {
+                  final data = order.data() as Map<String, dynamic>;
+                  final status = data['status'] ?? 'Unknown';
+                  statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+                }
+
+                return PieChart(
+                  PieChartData(
+                    sections: statusCounts.entries.map((entry) {
+                      return PieChartSectionData(
+                        color: _getStatusColor(entry.key),
+                        value: entry.value.toDouble(),
+                        title: '${entry.key}\n${entry.value}',
+                        radius: 50,
+                      );
+                    }).toList(),
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 40,
+                  ),
+                );
+              },
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
   Color _getStatusColor(String status) {
@@ -433,64 +444,68 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
   Widget _buildRecentActivity() {
     return JMCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Recent Activity',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: JMSpacing.lg),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .orderBy('lastLoginAt', descending: true)
-                  .limit(5)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Recent Activity',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: JMSpacing.lg),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .orderBy('lastLoginAt', descending: true)
+                .limit(5)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                final users = snapshot.data!.docs;
-                
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: users.length,
-                  itemBuilder: (context, index) {
-                    final user = users[index].data() as Map<String, dynamic>;
-                    final lastLogin = user['lastLoginAt'] as Timestamp?;
-                    
-                    return ListTile(
-                      leading: CircleAvatar(
-                        child: Text(user['name']?.substring(0, 1).toUpperCase() ?? '?'),
-                      ),
-                      title: Text(user['name'] ?? 'Unknown'),
-                      subtitle: Text(
-                        lastLogin != null 
-                            ? 'Last login: ${DateFormat('MMM dd, HH:mm').format(lastLogin.toDate())}'
-                            : 'Never logged in',
-                      ),
-                      trailing: Icon(
-                        user['isOnline'] == true ? Icons.circle : Icons.circle_outlined,
-                        color: user['isOnline'] == true ? Colors.green : Colors.grey,
-                        size: 12,
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-      );
-    }
+              final users = snapshot.data!.docs;
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: users.length,
+                itemBuilder: (context, index) {
+                  final user = users[index].data() as Map<String, dynamic>;
+                  final lastLogin = user['lastLoginAt'] as Timestamp?;
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      child: Text(
+                          user['name']?.substring(0, 1).toUpperCase() ?? '?'),
+                    ),
+                    title: Text(user['name'] ?? 'Unknown'),
+                    subtitle: Text(
+                      lastLogin != null
+                          ? 'Last login: ${DateFormat('MMM dd, HH:mm').format(lastLogin.toDate())}'
+                          : 'Never logged in',
+                    ),
+                    trailing: Icon(
+                      user['isOnline'] == true
+                          ? Icons.circle
+                          : Icons.circle_outlined,
+                      color:
+                          user['isOnline'] == true ? Colors.green : Colors.grey,
+                      size: 12,
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isWideScreen = screenWidth > 800;
-    
+
     return _isLoading
         ? _buildLoadingSkeleton(isWideScreen)
         : RefreshIndicator(
@@ -502,7 +517,8 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
                   children: [
                     const Text(
                       'Platform Overview',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: JMSpacing.lg),
                     LayoutBuilder(
@@ -510,13 +526,15 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
                         final crossAxisCount = isWideScreen
                             ? (constraints.maxWidth > 1200 ? 4 : 2)
                             : 2;
-                            
+
                         return GridView.count(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: isWideScreen ? JMSpacing.xl : JMSpacing.lg,
-                          mainAxisSpacing: isWideScreen ? JMSpacing.xl : JMSpacing.lg,
+                          crossAxisSpacing:
+                              isWideScreen ? JMSpacing.xl : JMSpacing.lg,
+                          mainAxisSpacing:
+                              isWideScreen ? JMSpacing.xl : JMSpacing.lg,
                           childAspectRatio: isWideScreen ? 1.5 : 1.2,
                           children: [
                             _buildMetricCard(
@@ -577,6 +595,9 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
                       _buildOrderStatusChart(),
                       const SizedBox(height: JMSpacing.xl),
                       _buildRecentActivity(),
+                      // Add bottom padding to prevent overflow
+                      SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.05),
                     ],
                   ],
                 ),
@@ -595,16 +616,16 @@ class _EnhancedAnalyticsDashboardState extends State<EnhancedAnalyticsDashboard>
             const SizedBox(height: JMSpacing.lg),
             LayoutBuilder(
               builder: (context, constraints) {
-                final crossAxisCount = isWideScreen
-                    ? (constraints.maxWidth > 1200 ? 4 : 2)
-                    : 2;
+                final crossAxisCount =
+                    isWideScreen ? (constraints.maxWidth > 1200 ? 4 : 2) : 2;
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: 4,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: isWideScreen ? JMSpacing.xl : JMSpacing.lg,
+                    crossAxisSpacing:
+                        isWideScreen ? JMSpacing.xl : JMSpacing.lg,
                     mainAxisSpacing: isWideScreen ? JMSpacing.xl : JMSpacing.lg,
                     childAspectRatio: isWideScreen ? 1.5 : 1.2,
                   ),

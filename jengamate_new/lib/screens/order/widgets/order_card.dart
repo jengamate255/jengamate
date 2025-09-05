@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jengamate/models/order_model.dart';
-import 'package:jengamate/models/enums/order_enums.dart';
+import 'package:jengamate/models/order_status.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:jengamate/screens/order/order_details_screen.dart';
 // import 'package:jengamate/screens/order/widgets/payment_dialog.dart'; // TODO: This file is missing, causing build errors.
@@ -26,7 +26,7 @@ class OrderCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => OrderDetailsScreen(orderId: order.id),
+              builder: (context) => OrderDetailsScreen(orderId: order.id ?? ''),
             ),
           );
         },
@@ -41,14 +41,14 @@ class OrderCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Order #${order.id.substring(0, 6)}...',
+                    'Order #${order.id?.substring(0, 6) ?? ''}...',
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 16),
                   ),
                   Text(
-                    order.typeDisplayName,
+                    'Standard', // Default type since OrderModel doesn't have typeDisplayName
                     style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.w500),
                   ),
@@ -66,7 +66,7 @@ class OrderCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        order.statusDisplayName.toUpperCase(),
+                        order.status.toString().split('.').last.toUpperCase(),
                         style: TextStyle(
                             color: statusColor,
                             fontWeight: FontWeight.bold,
@@ -80,9 +80,11 @@ class OrderCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _buildInfoRow(Icons.person_outline, 'Buyer: ${order.buyerId.substring(0, 8)}...'),
+                  _buildInfoRow(Icons.person_outline,
+                      'Buyer: ${order.customerId.substring(0, 8)}...'),
                   const SizedBox(height: 8),
-                  _buildInfoRow(Icons.store_outlined, 'Supplier: ${order.supplierId.substring(0, 8)}...'),
+                  _buildInfoRow(Icons.store_outlined,
+                      'Supplier: ${order.supplierId?.substring(0, 8) ?? 'N/A'}...'),
                   const Divider(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -90,7 +92,7 @@ class OrderCard extends StatelessWidget {
                       const Text('Total Amount',
                           style: TextStyle(color: AppTheme.subTextColor)),
                       Text(
-                        NumberFormat.currency(symbol: '${order.currency} ', decimalDigits: 2)
+                        NumberFormat.currency(symbol: 'TSh ', decimalDigits: 2)
                             .format(order.totalAmount),
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16),
@@ -98,7 +100,8 @@ class OrderCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  if (!order.isDelivered && !order.isCancelled)
+                  if (order.status != OrderStatus.delivered &&
+                      order.status != OrderStatus.cancelled)
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -106,7 +109,8 @@ class OrderCard extends StatelessWidget {
                           // TODO: Re-implement payment dialog. The original PaymentDialog file is missing.
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Payment functionality is currently unavailable.'),
+                              content: Text(
+                                  'Payment functionality is currently unavailable.'),
                             ),
                           );
                         },
@@ -154,8 +158,6 @@ class OrderCard extends StatelessWidget {
       case OrderStatus.cancelled:
       case OrderStatus.refunded:
         return AppTheme.errorColor;
-      case OrderStatus.disputed:
-        return AppTheme.warningColor;
       default:
         return Colors.grey;
     }

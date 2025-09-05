@@ -1,3 +1,4 @@
+import 'package:jengamate/models/system_config_model.dart';
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/system_config_model.dart';
 import 'package:jengamate/services/database_service.dart';
@@ -13,7 +14,7 @@ class SystemConfigurationScreen extends StatefulWidget {
 class _SystemConfigurationScreenState extends State<SystemConfigurationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _dbService = DatabaseService();
-  late Future<SystemConfig> _configFuture;
+  late Future<SystemConfig?> _configFuture;
 
   final _commissionRateController = TextEditingController();
   final _minimumWithdrawalController = TextEditingController();
@@ -25,12 +26,14 @@ class _SystemConfigurationScreenState extends State<SystemConfigurationScreen> {
     super.initState();
     _configFuture = _dbService.getSystemConfig();
     _configFuture.then((config) {
-      _commissionRateController.text = config.commissionRate.toString();
-      _minimumWithdrawalController.text = config.minimumWithdrawal.toString();
-      _maxRfqsPerDayController.text = config.maxRfqsPerDay.toString();
-      setState(() {
-        _requireApprovalForNewUsers = config.requireApprovalForNewUsers;
-      });
+      if (config != null) {
+        _commissionRateController.text = config.commissionRate.toString();
+        _minimumWithdrawalController.text = config.minimumWithdrawal.toString();
+        _maxRfqsPerDayController.text = config.maxRfqsPerDay.toString();
+        setState(() {
+          _requireApprovalForNewUsers = config.requireApprovalForNewUsers;
+        });
+      }
     });
   }
 
@@ -45,10 +48,13 @@ class _SystemConfigurationScreenState extends State<SystemConfigurationScreen> {
   void _saveConfiguration() {
     if (_formKey.currentState!.validate()) {
       final newConfig = SystemConfig(
+        uid: 'main',
         commissionRate: double.parse(_commissionRateController.text),
         minimumWithdrawal: double.parse(_minimumWithdrawalController.text),
         maxRfqsPerDay: int.parse(_maxRfqsPerDayController.text),
         requireApprovalForNewUsers: _requireApprovalForNewUsers,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
       _dbService.updateSystemConfig(newConfig).then((_) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -66,12 +72,12 @@ class _SystemConfigurationScreenState extends State<SystemConfigurationScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth > 800;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('System Configuration'),
       ),
-      body: FutureBuilder<SystemConfig>(
+      body: FutureBuilder<SystemConfig?>(
         future: _configFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -80,7 +86,7 @@ class _SystemConfigurationScreenState extends State<SystemConfigurationScreen> {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          
+
           return Center(
             child: Container(
               constraints: BoxConstraints(
@@ -152,7 +158,8 @@ class _SystemConfigurationScreenState extends State<SystemConfigurationScreen> {
                             ),
                             const SizedBox(height: 16),
                             SwitchListTile(
-                              title: const Text('Require Approval for New Users'),
+                              title:
+                                  const Text('Require Approval for New Users'),
                               value: _requireApprovalForNewUsers,
                               onChanged: (value) {
                                 setState(() {

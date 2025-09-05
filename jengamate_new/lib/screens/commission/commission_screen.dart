@@ -28,19 +28,8 @@ class CommissionScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Commission'),
       ),
-      body: StreamBuilder<CommissionModel?>(
-        stream: dbService.streamCommissionRules().map((commission) {
-          return CommissionModel(
-            id: '',
-            userId: currentUser.uid,
-            total: commission?.total ?? 0.0,
-            direct: commission?.direct ?? 0.0,
-            referral: commission?.referral ?? 0.0,
-            active: commission?.active ?? 0.0,
-            updatedAt: commission?.updatedAt ?? DateTime.now(),
-            minPayoutThreshold: commission?.minPayoutThreshold ?? 0.0,
-          );
-        }),
+      body: StreamBuilder<List<CommissionModel>>(
+        stream: dbService.streamUserCommissions(currentUser.uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -48,11 +37,13 @@ class CommissionScreen extends StatelessWidget {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          if (!snapshot.hasData || snapshot.data == null) {
+          if (!snapshot.hasData ||
+              snapshot.data == null ||
+              snapshot.data!.isEmpty) {
             return const Center(child: Text('No commission data found.'));
           }
 
-          final commission = snapshot.data!;
+          final commission = snapshot.data!.first;
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -61,7 +52,8 @@ class CommissionScreen extends StatelessWidget {
               children: [
                 _buildCommissionCard('Total Commission', commission.total),
                 _buildCommissionCard('Direct Commission', commission.direct),
-                _buildCommissionCard('Referral Commission', commission.referral),
+                _buildCommissionCard(
+                    'Referral Commission', commission.referral),
                 _buildCommissionCard('Active Commission', commission.active),
               ],
             ),
@@ -81,7 +73,8 @@ class CommissionScreen extends StatelessWidget {
           children: [
             Text(title, style: const TextStyle(fontSize: 16)),
             Text('KES ${amount.toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

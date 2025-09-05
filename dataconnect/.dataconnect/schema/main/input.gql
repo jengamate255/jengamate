@@ -296,6 +296,42 @@ input Comment_Order {
   ✨ Generated from Field `Comment`.`createdAt` of type `Timestamp!`
   """
   createdAt: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`content_count` of type `Int!`
+  """
+  content_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`issueId_count` of type `Int!`
+  """
+  issueId_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`taskId_count` of type `Int!`
+  """
+  taskId_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`userId_count` of type `Int!`
+  """
+  userId_count: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Comment`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
 }
 """
 ✨ Generated data input type for table 'Issue'. It includes all necessary fields for creating or upserting rows into table.
@@ -623,6 +659,54 @@ input Issue_Order {
   ✨ Generated from Field `Issue`.`title` of type `String!`
   """
   title: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`assignedToId_count` of type `Int!`
+  """
+  assignedToId_count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`description_count` of type `Int!`
+  """
+  description_count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`projectId_count` of type `Int!`
+  """
+  projectId_count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`reportedById_count` of type `Int!`
+  """
+  reportedById_count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`severity_count` of type `Int!`
+  """
+  severity_count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`status_count` of type `Int!`
+  """
+  status_count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`title_count` of type `Int!`
+  """
+  title_count: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Issue`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
 }
 """
 ✨ Generated data input type for table 'Organization'. It includes all necessary fields for creating or upserting rows into table.
@@ -854,6 +938,46 @@ input Organization_Order {
   ✨ Generated from Field `Organization`.`subscriptionEndDate` of type `Date`
   """
   subscriptionEndDate: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`name_count` of type `Int!`
+  """
+  name_count: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`planType_count` of type `Int!`
+  """
+  planType_count: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`subscriptionEndDate_count` of type `Int!`
+  """
+  subscriptionEndDate_count: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`subscriptionEndDate_min` of type `Date`
+  """
+  subscriptionEndDate_min: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `Organization`.`subscriptionEndDate_max` of type `Date`
+  """
+  subscriptionEndDate_max: OrderDirection
 }
 """
 ✨ Generated data input type for table 'Project'. It includes all necessary fields for creating or upserting rows into table.
@@ -1205,6 +1329,70 @@ input Project_Order {
   ✨ Generated from Field `Project`.`status` of type `String`
   """
   status: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`description_count` of type `Int!`
+  """
+  description_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`endDate_count` of type `Int!`
+  """
+  endDate_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`name_count` of type `Int!`
+  """
+  name_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`organizationId_count` of type `Int!`
+  """
+  organizationId_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`projectLeadId_count` of type `Int!`
+  """
+  projectLeadId_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`startDate_count` of type `Int!`
+  """
+  startDate_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`status_count` of type `Int!`
+  """
+  status_count: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`endDate_min` of type `Date`
+  """
+  endDate_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`startDate_min` of type `Date`
+  """
+  startDate_min: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`endDate_max` of type `Date`
+  """
+  endDate_max: OrderDirection
+  """
+  ✨ Generated from Field `Project`.`startDate_max` of type `Date`
+  """
+  startDate_max: OrderDirection
 }
 """
 ✨ Generated data input type for table 'Task'. It includes all necessary fields for creating or upserting rows into table.
@@ -1536,6 +1724,62 @@ input Task_Order {
   ✨ Generated from Field `Task`.`title` of type `String!`
   """
   title: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`assignedToId_count` of type `Int!`
+  """
+  assignedToId_count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`description_count` of type `Int!`
+  """
+  description_count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`dueDate_count` of type `Int!`
+  """
+  dueDate_count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`priority_count` of type `Int!`
+  """
+  priority_count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`projectId_count` of type `Int!`
+  """
+  projectId_count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`status_count` of type `Int!`
+  """
+  status_count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`title_count` of type `Int!`
+  """
+  title_count: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`dueDate_min` of type `Date`
+  """
+  dueDate_min: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `Task`.`dueDate_max` of type `Date`
+  """
+  dueDate_max: OrderDirection
 }
 """
 ✨ Generated data input type for table 'User'. It includes all necessary fields for creating or upserting rows into table.
@@ -1815,4 +2059,44 @@ input User_Order {
   ✨ Generated from Field `User`.`role` of type `String`
   """
   role: OrderDirection
+  """
+  ✨ Generated from Field `User`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`displayName_count` of type `Int!`
+  """
+  displayName_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`email_count` of type `Int!`
+  """
+  email_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`organizationId_count` of type `Int!`
+  """
+  organizationId_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`photoUrl_count` of type `Int!`
+  """
+  photoUrl_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`role_count` of type `Int!`
+  """
+  role_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
 }

@@ -27,7 +27,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   int _currentPage = 0;
   VideoPlayerController? _videoController;
   List<(String, String)> _mediaItems = [];
-  final ProductInteractionService _interactionService = ProductInteractionService();
+  final ProductInteractionService _interactionService =
+      ProductInteractionService();
 
   @override
   void initState() {
@@ -84,7 +85,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     _mediaItems = [];
 
     // Add video first if available (as requested)
-    if (widget.product.videoUrl != null && widget.product.videoUrl!.isNotEmpty) {
+    if (widget.product.videoUrl != null &&
+        widget.product.videoUrl!.isNotEmpty) {
       _mediaItems.add(('video', widget.product.videoUrl!));
     }
 
@@ -95,19 +97,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   void _initializeVideo() {
-    if (widget.product.videoUrl != null && widget.product.videoUrl!.isNotEmpty) {
-      _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.product.videoUrl!))
-        ..initialize().then((_) {
-          if (mounted) {
-            setState(() {});
-            // Auto-play if video is the first item and currently visible
-            if (_currentPage == 0 && _mediaItems.isNotEmpty && _mediaItems[0].$1 == 'video') {
-              _videoController?.play();
-            }
-          }
-        })
-        ..setLooping(true) // Loop video as requested
-        ..setVolume(0.0); // Mute by default as requested
+    if (widget.product.videoUrl != null &&
+        widget.product.videoUrl!.isNotEmpty) {
+      _videoController =
+          VideoPlayerController.networkUrl(Uri.parse(widget.product.videoUrl!))
+            ..initialize().then((_) {
+              if (mounted) {
+                setState(() {});
+                // Auto-play if video is the first item and currently visible
+                if (_currentPage == 0 &&
+                    _mediaItems.isNotEmpty &&
+                    _mediaItems[0].$1 == 'video') {
+                  _videoController?.play();
+                }
+              }
+            })
+            ..setLooping(true) // Loop video as requested
+            ..setVolume(0.0); // Mute by default as requested
     }
   }
 
@@ -135,9 +141,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     // Auto-scroll to the correct page in the carousel if needed
     if (_mediaItems.length > 3) {
       final targetPage = (index / 3).floor();
-      final currentCarouselPage = _pageController.hasClients
-          ? (_pageController.page ?? 0).round()
-          : 0;
+      final currentCarouselPage =
+          _pageController.hasClients ? (_pageController.page ?? 0).round() : 0;
 
       if (targetPage != currentCarouselPage) {
         _pageController.animateToPage(
@@ -192,7 +197,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
                 if (confirmDelete == true) {
                   try {
-                    await dbService.addOrUpdateProduct(
+                    await dbService.addOrUpdateProductModel(
                         widget.product.copyWith(isDeleted: true));
                     if (context.mounted) {
                       context.pop(); // Go back after deletion
@@ -215,218 +220,223 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       body: SingleChildScrollView(
         child: AdaptivePadding(
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_mediaItems.isNotEmpty)
-              JMCard(
-                child: Column(
-                  children: [
-                    // Multi-panel carousel view
-                    SizedBox(
-                      height: 200, // Reduced height for multi-panel view
-                      child: _mediaItems.length == 1
-                          ? _buildSingleMediaPanel()
-                          : _buildMultiPanelCarousel(),
-                    ),
-                    const SizedBox(height: JMSpacing.sm),
-                    // Page indicators
-                    if (_mediaItems.length > 1)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          _mediaItems.length,
-                          (index) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                            height: 8.0,
-                            width: _currentPage == index ? 24.0 : 8.0,
-                            decoration: BoxDecoration(
-                              color: _currentPage == index
-                                  ? AppTheme.primaryColor
-                                  : Colors.grey,
-                              borderRadius: BorderRadius.circular(4.0),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_mediaItems.isNotEmpty)
+                JMCard(
+                  child: Column(
+                    children: [
+                      // Multi-panel carousel view
+                      SizedBox(
+                        height: 200, // Reduced height for multi-panel view
+                        child: _mediaItems.length == 1
+                            ? _buildSingleMediaPanel()
+                            : _buildMultiPanelCarousel(),
+                      ),
+                      const SizedBox(height: JMSpacing.sm),
+                      // Page indicators
+                      if (_mediaItems.length > 1)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            _mediaItems.length,
+                            (index) => AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 4.0),
+                              height: 8.0,
+                              width: _currentPage == index ? 24.0 : 8.0,
+                              decoration: BoxDecoration(
+                                color: _currentPage == index
+                                    ? AppTheme.primaryColor
+                                    : Colors.grey,
+                                borderRadius: BorderRadius.circular(4.0),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
+              const SizedBox(height: JMSpacing.lg),
+              Text(
+                widget.product.name,
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
-            const SizedBox(height: JMSpacing.lg),
-            Text(
-              widget.product.name,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: JMSpacing.sm),
-            Text(
-              'TSH ${widget.product.price.toStringAsFixed(2)}',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(color: AppTheme.primaryColor),
-            ),
-            const SizedBox(height: JMSpacing.lg),
-            Text(
-              widget.product.description,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: JMSpacing.xl),
-            Text(
-              'Product Details',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: JMSpacing.lg),
-            JMCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildDetailRow('Type', widget.product.type),
-                  _buildDetailRow('Thickness', widget.product.thickness),
-                  _buildDetailRow('Color', widget.product.color),
-                  _buildDetailRow('Dimensions', widget.product.dimensions),
-                  _buildDetailRow(
-                      'Stock', widget.product.stock > 0 ? '${widget.product.stock} available' : 'Out of Stock'),
-                  _buildDetailRow('Service Provider', widget.product.serviceProvider),
-                ],
+              const SizedBox(height: JMSpacing.sm),
+              Text(
+                'TSH ${widget.product.price.toStringAsFixed(2)}',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: AppTheme.primaryColor),
               ),
-            ),
-            if (widget.product.isHot)
-              Padding(
-                padding: const EdgeInsets.only(top: JMSpacing.sm),
-                child: Text('🔥 Hot Deal!',
-                    style: TextStyle(
-                        color: Colors.red, fontWeight: FontWeight.bold)),
+              const SizedBox(height: JMSpacing.lg),
+              Text(
+                widget.product.description,
+                style: Theme.of(context).textTheme.bodyLarge,
               ),
-            const SizedBox(height: JMSpacing.xl),
-
-            // Removed Reviews Section to match screenshot
-            // Row(
-            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            //   children: [
-            //     Text(
-            //       'Customer Reviews',
-            //       style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            //     ),
-            //     if (currentUser != null) // Only show submit button if user is logged in
-            //       ElevatedButton(
-            //         onPressed: () {
-            //           showDialog(
-            //             context: context,
-            //             builder: (context) => SubmitReviewDialog(productId: product.id),
-            //           );
-            //         },
-            //         child: const Text('Submit Review'),
-            //       ),
-            //   ],
-            // ),
-            // const SizedBox(height: 16),
-            // StreamBuilder<List<ReviewModel>>(
-            //   stream: dbService.getProductReviews(product.id),
-            //   builder: (context, snapshot) {
-            //     if (snapshot.connectionState == ConnectionState.waiting) {
-            //       return const Center(child: CircularProgressIndicator());
-            //     }
-            //     if (snapshot.hasError) {
-            //       return Center(child: Text('Error loading reviews: ${snapshot.error}'));
-            //     }
-            //     if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            //       return const Center(child: Text('No reviews yet. Be the first to review!'));
-            //     }
-            //
-            //     final reviews = snapshot.data!;
-            //     return ListView.builder(
-            //       shrinkWrap: true,
-            //       physics: const NeverScrollableScrollPhysics(),
-            //       itemCount: reviews.length,
-            //       itemBuilder: (context, index) {
-            //         final review = reviews[index];
-            //         return FutureBuilder<UserModel?>(
-            //           future: dbService.getUser(review.userId),
-            //           builder: (context, userSnapshot) {
-            //             if (userSnapshot.connectionState == ConnectionState.waiting) {
-            //               return const ListTile(title: Text('Loading review...'));
-            //             }
-            //             if (userSnapshot.hasError) {
-            //               return const ListTile(title: Text('Error loading user for review'));
-            //             }
-            //             final reviewUser = userSnapshot.data;
-            //             final reviewerName = reviewUser?.name ?? 'Anonymous';
-            //
-            //             return Card(
-            //               margin: const EdgeInsets.only(bottom: 8.0),
-            //               child: Padding(
-            //                 padding: const EdgeInsets.all(16.0),
-            //                 child: Column(
-            //                   crossAxisAlignment: CrossAxisAlignment.start,
-            //                   children: [
-            //                     Row(
-            //                       children: [
-            //                         Text(reviewerName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            //                         const SizedBox(width: 8),
-            //                         Row(
-            //                           children: List.generate(5, (starIndex) {
-            //                             return Icon(
-            //                               starIndex < review.rating ? Icons.star : Icons.star_border,
-            //                               color: Colors.amber,
-            //                               size: 16,
-            //                             );
-            //                           }),
-            //                         ),
-            //                       ],
-            //                     ),
-            //                     const SizedBox(height: 8),
-            //                     Text(review.comment),
-            //                     const SizedBox(height: 4),
-            //                     Text(
-            //                       DateFormat('MMM dd, yyyy').format(review.timestamp),
-            //                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            //                     ),
-            //                   ],
-            //                 ),
-            //               ),
-            //             );
-            //           },
-            //         );
-            //       },
-            //     );
-            //   },
-            // ),
-            if (currentUser?.role == UserRole.engineer)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: JMSpacing.lg),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              const SizedBox(height: JMSpacing.xl),
+              Text(
+                'Product Details',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: JMSpacing.lg),
+              JMCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        _trackInquiryClick();
-                        context.go(AppRoutes.inquirySubmission,
-                            extra: {'productId': widget.product.id});
-                      },
-                      child: const Text('Make Inquiry'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        _trackRFQClick();
-                        final path = AppRouteBuilders.rfqSubmissionPath(
-                          productId: widget.product.id,
-                          productName: widget.product.name,
-                        );
-                        context.go(path);
-                      },
-                      child: const Text('Request for Quotation'),
-                    ),
+                    _buildDetailRow('Type', widget.product.type),
+                    _buildDetailRow('Thickness', widget.product.thickness),
+                    _buildDetailRow('Color', widget.product.color),
+                    _buildDetailRow('Dimensions', widget.product.dimensions),
+                    _buildDetailRow(
+                        'Stock',
+                        widget.product.stock > 0
+                            ? '${widget.product.stock} available'
+                            : 'Out of Stock'),
+                    _buildDetailRow(
+                        'Service Provider', widget.product.serviceProvider),
                   ],
                 ),
               ),
-          ],
-        ),
+              if (widget.product.isHot)
+                Padding(
+                  padding: const EdgeInsets.only(top: JMSpacing.sm),
+                  child: Text('🔥 Hot Deal!',
+                      style: TextStyle(
+                          color: Colors.red, fontWeight: FontWeight.bold)),
+                ),
+              const SizedBox(height: JMSpacing.xl),
+
+              // Removed Reviews Section to match screenshot
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //   children: [
+              //     Text(
+              //       'Customer Reviews',
+              //       style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              //     ),
+              //     if (currentUser != null) // Only show submit button if user is logged in
+              //       ElevatedButton(
+              //         onPressed: () {
+              //           showDialog(
+              //             context: context,
+              //             builder: (context) => SubmitReviewDialog(productId: product.id),
+              //           );
+              //         },
+              //         child: const Text('Submit Review'),
+              //       ),
+              //   ],
+              // ),
+              // const SizedBox(height: 16),
+              // StreamBuilder<List<ReviewModel>>(
+              //   stream: dbService.getProductReviews(product.id),
+              //   builder: (context, snapshot) {
+              //     if (snapshot.connectionState == ConnectionState.waiting) {
+              //       return const Center(child: CircularProgressIndicator());
+              //     }
+              //     if (snapshot.hasError) {
+              //       return Center(child: Text('Error loading reviews: ${snapshot.error}'));
+              //     }
+              //     if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              //       return const Center(child: Text('No reviews yet. Be the first to review!'));
+              //     }
+              //
+              //     final reviews = snapshot.data!;
+              //     return ListView.builder(
+              //       shrinkWrap: true,
+              //       physics: const NeverScrollableScrollPhysics(),
+              //       itemCount: reviews.length,
+              //       itemBuilder: (context, index) {
+              //         final review = reviews[index];
+              //         return FutureBuilder<UserModel?>(
+              //           future: dbService.getUser(review.userId),
+              //           builder: (context, userSnapshot) {
+              //             if (userSnapshot.connectionState == ConnectionState.waiting) {
+              //               return const ListTile(title: Text('Loading review...'));
+              //             }
+              //             if (userSnapshot.hasError) {
+              //               return const ListTile(title: Text('Error loading user for review'));
+              //             }
+              //             final reviewUser = userSnapshot.data;
+              //             final reviewerName = reviewUser?.name ?? 'Anonymous';
+              //
+              //             return Card(
+              //               margin: const EdgeInsets.only(bottom: 8.0),
+              //               child: Padding(
+              //                 padding: const EdgeInsets.all(16.0),
+              //                 child: Column(
+              //                   crossAxisAlignment: CrossAxisAlignment.start,
+              //                   children: [
+              //                     Row(
+              //                       children: [
+              //                         Text(reviewerName, style: const TextStyle(fontWeight: FontWeight.bold)),
+              //                         const SizedBox(width: 8),
+              //                         Row(
+              //                           children: List.generate(5, (starIndex) {
+              //                             return Icon(
+              //                               starIndex < review.rating ? Icons.star : Icons.star_border,
+              //                               color: Colors.amber,
+              //                               size: 16,
+              //                             );
+              //                           }),
+              //                         ),
+              //                       ],
+              //                     ),
+              //                     const SizedBox(height: 8),
+              //                     Text(review.comment),
+              //                     const SizedBox(height: 4),
+              //                     Text(
+              //                       DateFormat('MMM dd, yyyy').format(review.timestamp),
+              //                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              //                     ),
+              //                   ],
+              //                 ),
+              //               ),
+              //             );
+              //           },
+              //         );
+              //       },
+              //     );
+              //   },
+              // ),
+              if (currentUser?.role == UserRole.engineer)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: JMSpacing.lg),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          _trackInquiryClick();
+                          context.go(AppRoutes.inquirySubmission,
+                              extra: {'productId': widget.product.id});
+                        },
+                        child: const Text('Make Inquiry'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          _trackRFQClick();
+                          final path = AppRouteBuilders.rfqSubmissionPath(
+                            productId: widget.product.id,
+                            productName: widget.product.name,
+                          );
+                          context.go(path);
+                        },
+                        child: const Text('Request for Quotation'),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -436,9 +446,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     final (type, url) = _mediaItems[0];
     return ClipRRect(
       borderRadius: BorderRadius.circular(8.0),
-      child: type == 'video'
-          ? _buildVideoPanel(url)
-          : _buildImagePanel(url),
+      child: type == 'video' ? _buildVideoPanel(url) : _buildImagePanel(url),
     );
   }
 
@@ -523,10 +531,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               type == 'video'
                   ? Container(
                       color: Colors.black,
-                      child: _videoController != null && _videoController!.value.isInitialized
+                      child: _videoController != null &&
+                              _videoController!.value.isInitialized
                           ? VideoPlayer(_videoController!)
                           : const Center(
-                              child: Icon(Icons.video_library, color: Colors.white, size: 32),
+                              child: Icon(Icons.video_library,
+                                  color: Colors.white, size: 32),
                             ),
                     )
                   : Image.network(
@@ -544,7 +554,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 top: 8,
                 right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(12),
@@ -553,7 +564,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        type == 'video' ? Icons.play_circle_filled : Icons.image,
+                        type == 'video'
+                            ? Icons.play_circle_filled
+                            : Icons.image,
                         color: Colors.white,
                         size: 12,
                       ),
@@ -629,7 +642,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _videoController!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                  _videoController!.value.isPlaying
+                      ? Icons.pause
+                      : Icons.play_arrow,
                   color: Colors.white,
                   size: 32,
                 ),
@@ -653,7 +668,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _videoController!.value.volume > 0 ? Icons.volume_up : Icons.volume_off,
+                  _videoController!.value.volume > 0
+                      ? Icons.volume_up
+                      : Icons.volume_off,
                   color: Colors.white,
                   size: 20,
                 ),

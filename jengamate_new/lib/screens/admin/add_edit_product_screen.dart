@@ -12,7 +12,6 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
-import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/models/category_model.dart';
 
 class AddEditProductScreen extends StatefulWidget {
@@ -39,11 +38,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
   final _statusController = TextEditingController();
 
   final DatabaseService _databaseService = DatabaseService();
-      final HybridStorageService _storageService = HybridStorageService(
+  final HybridStorageService _storageService = HybridStorageService(
     firebaseStorageService: StorageService(),
     supabaseClient: Supabase.instance.client,
   );
-
 
   XFile? _pickedImage;
   String? _videoUrl;
@@ -68,7 +66,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
       _priceController.text = widget.product!.price.toString();
       _descriptionController.text = widget.product!.description;
       _selectedProfile = widget.product!.type;
-      if (_selectedProfile != null && !['it4', 'it5'].contains(_selectedProfile)) {
+      if (_selectedProfile != null &&
+          !['it4', 'it5'].contains(_selectedProfile)) {
         _selectedProfile = null;
       }
       _selectedGauge = widget.product!.thickness;
@@ -103,7 +102,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
 
   Future<void> _fetchCategories() async {
     try {
-      final categories = await _databaseService.getCategories().first;
+      final categories = await _databaseService.getCategories();
       if (mounted) {
         setState(() {
           _categories = categories;
@@ -118,33 +117,34 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
             // If subCategoryId is set, prefer deriving from it
             if (prod.subCategoryId != null && prod.subCategoryId!.isNotEmpty) {
               final sub = _categories.cast<CategoryModel?>().firstWhere(
-                (c) => c?.id == prod.subCategoryId,
-                orElse: () => null,
-              );
+                    (c) => c?.id == prod.subCategoryId,
+                    orElse: () => null,
+                  );
               if (sub != null && sub.parentId != null) {
                 // Verify parent exists and is a root category
                 final parent = _categories.cast<CategoryModel?>().firstWhere(
-                  (c) => c?.id == sub.parentId && c?.parentId == null,
-                  orElse: () => null,
-                );
+                      (c) => c?.id == sub.parentId && c?.parentId == null,
+                      orElse: () => null,
+                    );
                 if (parent != null) {
                   _selectedCategoryId = parent.id;
-                  _fetchSubCategories(_selectedCategoryId!, initialSubCategoryId: sub.id);
+                  _fetchSubCategories(_selectedCategoryId!,
+                      initialSubCategoryId: sub.id);
                 }
               }
             } else if (prod.categoryId.isNotEmpty) {
               // Ensure we select a root if categoryId points to a child
               final found = _categories.cast<CategoryModel?>().firstWhere(
-                (c) => c?.id == prod.categoryId,
-                orElse: () => null,
-              );
+                    (c) => c?.id == prod.categoryId,
+                    orElse: () => null,
+                  );
               if (found != null) {
                 if (found.parentId != null) {
                   // This is a subcategory, find its parent
                   final parent = _categories.cast<CategoryModel?>().firstWhere(
-                    (c) => c?.id == found.parentId && c?.parentId == null,
-                    orElse: () => null,
-                  );
+                        (c) => c?.id == found.parentId && c?.parentId == null,
+                        orElse: () => null,
+                      );
                   if (parent != null) {
                     _selectedCategoryId = parent.id;
                     _fetchSubCategories(_selectedCategoryId!);
@@ -176,7 +176,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
   Future<void> _fetchSubCategories(String parentId,
       {String? initialSubCategoryId}) async {
     try {
-      final subCategories = await _databaseService.getSubCategories(parentId).first;
+      final subCategories = await _databaseService.getSubCategories(parentId);
       if (mounted) {
         setState(() {
           _subCategories = subCategories;
@@ -214,7 +214,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
     } catch (e) {
       print('Error loading image from URL: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('An error occurred while loading the image.')),
+        const SnackBar(
+            content: Text('An error occurred while loading the image.')),
       );
     }
   }
@@ -264,9 +265,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
   Future<void> _saveProduct() async {
     if (_formKey.currentState!.validate()) {
       final user = Provider.of<UserModel?>(context, listen: false);
-      if (user == null) { // Simplified check as role check is below
+      if (user == null) {
+        // Simplified check as role check is below
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You must be logged in to perform this action.')),
+          const SnackBar(
+              content: Text('You must be logged in to perform this action.')),
         );
         return;
       }
@@ -295,7 +298,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
         }
 
         final productData = ProductModel(
-          id: widget.product?.id ?? FirebaseFirestore.instance.collection('products').doc().id,
+          id: widget.product?.id ??
+              FirebaseFirestore.instance.collection('products').doc().id,
           name: _nameController.text,
           price: double.tryParse(_priceController.text) ?? 0.0,
           description: _descriptionController.text,
@@ -315,7 +319,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
           updatedAt: DateTime.now(),
         );
 
-        await _databaseService.addOrUpdateProduct(productData);
+        await _databaseService.addOrUpdateProductModel(productData);
 
         if (mounted) {
           Navigator.of(context).pop(); // Dismiss loading indicator
@@ -332,11 +336,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
       }
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<UserModel?>(context);
 
-    if (user == null || (user.role != UserRole.admin && user.role != UserRole.supplier)) {
+    if (user == null ||
+        (user.role != UserRole.admin && user.role != UserRole.supplier)) {
       return Scaffold(
         appBar: AppBar(
           title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
@@ -483,7 +489,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
                           Expanded(
                             child: Text(
                               _pickedVideo?.name ??
-                                  (_videoUrl?.split('/').last.split('?').first ?? ''),
+                                  (_videoUrl
+                                          ?.split('/')
+                                          .last
+                                          .split('?')
+                                          .first ??
+                                      ''),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -521,7 +532,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
             padding: const EdgeInsets.all(16.0),
             child: ListView(
               children: [
-                Text('Product Specifications', style: Theme.of(context).textTheme.titleLarge),
+                Text('Product Specifications',
+                    style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 16),
                 // Add your specification fields here
                 // For example:
@@ -593,11 +605,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildTextField(_thicknessController, 'Thickness', 'Please enter thickness'),
-                _buildTextField(_colorController, 'Color', 'Please enter color'),
-                _buildTextField(_dimensionsController, 'Dimensions', 'Please enter dimensions'),
-                _buildTextField(_priceController, 'Price', 'Please enter a price', keyboardType: TextInputType.number),
-                _buildTextField(_stockController, 'Stock', 'Please enter stock', keyboardType: TextInputType.number),
+                _buildTextField(_thicknessController, 'Thickness',
+                    'Please enter thickness'),
+                _buildTextField(
+                    _colorController, 'Color', 'Please enter color'),
+                _buildTextField(_dimensionsController, 'Dimensions',
+                    'Please enter dimensions'),
+                _buildTextField(
+                    _priceController, 'Price', 'Please enter a price',
+                    keyboardType: TextInputType.number),
+                _buildTextField(_stockController, 'Stock', 'Please enter stock',
+                    keyboardType: TextInputType.number),
               ],
             ),
           ),
@@ -611,7 +629,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
             onPressed: () {
               if (_variantFormKey.currentState!.validate()) {
                 final newVariant = ProductVariant(
-                  id: FirebaseFirestore.instance.collection('products').doc().collection('variants').doc().id,
+                  id: FirebaseFirestore.instance
+                      .collection('products')
+                      .doc()
+                      .collection('variants')
+                      .doc()
+                      .id,
                   thickness: _thicknessController.text,
                   color: _colorController.text,
                   dimensions: _dimensionsController.text,
@@ -633,9 +656,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
 
   Widget _buildCategoryDropdown() {
     // Get root categories only
-    final rootCategories = _categories
-        .where((c) => c != null && c!.parentId == null)
-        .toList();
+    final rootCategories =
+        _categories.where((c) => c != null && c!.parentId == null).toList();
 
     // Validate that selected category exists in root categories
     String? validatedSelectedCategoryId = _selectedCategoryId;
@@ -724,28 +746,28 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
       validator: (value) => value == null ? 'Please select a brand' : null,
     );
   }
-  
-    Widget _buildGaugeDropdown() {
-      return DropdownButtonFormField<String>(
-        value: _selectedGauge,
-        decoration: const InputDecoration(
-          labelText: 'Gauge',
-          border: OutlineInputBorder(),
-        ),
-        items: ['30g', '28g', '26g', '24g'].map((String value) {
-          return DropdownMenuItem<String>(
-            value: value,
-            child: Text(value),
-          );
-        }).toList(),
-        onChanged: (newValue) {
-          setState(() {
-            _selectedGauge = newValue;
-          });
-        },
-        validator: (value) => value == null ? 'Please select a gauge' : null,
-      );
-    }
+
+  Widget _buildGaugeDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedGauge,
+      decoration: const InputDecoration(
+        labelText: 'Gauge',
+        border: OutlineInputBorder(),
+      ),
+      items: ['30g', '28g', '26g', '24g'].map((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
+      onChanged: (newValue) {
+        setState(() {
+          _selectedGauge = newValue;
+        });
+      },
+      validator: (value) => value == null ? 'Please select a gauge' : null,
+    );
+  }
 
   Widget _buildProfileDropdown() {
     return DropdownButtonFormField<String>(

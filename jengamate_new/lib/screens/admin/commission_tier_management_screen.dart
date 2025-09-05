@@ -1,3 +1,4 @@
+import 'package:jengamate/models/commission_tier_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jengamate/models/commission_tier_model.dart';
@@ -11,13 +12,16 @@ class CommissionTierManagementScreen extends StatefulWidget {
   const CommissionTierManagementScreen({super.key});
 
   @override
-  State<CommissionTierManagementScreen> createState() => _CommissionTierManagementScreenState();
+  State<CommissionTierManagementScreen> createState() =>
+      _CommissionTierManagementScreenState();
 }
 
-class _CommissionTierManagementScreenState extends State<CommissionTierManagementScreen> with TickerProviderStateMixin {
+class _CommissionTierManagementScreenState
+    extends State<CommissionTierManagementScreen>
+    with TickerProviderStateMixin {
   final DatabaseService _databaseService = DatabaseService();
   late TabController _tabController;
-  
+
   List<CommissionTier> _tiers = [];
   List<UserModel> _usersInTiers = [];
   bool _isLoading = true;
@@ -36,25 +40,13 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
       final dbService = DatabaseService();
 
       // Load real commission tiers from database
-      final tierData = await dbService.getCommissionTiers();
-      _tiers = tierData.map((data) => CommissionTier(
-        id: data['id'] ?? '',
-        name: data['name'] ?? 'Unknown Tier',
-        level: data['level'] ?? 1,
-        minSales: (data['minSales'] ?? 0).toDouble(),
-        maxSales: (data['maxSales'] ?? 0).toDouble(),
-        commissionRate: (data['commissionRate'] ?? 0.0).toDouble(),
-        bonusAmount: (data['bonusAmount'] ?? 0).toDouble(),
-        requirements: List<String>.from(data['requirements'] ?? []),
-        benefits: List<String>.from(data['benefits'] ?? []),
-        color: data['color'] ?? '#CD7F32',
-        isActive: data['isActive'] ?? true,
-      )).toList();
+      _tiers = await dbService.getCommissionTiers();
 
       // Load users with their tier information
       _usersInTiers = await dbService.getUsersWithTierInfo();
 
-      Logger.log('Loaded ${_tiers.length} commission tiers and ${_usersInTiers.length} users');
+      Logger.log(
+          'Loaded ${_tiers.length} commission tiers and ${_usersInTiers.length} users');
     } catch (e) {
       Logger.logError('Error loading tier data', e, StackTrace.current);
       // Set empty lists instead of fallback sample data
@@ -73,8 +65,6 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -172,8 +162,8 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
     return Text(
       title,
       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.bold,
-      ),
+            fontWeight: FontWeight.bold,
+          ),
     );
   }
 
@@ -185,7 +175,7 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
 
   Widget _buildTierCard(CommissionTier tier) {
     final tierColor = Color(int.parse(tier.color.replaceFirst('#', '0xFF')));
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 4,
@@ -222,9 +212,9 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
                       Text(
                         tier.name,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: tierColor,
-                        ),
+                              fontWeight: FontWeight.bold,
+                              color: tierColor,
+                            ),
                       ),
                       Text(
                         '${(tier.commissionRate * 100).toStringAsFixed(1)}% Commission',
@@ -268,7 +258,9 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
       Expanded(
         child: _buildDetailSection(
           'Bonus',
-          tier.bonusAmount > 0 ? '\$${tier.bonusAmount.toStringAsFixed(0)}' : 'None',
+          tier.bonusAmount > 0
+              ? '\$${tier.bonusAmount.toStringAsFixed(0)}'
+              : 'None',
           Icons.card_giftcard,
         ),
       ),
@@ -329,8 +321,9 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
                 itemCount: _tiers.length,
                 itemBuilder: (context, index) {
                   final tier = _tiers[index];
-                  final tierColor = Color(int.parse(tier.color.replaceFirst('#', '0xFF')));
-                  
+                  final tierColor =
+                      Color(int.parse(tier.color.replaceFirst('#', '0xFF')));
+
                   return Row(
                     children: [
                       Column(
@@ -356,7 +349,8 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
                           const SizedBox(height: 8),
                           Text(
                             tier.name,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -383,7 +377,9 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
             spacing: Responsive.getResponsiveSpacing(context),
             runSpacing: Responsive.getResponsiveSpacing(context),
             children: _buildDistributionCardsList()
-                .map((card) => SizedBox(width: Responsive.getResponsiveCardWidth(context), child: card))
+                .map((card) => SizedBox(
+                    width: Responsive.getResponsiveCardWidth(context),
+                    child: card))
                 .toList(),
           );
   }
@@ -392,7 +388,7 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
     return _tiers.map((tier) {
       final tierColor = Color(int.parse(tier.color.replaceFirst('#', '0xFF')));
       final userCount = _getUserCountForTier(tier.name);
-      
+
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -422,12 +418,18 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
   int _getUserCountForTier(String tierName) {
     // Sample data - in real app, this would come from database
     switch (tierName) {
-      case 'Bronze': return 45;
-      case 'Silver': return 23;
-      case 'Gold': return 12;
-      case 'Platinum': return 5;
-      case 'Diamond': return 2;
-      default: return 0;
+      case 'Bronze':
+        return 45;
+      case 'Silver':
+        return 23;
+      case 'Gold':
+        return 12;
+      case 'Platinum':
+        return 5;
+      case 'Diamond':
+        return 2;
+      default:
+        return 0;
     }
   }
 
@@ -444,10 +446,22 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
             ),
             const SizedBox(height: 16),
             ...List.generate(5, (index) {
-              final users = ['John Doe', 'Jane Smith', 'Bob Wilson', 'Alice Johnson', 'Charlie Brown'];
+              final users = [
+                'John Doe',
+                'Jane Smith',
+                'Bob Wilson',
+                'Alice Johnson',
+                'Charlie Brown'
+              ];
               final tiers = ['Silver', 'Gold', 'Bronze', 'Platinum', 'Silver'];
-              final changes = ['Promoted', 'Promoted', 'New', 'Promoted', 'Promoted'];
-              
+              final changes = [
+                'Promoted',
+                'Promoted',
+                'New',
+                'Promoted',
+                'Promoted'
+              ];
+
               return ListTile(
                 leading: CircleAvatar(
                   child: Text(users[index][0]),
@@ -469,22 +483,28 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
   Widget _buildPerformanceMetrics() {
     return Responsive.isMobile(context)
         ? Column(children: _buildMetricCardsList())
-        : Row(children: _buildMetricCardsList().map((card) => Expanded(child: card)).toList());
+        : Row(
+            children: _buildMetricCardsList()
+                .map((card) => Expanded(child: card))
+                .toList());
   }
 
   List<Widget> _buildMetricCardsList() {
     return [
-      _buildMetricCard('Avg. Promotion Time', '45 days', Icons.schedule, Colors.blue),
+      _buildMetricCard(
+          'Avg. Promotion Time', '45 days', Icons.schedule, Colors.blue),
       const SizedBox(width: 16, height: 8),
       _buildMetricCard('Top Tier Users', '7 users', Icons.star, Colors.amber),
       const SizedBox(width: 16, height: 8),
-      _buildMetricCard('Monthly Promotions', '12 users', Icons.trending_up, Colors.green),
+      _buildMetricCard(
+          'Monthly Promotions', '12 users', Icons.trending_up, Colors.green),
       const SizedBox(width: 16, height: 8),
       _buildMetricCard('Tier Retention', '89%', Icons.loyalty, Colors.purple),
     ];
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -554,23 +574,35 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
   double _getTierEffectiveness(String tier) {
     // Sample effectiveness data
     switch (tier) {
-      case 'Bronze': return 75;
-      case 'Silver': return 85;
-      case 'Gold': return 92;
-      case 'Platinum': return 88;
-      case 'Diamond': return 95;
-      default: return 0;
+      case 'Bronze':
+        return 75;
+      case 'Silver':
+        return 85;
+      case 'Gold':
+        return 92;
+      case 'Platinum':
+        return 88;
+      case 'Diamond':
+        return 95;
+      default:
+        return 0;
     }
   }
 
   Color _getTierColor(String tier) {
     switch (tier) {
-      case 'Bronze': return const Color(0xFFCD7F32);
-      case 'Silver': return const Color(0xFFC0C0C0);
-      case 'Gold': return const Color(0xFFFFD700);
-      case 'Platinum': return const Color(0xFFE5E4E2);
-      case 'Diamond': return const Color(0xFFB9F2FF);
-      default: return Colors.grey;
+      case 'Bronze':
+        return const Color(0xFFCD7F32);
+      case 'Silver':
+        return const Color(0xFFC0C0C0);
+      case 'Gold':
+        return const Color(0xFFFFD700);
+      case 'Platinum':
+        return const Color(0xFFE5E4E2);
+      case 'Diamond':
+        return const Color(0xFFB9F2FF);
+      default:
+        return Colors.grey;
     }
   }
 
@@ -588,11 +620,26 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
             const SizedBox(height: 16),
             ...List.generate(3, (index) {
               final promotions = [
-                {'user': 'John Doe', 'from': 'Silver', 'to': 'Gold', 'date': '2 days ago'},
-                {'user': 'Jane Smith', 'from': 'Bronze', 'to': 'Silver', 'date': '5 days ago'},
-                {'user': 'Bob Wilson', 'from': 'Gold', 'to': 'Platinum', 'date': '1 week ago'},
+                {
+                  'user': 'John Doe',
+                  'from': 'Silver',
+                  'to': 'Gold',
+                  'date': '2 days ago'
+                },
+                {
+                  'user': 'Jane Smith',
+                  'from': 'Bronze',
+                  'to': 'Silver',
+                  'date': '5 days ago'
+                },
+                {
+                  'user': 'Bob Wilson',
+                  'from': 'Gold',
+                  'to': 'Platinum',
+                  'date': '1 week ago'
+                },
               ];
-              
+
               final promo = promotions[index];
               return ListTile(
                 leading: const Icon(Icons.trending_up, color: Colors.green),
@@ -609,12 +656,16 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
 
   void _toggleTierStatus(CommissionTier tier, bool isActive) {
     setState(() {
-      tier.isActive = isActive;
+      final idx = _tiers.indexWhere((t) => t.uid == tier.uid);
+      if (idx != -1) {
+        _tiers[idx] = _tiers[idx].copyWith(isActive: isActive);
+      }
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${tier.name} tier ${isActive ? 'activated' : 'deactivated'}'),
+        content:
+            Text('${tier.name} tier ${isActive ? 'activated' : 'deactivated'}'),
       ),
     );
   }
@@ -630,11 +681,16 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
   void _showTierDialog(CommissionTier? tier) {
     final isEditing = tier != null;
     final nameController = TextEditingController(text: tier?.name ?? '');
-    final levelController = TextEditingController(text: tier?.level.toString() ?? '');
-    final minSalesController = TextEditingController(text: tier?.minSales.toString() ?? '');
-    final maxSalesController = TextEditingController(text: tier?.maxSales.toString() ?? '');
-    final commissionController = TextEditingController(text: ((tier?.commissionRate ?? 0) * 100).toString());
-    final bonusController = TextEditingController(text: tier?.bonusAmount.toString() ?? '0');
+    final levelController =
+        TextEditingController(text: tier?.level.toString() ?? '');
+    final minSalesController =
+        TextEditingController(text: tier?.minSales.toString() ?? '');
+    final maxSalesController =
+        TextEditingController(text: tier?.maxSales.toString() ?? '');
+    final commissionController = TextEditingController(
+        text: ((tier?.commissionRate ?? 0) * 100).toString());
+    final bonusController =
+        TextEditingController(text: tier?.bonusAmount.toString() ?? '0');
 
     showDialog(
       context: context,
@@ -669,7 +725,8 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
               const SizedBox(height: 16),
               TextField(
                 controller: commissionController,
-                decoration: const InputDecoration(labelText: 'Commission Rate (%)'),
+                decoration:
+                    const InputDecoration(labelText: 'Commission Rate (%)'),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 16),
@@ -690,7 +747,9 @@ class _CommissionTierManagementScreenState extends State<CommissionTierManagemen
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Tier ${isEditing ? 'updated' : 'created'} successfully')),
+                SnackBar(
+                    content: Text(
+                        'Tier ${isEditing ? 'updated' : 'created'} successfully')),
               );
             },
             child: Text(isEditing ? 'Update' : 'Create'),
