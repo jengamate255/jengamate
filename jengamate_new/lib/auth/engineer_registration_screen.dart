@@ -63,28 +63,22 @@ class _EngineerRegistrationScreenState
       _registrationData.password!,
     );
 
-    if (userCredential != null) {
-      final user = UserModel(
-        uid: userCredential.user!.uid,
-        email: _registrationData.email,
-        firstName: _registrationData.firstName!,
-        lastName: _registrationData.lastName!,
-        role: UserRole.engineer,
-      );
+    final user = UserModel(
+      uid: userCredential.user!.uid,
+      email: _registrationData.email,
+      firstName: _registrationData.firstName!,
+      lastName: _registrationData.lastName!,
+      role: UserRole.engineer,
+    );
 
-      await dbService.updateUser(user);
+    await dbService.updateUser(user);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration successful!')),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Registration successful!')),
+    );
 
-      context.go(AppRoutes.dashboard);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration failed')),
-      );
+    context.go(AppRoutes.dashboard);
     }
-  }
 
 
   @override

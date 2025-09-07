@@ -5,7 +5,6 @@ import 'package:jengamate/services/admin_analytics_service.dart';
 import 'package:jengamate/widgets/advanced_filter_panel.dart';
 import 'package:jengamate/widgets/user_activity_timeline.dart';
 import 'package:jengamate/models/admin_user_activity.dart';
-import 'package:provider/provider.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({Key? key}) : super(key: key);
@@ -17,7 +16,7 @@ class UserManagementScreen extends StatefulWidget {
 class _UserManagementScreenState extends State<UserManagementScreen> {
   final AdminAnalyticsService _analyticsService = AdminAnalyticsService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   Map<String, dynamic> _currentFilters = {};
   String _searchQuery = '';
   bool _isLoading = false;
@@ -117,25 +116,25 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         final stats = [
           {
             'title': 'Total Users',
-            'value': data['totalUsers']?.toString() ?? '0',
+            'value': (data['totalUsers'] ?? 0).toString(),
             'icon': Icons.people,
             'color': Colors.blue,
           },
           {
             'title': 'Active Users',
-            'value': data['activeUsers']?.toString() ?? '0',
+            'value': (data['activeUsers'] ?? 0).toString(),
             'icon': Icons.check_circle,
             'color': Colors.green,
           },
           {
             'title': 'Pending',
-            'value': data['pendingUsers']?.toString() ?? '0',
+            'value': (data['pendingUsers'] ?? 0).toString(),
             'icon': Icons.pending,
             'color': Colors.orange,
           },
           {
             'title': 'Suspended',
-            'value': data['suspendedUsers']?.toString() ?? '0',
+            'value': (data['suspendedUsers'] ?? 0).toString(),
             'icon': Icons.block,
             'color': Colors.red,
           },
@@ -151,7 +150,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
-                        Icon(stat['icon'] as IconData, color: stat['color'] as Color),
+                        Icon(stat['icon'] as IconData,
+                            color: stat['color'] as Color),
                         const SizedBox(height: 8),
                         Text(
                           stat['value'] as String,
@@ -215,9 +215,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       margin: const EdgeInsets.only(bottom: 8.0),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getUserStatusColor((user.isActive ? 'approved' : 'suspended')),
+          backgroundColor:
+              _getUserStatusColor((user.isActive ? 'approved' : 'suspended')),
           child: Text(
-            user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
+            user.displayName.isNotEmpty
+                ? user.displayName[0].toUpperCase()
+                : '?',
             style: const TextStyle(color: Colors.white),
           ),
         ),
@@ -290,11 +293,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
 
     if (_currentFilters['startDate'] != null) {
-      query = query.where('createdAt', isGreaterThanOrEqualTo: _currentFilters['startDate']);
+      query = query.where('createdAt',
+          isGreaterThanOrEqualTo: _currentFilters['startDate']);
     }
 
     if (_currentFilters['endDate'] != null) {
-      query = query.where('createdAt', isLessThanOrEqualTo: _currentFilters['endDate']);
+      query = query.where('createdAt',
+          isLessThanOrEqualTo: _currentFilters['endDate']);
     }
 
     return query.snapshots();
@@ -302,10 +307,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   bool _matchesSearch(EnhancedUser user) {
     if (_searchQuery.isEmpty) return true;
-    
+
     return user.displayName.toLowerCase().contains(_searchQuery) ||
-           user.email.toLowerCase().contains(_searchQuery) ||
-           (user.phoneNumber?.toLowerCase().contains(_searchQuery) ?? false);
+        user.email.toLowerCase().contains(_searchQuery) ||
+        (user.phoneNumber?.toLowerCase().contains(_searchQuery) ?? false);
   }
 
   Color _getUserStatusColor(String status) {
@@ -361,10 +366,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               _buildDetailRow('Email', user.email),
               _buildDetailRow('Phone', user.phoneNumber ?? 'N/A'),
               _buildDetailRow('Role', user.roles.join(', ').toUpperCase()),
-              _buildDetailRow('Status', (user.isActive ? 'approved' : 'suspended').toUpperCase()),
+              _buildDetailRow('Status',
+                  (user.isActive ? 'approved' : 'suspended').toUpperCase()),
               _buildDetailRow('Active', user.isActive ? 'Yes' : 'No'),
-              _buildDetailRow('Created', user.createdAt?.toString() ?? 'N/A'),
-              _buildDetailRow('Last Login', user.lastLoginAt?.toString() ?? 'N/A'),
+              _buildDetailRow('Created', user.createdAt.toString()),
+              _buildDetailRow(
+                  'Last Login',
+                  user.lastLoginAt != null
+                      ? user.lastLoginAt.toString()
+                      : 'N/A'),
               const SizedBox(height: 16),
               const Text(
                 'Recent Activity',
@@ -465,9 +475,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       await _analyticsService.logUserActivity(
         userId: user.uid,
         action: action,
-        ipAddress: 'admin_panel',
-        userAgent: 'admin_dashboard',
         metadata: {
+          'ipAddress': 'admin_panel',
+          'userAgent': 'admin_dashboard',
           'performedBy': 'admin',
           'targetUser': user.uid,
         },
@@ -495,10 +505,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Future<void> _exportUsers() async {
     try {
       setState(() => _isLoading = true);
-      
+
       final csvData = await _analyticsService.exportUsersToCSV(
-        filters: _currentFilters,
-      );
+          // filters: _currentFilters, // Not directly supported by exportUsersToCSV
+          );
 
       if (csvData.isNotEmpty) {
         // In a real app, you would save this to a file

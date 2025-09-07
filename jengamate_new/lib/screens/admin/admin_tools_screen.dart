@@ -4,6 +4,7 @@ import 'package:jengamate/config/app_routes.dart';
 import 'package:provider/provider.dart';
 import 'package:jengamate/services/tier_metadata_service.dart';
 import 'package:jengamate/screens/admin/providers/admin_metrics_provider.dart';
+import 'package:jengamate/screens/admin/image_migration_screen.dart';
 
 class AdminToolsScreen extends StatelessWidget {
   final AdminMetricsProvider? _providedMetrics;
@@ -104,6 +105,11 @@ class AdminToolsScreen extends StatelessWidget {
             'title': 'Advanced Analytics',
             'icon': Icons.bar_chart,
             'route': '/advanced-analytics',
+          },
+          {
+            'title': 'Image Migration',
+            'icon': Icons.image,
+            'widget': const ImageMigrationScreen(),
           },
           {
             'title': 'Audit Logs',

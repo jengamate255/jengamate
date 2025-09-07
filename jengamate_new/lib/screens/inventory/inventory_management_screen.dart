@@ -405,7 +405,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
-                        product.imageUrl!,
+                        product.imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Icon(

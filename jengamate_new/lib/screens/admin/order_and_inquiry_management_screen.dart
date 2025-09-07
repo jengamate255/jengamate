@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/order_model.dart';
-import 'package:jengamate/models/inquiry_model.dart';
+import 'package:jengamate/models/inquiry.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
 import 'package:jengamate/models/user_model.dart';
@@ -50,22 +50,25 @@ class OrderAndInquiryManagementScreen extends StatelessWidget {
                 return AdaptivePadding(
                   child: ListView.separated(
                     itemCount: orders.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: JMSpacing.sm),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: JMSpacing.sm),
                     itemBuilder: (context, index) {
                       final order = orders[index];
                       return JMCard(
                         child: ListTile(
-                          title: Text('Order #${order.id}'),
+                          title: Text('Order #${order.uid}'),
                           subtitle: Text('Buyer ID: ${order.buyerId}'),
                           trailing: DropdownButton<OrderStatus>(
                             value: order.status,
                             onChanged: (OrderStatus? newStatus) {
                               if (newStatus != null) {
-                                dbService.updateOrderStatus(order.id, newStatus.name);
+                                dbService.updateOrderStatus(
+                                    order.uid, newStatus);
                               }
                             },
                             items: OrderStatus.values
-                                .map<DropdownMenuItem<OrderStatus>>((OrderStatus value) {
+                                .map<DropdownMenuItem<OrderStatus>>(
+                                    (OrderStatus value) {
                               return DropdownMenuItem<OrderStatus>(
                                 value: value,
                                 child: Text(value.toString().split('.').last),
@@ -81,8 +84,9 @@ class OrderAndInquiryManagementScreen extends StatelessWidget {
             ),
 
             // Inquiries Tab
-            StreamBuilder<List<InquiryModel>>(
-              stream: dbService.streamAllInquiries(), // Admin gets all inquiries
+            StreamBuilder<List<Inquiry>>(
+              stream:
+                  dbService.streamAllInquiries(), // Admin gets all inquiries
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -99,12 +103,14 @@ class OrderAndInquiryManagementScreen extends StatelessWidget {
                 return AdaptivePadding(
                   child: ListView.separated(
                     itemCount: inquiries.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: JMSpacing.sm),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: JMSpacing.sm),
                     itemBuilder: (context, index) {
                       final inquiry = inquiries[index];
                       return JMCard(
                         child: ListTile(
-                          title: Text('Inquiry #${inquiry.id.substring(0, 8)}'),
+                          title: Text(
+                              'Inquiry #${inquiry.uid.length >= 8 ? inquiry.uid.substring(0, 8) : inquiry.uid}'),
                           subtitle: Text(inquiry.status),
                         ),
                       );

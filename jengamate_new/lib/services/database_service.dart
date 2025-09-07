@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -12,15 +11,18 @@ import 'package:jengamate/models/category_model.dart';
 import 'package:jengamate/models/product_model.dart';
 import 'package:jengamate/models/financial_transaction_model.dart';
 import 'package:jengamate/models/commission_tier_model.dart';
+import 'package:jengamate/models/rank_model.dart';
 import 'package:jengamate/models/content_report_model.dart';
 import 'package:jengamate/models/audit_log_model.dart';
 import 'package:jengamate/models/quote_model.dart';
+import 'package:jengamate/models/payment_model.dart';
 import 'package:jengamate/models/chat_room_model.dart';
 import 'package:jengamate/models/support_ticket_model.dart';
 import 'package:jengamate/models/inquiry.dart';
 import 'package:jengamate/models/system_config_model.dart';
 import 'package:jengamate/models/chat_message_model.dart';
 import 'package:jengamate/models/faq_model.dart';
+import 'package:jengamate/models/enhanced_user.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/utils/logger.dart';
 
@@ -39,6 +41,233 @@ class DatabaseService {
       Logger.logError('Error creating notification', e);
       rethrow;
     }
+  }
+
+  // Payments
+  Future<void> createPayment(PaymentModel payment) async {
+    try {
+      final docRef = _firestore.collection('payments').doc();
+      final model =
+          payment.id.isEmpty ? payment.copyWith(id: docRef.id) : payment;
+      await docRef.set(model.toMap());
+    } catch (e) {
+      Logger.logError('Error creating payment', e);
+      rethrow;
+    }
+  }
+
+  Stream<List<PaymentModel>> streamPayments(String userId) {
+    return _firestore
+        .collection('payments')
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => PaymentModel.fromFirestore(doc))
+            .toList());
+  }
+
+  // Orders
+  Stream<List<OrderModel>> getOrders(String? userId) {
+    Query collection =
+        _firestore.collection('orders').orderBy('createdAt', descending: true);
+    if (userId != null && userId.isNotEmpty) {
+      collection = _firestore
+          .collection('orders')
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true);
+    }
+    return collection.snapshots().map((snapshot) =>
+        snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList());
+  }
+
+  // Inquiry activity timeline (comments and status changes)
+  Stream<List<Map<String, dynamic>>> streamInquiryActivities(String inquiryId) {
+    return _firestore
+        .collection('inquiries')
+        .doc(inquiryId)
+        .collection('activities')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => d.data()).toList());
+  }
+
+  Future<void> addInquiryComment({
+    required String inquiryId,
+    required String userId,
+    required String userName,
+    required String text,
+  }) async {
+    try {
+      await _firestore
+          .collection('inquiries')
+          .doc(inquiryId)
+          .collection('activities')
+          .add({
+        'type': 'comment',
+        'text': text,
+        'userId': userId,
+        'userName': userName,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      Logger.logError('Error adding inquiry comment', e);
+      rethrow;
+    }
+  }
+
+  Future<void> logInquiryStatusChange({
+    required String inquiryId,
+    required String fromStatus,
+    required String toStatus,
+    required String userId,
+    required String userName,
+  }) async {
+    try {
+      await _firestore
+          .collection('inquiries')
+          .doc(inquiryId)
+          .collection('activities')
+          .add({
+        'type': 'status',
+        'from': fromStatus,
+        'to': toStatus,
+        'userId': userId,
+        'userName': userName,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      Logger.logError('Error logging inquiry status change', e);
+      rethrow;
+    }
+  }
+
+  // Simple notification helper (writes a bare doc into notifications)
+  Future<void> sendInquiryNotification({
+    required String userId,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      await _firestore.collection('notifications').add({
+        'userId': userId,
+        'title': title,
+        'body': body,
+        'isRead': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      Logger.logError('Error sending inquiry notification', e);
+      rethrow;
+    }
+  }
+
+  // Total Sales (TSH) within the last [days] days
+  Stream<double> streamTotalSalesAmountTSHWindow({int days = 7}) {
+    final cutoff = DateTime.now().subtract(Duration(days: days));
+    return _firestore
+        .collection('orders')
+        .where('status', isEqualTo: OrderStatus.completed.name)
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+        .snapshots()
+        .map((snapshot) {
+      double sum = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final v = data['totalAmount'];
+        if (v is num) sum += v.toDouble();
+      }
+      return sum;
+    });
+  }
+
+  Stream<int> streamTotalOrdersCount() {
+    return _firestore
+        .collection('orders')
+        .snapshots()
+        .map((s) => s.docs.length);
+  }
+
+  Stream<int> streamPendingOrdersCount() {
+    return _firestore
+        .collection('orders')
+        .where('status', isEqualTo: OrderStatus.pending.name)
+        .snapshots()
+        .map((s) => s.docs.length);
+  }
+
+  Stream<int> streamCompletedOrdersCount() {
+    return _firestore
+        .collection('orders')
+        .where('status', isEqualTo: OrderStatus.completed.name)
+        .snapshots()
+        .map((s) => s.docs.length);
+  }
+
+  // Total Sales (TSH) computed from completed orders' totalAmount
+  Stream<double> streamTotalSalesAmountTSH() {
+    return _firestore
+        .collection('orders')
+        .where('status', isEqualTo: OrderStatus.completed.name)
+        .snapshots()
+        .map((snapshot) {
+      double sum = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final v = data['totalAmount'];
+        if (v is num) sum += v.toDouble();
+      }
+      return sum;
+    });
+  }
+
+  Stream<int> streamTotalUsersCount() {
+    return _firestore.collection('users').snapshots().map((s) => s.docs.length);
+  }
+
+  // New users in the last [days] days (default 7)
+  Stream<int> streamNewUsersCount({int days = 7}) {
+    final cutoff = DateTime.now().subtract(Duration(days: days));
+    return _firestore
+        .collection('users')
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+        .snapshots()
+        .map((s) => s.docs.length);
+  }
+
+  // Daily sales timeseries for the last [days] days (TSH from completed orders)
+  Stream<List<double>> streamDailySalesTSH({int days = 7}) {
+    final cutoff = DateTime.now().subtract(Duration(days: days));
+    return _firestore
+        .collection('orders')
+        .where('status', isEqualTo: OrderStatus.completed.name)
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+        .snapshots()
+        .map((snapshot) {
+      // Initialize array of length [days] with zeros, oldest to newest
+      final List<double> series = List<double>.filled(days, 0);
+      final now = DateTime.now();
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final createdAt = (data['createdAt'] is Timestamp)
+            ? (data['createdAt'] as Timestamp).toDate()
+            : (data['createdAt'] is DateTime)
+                ? data['createdAt'] as DateTime
+                : null;
+        final amountNum = data['totalAmount'];
+        if (createdAt == null || amountNum is! num) continue;
+        final diff = now
+            .difference(
+                DateTime(createdAt.year, createdAt.month, createdAt.day))
+            .inDays;
+        // diff == 0 means today; we want index days-1 for today
+        final indexFromStart = days - 1 - diff;
+        if (indexFromStart >= 0 && indexFromStart < days) {
+          series[indexFromStart] += amountNum.toDouble();
+        }
+      }
+      return series;
+    });
   }
 
   Stream<List<NotificationModel>> streamUserNotifications(String userId) {
@@ -84,9 +313,9 @@ class DatabaseService {
     }
   }
 
-  Stream<List<UserModel>> streamEnhancedUsers() {
+  Stream<List<EnhancedUser>> streamEnhancedUsers() {
     return _firestore.collection('users').snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList());
+        snapshot.docs.map((doc) => EnhancedUser.fromFirestore(doc)).toList());
   }
 
   Stream<List<UserModel>> streamAllUsers() {
@@ -106,7 +335,6 @@ class DatabaseService {
       rethrow;
     }
   }
-
 
   // RFQ Management
   Stream<List<RFQModel>> streamAllRFQs() {
@@ -734,8 +962,6 @@ class DatabaseService {
     }
   }
 
-
-
   Future<void> requestWithdrawal(Map<String, dynamic> withdrawal) async {
     try {
       await _firestore.collection('withdrawals').add(withdrawal);
@@ -803,9 +1029,7 @@ class DatabaseService {
           .where('isApproved', isEqualTo: true)
           .get();
 
-      return snapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
-          .toList();
+      return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       Logger.logError('Error getting approved suppliers', e);
       rethrow;
@@ -846,9 +1070,7 @@ class DatabaseService {
           .limit(limit)
           .get();
 
-      return snapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
-          .toList();
+      return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       Logger.logError('Error searching users', e);
       rethrow;
@@ -887,6 +1109,27 @@ class DatabaseService {
     });
   }
 
+  Future<void> updateOrder(OrderModel order) async {
+    try {
+      await _firestore.collection('orders').doc(order.uid).set(order.toMap());
+    } catch (e) {
+      Logger.logError('Error updating order', e);
+      rethrow;
+    }
+  }
+
+  Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
+    try {
+      await _firestore.collection('orders').doc(orderId).update({
+        'status': status.name,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      Logger.logError('Error updating order status', e);
+      rethrow;
+    }
+  }
+
   Stream<List<Inquiry>> streamInquiriesForUser(String userId) {
     return _firestore
         .collection('inquiries')
@@ -894,37 +1137,97 @@ class DatabaseService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        try {
-          return Inquiry.fromFirestore(doc);
-        } catch (e) {
-          Logger.logError('Error parsing inquiry', e);
-          return null;
-        }
-      }).whereType<Inquiry>().toList();
+      return snapshot.docs
+          .map((doc) {
+            try {
+              final data = doc.data();
+              // Skip if either description or subject is not a string when they are not null
+              if ((data['description'] != null && data['description'] is! String) ||
+                  (data['subject'] != null && data['subject'] is! String)) {
+                Logger.logError(
+                    'Inquiry data type mismatch for doc ${doc.id}: description=${data['description']?.runtimeType}, subject=${data['subject']?.runtimeType}',
+                    Exception('Type mismatch'));
+                return null;
+              }
+              return Inquiry.fromFirestore(doc);
+            } catch (e, st) {
+              Logger.logError(
+                  'Error parsing inquiry for doc ${doc.id}: $e. Data: ${doc.data()}',
+                  e,
+                  st);
+              return null;
+            }
+          })
+          .whereType<Inquiry>()
+          .toList();
     });
   }
 
-  Future<void> createInquiry(Inquiry Inquiry) async {
+  Future<void> updateInquiryFields(
+      String inquiryId, Map<String, dynamic> data) async {
     try {
-      await _firestore
-          .collection('inquiries')
-          .doc(Inquiry.uid)
-          .set(Inquiry.toMap());
+      if (inquiryId.isEmpty) {
+        throw Exception('Cannot update inquiry: Empty inquiry ID provided');
+      }
+      await _firestore.collection('inquiries').doc(inquiryId).update({
+        ...data,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
-      Logger.logError('Error creating Inquiry', e);
+      Logger.logError('Error updating inquiry fields', e);
       rethrow;
     }
   }
 
-  Future<void> addMessage(ChatMessage message) async {
+  Future<void> updateInquiryStatus(String inquiryId, String status) async {
+    print('📝 updateInquiryStatus called');
+    print('   inquiryId: "$inquiryId" (length: ${inquiryId.length})');
+    print('   status: "$status"');
+    
+    if (inquiryId.isEmpty) {
+      final error = 'Cannot update inquiry status: Empty inquiry ID provided';
+      print('❌ $error');
+      throw Exception(error);
+    }
+    
     try {
-      await _firestore
-          .collection('messages')
-          .doc(message.uid)
-          .set(message.toMap());
+      final updateData = {
+        'status': status,
+        if (status == 'resolved') 'resolvedAt': FieldValue.serverTimestamp(),
+      };
+      
+      print('🔄 Updating inquiry with data: $updateData');
+      await updateInquiryFields(inquiryId, updateData);
+      print('✅ Successfully updated inquiry status');
     } catch (e) {
-      Logger.logError('Error adding message', e);
+      final error = 'Error updating inquiry status: $e';
+      print('❌ $error');
+      Logger.logError(error, e);
+      rethrow;
+    }
+  }
+
+  Future<void> updateInquiryPriority(String inquiryId, String priority) async {
+    try {
+      await updateInquiryFields(inquiryId, {'priority': priority});
+    } catch (e) {
+      Logger.logError('Error updating inquiry priority', e);
+      rethrow;
+    }
+  }
+
+  Future<void> assignInquiry({
+    required String inquiryId,
+    required String? assignedTo,
+    required String? assignedToName,
+  }) async {
+    try {
+      await updateInquiryFields(inquiryId, {
+        'assignedTo': assignedTo,
+        'assignedToName': assignedToName,
+      });
+    } catch (e) {
+      Logger.logError('Error assigning inquiry', e);
       rethrow;
     }
   }
@@ -938,6 +1241,18 @@ class DatabaseService {
         .map((snapshot) => snapshot.docs
             .map((doc) => ChatMessage.fromFirestore(doc))
             .toList());
+  }
+
+  Future<void> addMessage(ChatMessage message) async {
+    try {
+      final docRef = _firestore.collection('messages').doc();
+      final model =
+          message.uid.isEmpty ? message.copyWith(uid: docRef.id) : message;
+      await docRef.set(model.toMap());
+    } catch (e) {
+      Logger.logError('Error adding message', e);
+      rethrow;
+    }
   }
 
   Future<ChatRoom?> getChatRoom(String roomId) async {
@@ -961,9 +1276,6 @@ class DatabaseService {
       rethrow;
     }
   }
-
-
-
 
   Future<void> createCommissionTier(CommissionTier tier) async {
     try {
@@ -989,20 +1301,21 @@ class DatabaseService {
     }
   }
 
-  // Placeholder for addRank
-  Future<void> addRank(Map<String, dynamic> rank) async {
+  // Ranks
+  Future<void> addRank(RankModel rank) async {
     try {
-      await _firestore.collection('ranks').add(rank);
+      final docRef = _firestore.collection('ranks').doc();
+      final model = rank.id.isEmpty ? rank.copyWith(id: docRef.id) : rank;
+      await _firestore.collection('ranks').doc(model.id).set(model.toMap());
     } catch (e) {
       Logger.logError('Error adding rank', e);
       rethrow;
     }
   }
 
-  // Placeholder for updateRank
-  Future<void> updateRank(Map<String, dynamic> rank) async {
+  Future<void> updateRank(RankModel rank) async {
     try {
-      await _firestore.collection('ranks').doc(rank['id']).update(rank);
+      await _firestore.collection('ranks').doc(rank.id).update(rank.toMap());
     } catch (e) {
       Logger.logError('Error updating rank', e);
       rethrow;
@@ -1019,12 +1332,9 @@ class DatabaseService {
     }
   }
 
-  // Placeholder for streamRanks
-  Stream<List<dynamic>> streamRanks() {
-    return _firestore
-        .collection('ranks')
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+  Stream<List<RankModel>> streamRanks() {
+    return _firestore.collection('ranks').snapshots().map((snapshot) =>
+        snapshot.docs.map((doc) => RankModel.fromFirestore(doc)).toList());
   }
 
   // Placeholder for addReview
@@ -1056,12 +1366,20 @@ class DatabaseService {
   //       snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList());
   // }
 
-  // Placeholder for updateEnhancedUser
-  Future<void> updateEnhancedUser(Map<String, dynamic> user) async {
+  Future<void> updateEnhancedUser(EnhancedUser user) async {
     try {
-      await _firestore.collection('users').doc(user['uid']).update(user);
+      await _firestore.collection('users').doc(user.uid).update(user.toMap());
     } catch (e) {
       Logger.logError('Error updating enhanced user', e);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteUser(String uid) async {
+    try {
+      await _firestore.collection('users').doc(uid).delete();
+    } catch (e) {
+      Logger.logError('Error deleting user', e);
       rethrow;
     }
   }
@@ -1197,8 +1515,31 @@ class DatabaseService {
         .collection('inquiries')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Inquiry.fromFirestore(doc)).toList());
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) {
+            try {
+              final data = doc.data();
+              // Skip if either description or subject is not a string when they are not null
+              if ((data['description'] != null && data['description'] is! String) ||
+                  (data['subject'] != null && data['subject'] is! String)) {
+                Logger.logError(
+                    'Inquiry data type mismatch for doc ${doc.id}: description=${data['description']?.runtimeType}, subject=${data['subject']?.runtimeType}',
+                    Exception('Type mismatch'));
+                return null;
+              }
+              return Inquiry.fromFirestore(doc);
+            } catch (e, st) {
+              Logger.logError(
+                  'Error parsing inquiry for doc ${doc.id}: $e. Data: ${doc.data()}',
+                  e,
+                  st);
+              return null;
+            }
+          })
+          .whereType<Inquiry>()
+          .toList();
+    });
   }
 
   Future<UserModel?> getCurrentUser() async {
@@ -1233,9 +1574,7 @@ class DatabaseService {
           .where('referrerId', isEqualTo: userId)
           .get();
 
-      return snapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
-          .toList();
+      return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       Logger.logError('Error getting user referrals', e);
       return [];

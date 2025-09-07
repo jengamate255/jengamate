@@ -187,7 +187,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             DataCell(Text(item['uid'] ?? 'N/A')),
             DataCell(Text(item['name'] ?? 'N/A')),
             DataCell(Text(item['email'] ?? 'N/A')),
-            DataCell.Text(item['role'] ?? 'user')),
+            DataCell(Text(item['role'] ?? 'user')),
             DataCell(Text(DateFormat('MMM dd, yyyy').format(item['createdAt'].toDate()))),
           ]);
         case 'withdrawals':

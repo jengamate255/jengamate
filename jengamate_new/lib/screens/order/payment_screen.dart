@@ -1,11 +1,14 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:jengamate/models/payment_model.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/services/payment_service.dart';
-import 'package:jengamate/services/storage_service.dart';
+import 'package:jengamate/services/supabase_storage_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jengamate/models/enums/payment_enums.dart';
+import 'package:jengamate/utils/logger.dart'; // Import Logger
 
 class PaymentScreen extends StatefulWidget {
   final String orderId;
@@ -19,7 +22,32 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final AuthService _authService = AuthService();
   final PaymentService _paymentService = PaymentService();
-  final StorageService _storageService = StorageService();
+  // Use Supabase for storing payment proof images
+  final SupabaseStorageService _storageService = SupabaseStorageService(
+    supabaseClient: Supabase.instance.client,
+    bucket: 'payment_proofs',
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeSupabaseAuth();
+  }
+
+  Future<void> _initializeSupabaseAuth() async {
+    final firebaseUser = _authService.currentUser;
+    if (firebaseUser != null) {
+      final idToken = await firebaseUser.getIdToken();
+      if (idToken != null) {
+        try {
+          await _authService.signInSupabaseWithFirebaseToken(idToken);
+        } catch (e) {
+          Logger.logError('Failed to sign in Supabase with Firebase token', e);
+        }
+      }
+    }
+  }
+
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
@@ -68,34 +96,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
-    if (_paymentProofs.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please upload payment proof')),
-      );
-      return;
-    }
-
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Upload payment proof
-      final proofFile = _paymentProofs.first;
-      final proofBytes = await proofFile.readAsBytes();
-      final proofUrl = await _storageService.uploadImage(
-        bytes: proofBytes,
-        folder: 'payment_proofs/${widget.orderId}',
-        fileName: proofFile.name,
-      );
-
-
-      final userId = _authService.currentUser?.uid;
-      if (userId == null) {
+      // Get user ID from Firebase (always available if user is logged in)
+      final firebaseUser = _authService.currentUser;
+      if (firebaseUser == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('User not authenticated. Please log in again.')),
+            const SnackBar(content: Text('Please log in to make payment')),
           );
         }
         setState(() {
@@ -104,7 +115,44 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // Create payment
+      final userId = firebaseUser.uid; // Use Firebase user ID
+      String? proofUrl;
+
+      // Handle payment proof upload (optional if Supabase not authenticated)
+      if (_paymentProofs.isNotEmpty) {
+        try {
+          final supabaseUser = Supabase.instance.client.auth.currentUser;
+          if (supabaseUser == null) {
+            // Attempt to re-initialize Supabase auth
+            await _initializeSupabaseAuth();
+          }
+
+          // Check if Supabase auth worked
+          final currentSupabaseUser = Supabase.instance.client.auth.currentUser;
+          if (currentSupabaseUser != null) {
+            // Upload payment proof to Supabase
+            final proofFile = _paymentProofs.first;
+            final proofBytes = await proofFile.readAsBytes();
+            proofUrl = await _storageService.uploadFile(
+              fileName: proofFile.name,
+              folder: widget.orderId,
+              bytes: proofBytes,
+            );
+          } else {
+            // Supabase not authenticated - skip upload and log warning
+            Logger.logError(
+                'Payment proof upload skipped - Supabase not authenticated');
+            proofUrl = null; // Payment can proceed without proof
+          }
+        } catch (storageError) {
+          // Log but don't block payment submission
+          Logger.logError(
+              'Payment proof upload failed, continuing without proof: $storageError');
+          proofUrl = null;
+        }
+      }
+
+      // Create payment with or without proof URL
       final payment = PaymentModel(
         id: '',
         orderId: widget.orderId,
@@ -116,16 +164,28 @@ class _PaymentScreenState extends State<PaymentScreen> {
         paymentProofUrl: proofUrl,
         createdAt: DateTime.now(),
         completedAt: null,
-        metadata: {'notes': _notesController.text},
+        metadata: {
+          'notes': _notesController.text,
+          if (proofUrl == null && _paymentProofs.isNotEmpty)
+            'payment_proof_skipped': 'Supabase authentication failed',
+        },
       );
 
-      await _paymentService.createPayment(payment);
+      final paymentId = await _paymentService.createPayment(payment);
+      Logger.log('Payment created with ID: $paymentId');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment submitted successfully')),
-        );
-        Navigator.pop(context);
+        String successMessage;
+        if (proofUrl != null) {
+          successMessage = 'Payment submitted successfully with proof';
+        } else if (_paymentProofs.isNotEmpty) {
+          successMessage =
+              'Payment submitted successfully (proof upload skipped)';
+        } else {
+          successMessage = 'Payment submitted successfully';
+        }
+
+        Navigator.pop(context, successMessage); // Pass the message back
       }
     } catch (e) {
       if (mounted) {
@@ -310,20 +370,59 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             const SizedBox(height: 16),
             if (_paymentProofs.isNotEmpty)
-              Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    _paymentProofs.first.path,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  ),
-                ),
+              FutureBuilder<Uint8List?>(
+                future: _paymentProofs.first.readAsBytes(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: kIsWeb
+                            ? Image.memory(
+                                snapshot.data!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              )
+                            : Image.file(
+                                File(_paymentProofs.first.path),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              ),
+                      ),
+                    );
+                  } else if (snapshot.hasError) {
+                    return Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.red),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error, color: Colors.red, size: 48),
+                            SizedBox(height: 8),
+                            Text('Failed to load image'),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                },
               )
             else
               Container(

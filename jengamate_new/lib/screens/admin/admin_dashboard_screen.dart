@@ -165,7 +165,7 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
                     _buildHealthIndicator(
                       'System Status',
                       health['status'] == 'healthy' ? Colors.green : Colors.red,
-                      health['status']?.toString().toUpperCase() ?? 'UNKNOWN',
+                      (health['status']?.toString() ?? 'unknown').toUpperCase(),
                     ),
                     const SizedBox(width: 16),
                     _buildHealthIndicator(
@@ -212,28 +212,28 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
         final statCards = [
           {
             'title': 'Total Users',
-            'value': stats['totalUsers']?.toString() ?? '0',
+            'value': (stats['totalUsers'] ?? 0).toString(),
             'icon': Icons.people,
             'color': Colors.blue,
             'route': 4, // UserManagementScreen
           },
           {
             'title': 'Pending Documents',
-            'value': stats['pendingDocuments']?.toString() ?? '0',
+            'value': (stats['pendingDocuments'] ?? 0).toString(),
             'icon': Icons.verified_user,
             'color': Colors.orange,
             'route': 1, // DocumentVerificationScreen
           },
           {
             'title': 'Active RFQs',
-            'value': stats['activeRFQs']?.toString() ?? '0',
+            'value': (stats['activeRFQs'] ?? 0).toString(),
             'icon': Icons.request_quote,
             'color': Colors.green,
             'route': 3, // RFQManagementScreen
           },
           {
             'title': 'Flagged Content',
-            'value': stats['flaggedContent']?.toString() ?? '0',
+            'value': (stats['flaggedContent'] ?? 0).toString(),
             'icon': Icons.flag,
             'color': Colors.red,
             'route': 2, // ContentModerationScreen
@@ -347,7 +347,7 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
                           size: 20,
                         ),
                       ),
-                      title: Text(activity['description'] ?? 'No description'),
+                      title: Text(activity['description'] != null ? activity['description'].toString() : 'No description'),
                       subtitle: Text(
                         _formatDateTime(activity['timestamp']),
                       ),
@@ -396,22 +396,22 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
                     _buildHealthMetric(
                       'Database',
                       health['databaseStatus'] == 'healthy',
-                      health['databaseResponseTime']?.toString() ?? 'N/A',
+                      health['databaseResponseTime'] != null ? health['databaseResponseTime'].toString() : 'N/A',
                     ),
                     _buildHealthMetric(
                       'Authentication',
                       health['authStatus'] == 'healthy',
-                      health['authResponseTime']?.toString() ?? 'N/A',
+                      health['authResponseTime'] != null ? health['authResponseTime'].toString() : 'N/A',
                     ),
                     _buildHealthMetric(
                       'Storage',
                       health['storageStatus'] == 'healthy',
-                      health['storageUsage']?.toString() ?? 'N/A',
+                      health['storageUsage'] != null ? health['storageUsage'].toString() : 'N/A',
                     ),
                     _buildHealthMetric(
                       'API',
                       health['apiStatus'] == 'healthy',
-                      health['apiResponseTime']?.toString() ?? 'N/A',
+                      health['apiResponseTime'] != null ? health['apiResponseTime'].toString() : 'N/A',
                     ),
                   ],
                 );

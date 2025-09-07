@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/models/document_verification.dart';
+import 'package:jengamate/models/admin_user_activity.dart';
 import 'package:jengamate/services/admin_analytics_service.dart';
 import 'package:jengamate/widgets/advanced_filter_panel.dart';
 import 'package:jengamate/widgets/user_activity_timeline.dart';
@@ -9,13 +10,15 @@ class DocumentVerificationScreen extends StatefulWidget {
   const DocumentVerificationScreen({Key? key}) : super(key: key);
 
   @override
-  _DocumentVerificationScreenState createState() => _DocumentVerificationScreenState();
+  _DocumentVerificationScreenState createState() =>
+      _DocumentVerificationScreenState();
 }
 
-class _DocumentVerificationScreenState extends State<DocumentVerificationScreen> {
+class _DocumentVerificationScreenState
+    extends State<DocumentVerificationScreen> {
   final AdminAnalyticsService _analyticsService = AdminAnalyticsService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   Map<String, dynamic> _currentFilters = {};
   String _searchQuery = '';
   bool _isLoading = false;
@@ -114,25 +117,25 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
         final stats = [
           {
             'title': 'Total Documents',
-            'value': data['totalDocuments']?.toString() ?? '0',
+            'value': (data['totalDocuments'] ?? 0).toString(),
             'icon': Icons.description,
             'color': Colors.blue,
           },
           {
             'title': 'Pending',
-            'value': data['pendingDocuments']?.toString() ?? '0',
+            'value': (data['pendingDocuments'] ?? 0).toString(),
             'icon': Icons.pending,
             'color': Colors.orange,
           },
           {
             'title': 'Verified',
-            'value': data['verifiedDocuments']?.toString() ?? '0',
+            'value': (data['verifiedDocuments'] ?? 0).toString(),
             'icon': Icons.verified,
             'color': Colors.green,
           },
           {
             'title': 'Rejected',
-            'value': data['rejectedDocuments']?.toString() ?? '0',
+            'value': (data['rejectedDocuments'] ?? 0).toString(),
             'icon': Icons.cancel,
             'color': Colors.red,
           },
@@ -148,7 +151,8 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
-                        Icon(stat['icon'] as IconData, color: stat['color'] as Color),
+                        Icon(stat['icon'] as IconData,
+                            color: stat['color'] as Color),
                         const SizedBox(height: 8),
                         Text(
                           stat['value'] as String,
@@ -252,23 +256,28 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
   }
 
   Stream<QuerySnapshot> _getFilteredDocuments() {
-    Query query = FirebaseFirestore.instance.collection('document_verifications');
+    Query query =
+        FirebaseFirestore.instance.collection('document_verifications');
 
     // Apply filters
     if (_currentFilters['documentType'] != null) {
-      query = query.where('documentType', isEqualTo: _currentFilters['documentType']);
+      query = query.where('documentType',
+          isEqualTo: _currentFilters['documentType']);
     }
 
     if (_currentFilters['documentStatus'] != null) {
-      query = query.where('status', isEqualTo: _currentFilters['documentStatus']);
+      query =
+          query.where('status', isEqualTo: _currentFilters['documentStatus']);
     }
 
     if (_currentFilters['startDate'] != null) {
-      query = query.where('submittedAt', isGreaterThanOrEqualTo: _currentFilters['startDate']);
+      query = query.where('submittedAt',
+          isGreaterThanOrEqualTo: _currentFilters['startDate']);
     }
 
     if (_currentFilters['endDate'] != null) {
-      query = query.where('submittedAt', isLessThanOrEqualTo: _currentFilters['endDate']);
+      query = query.where('submittedAt',
+          isLessThanOrEqualTo: _currentFilters['endDate']);
     }
 
     return query.orderBy('submittedAt', descending: true).snapshots();
@@ -276,10 +285,10 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
 
   bool _matchesSearch(DocumentVerification document) {
     if (_searchQuery.isEmpty) return true;
-    
+
     return document.userName.toLowerCase().contains(_searchQuery) ||
-           document.userEmail.toLowerCase().contains(_searchQuery) ||
-           document.documentType.toLowerCase().contains(_searchQuery);
+        document.userEmail.toLowerCase().contains(_searchQuery) ||
+        document.documentType.toLowerCase().contains(_searchQuery);
   }
 
   IconData _getDocumentIcon(String documentType) {
@@ -453,7 +462,8 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Verify Document'),
-        content: Text('Are you sure you want to verify ${document.documentType} for ${document.userName}?'),
+        content: Text(
+            'Are you sure you want to verify ${document.documentType} for ${document.userName}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -485,9 +495,9 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
       await _analyticsService.logUserActivity(
         userId: document.userId,
         action: 'document_verified',
-        ipAddress: 'admin_panel',
-        userAgent: 'admin_dashboard',
         metadata: {
+          'ipAddress': 'admin_panel',
+          'userAgent': 'admin_dashboard',
           'documentType': document.documentType,
           'documentId': document.id,
         },
@@ -514,7 +524,8 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Are you sure you want to reject ${document.documentType} for ${document.userName}?'),
+            Text(
+                'Are you sure you want to reject ${document.documentType} for ${document.userName}?'),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
@@ -558,9 +569,9 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
       await _analyticsService.logUserActivity(
         userId: document.userId,
         action: 'document_rejected',
-        ipAddress: 'admin_panel',
-        userAgent: 'admin_dashboard',
         metadata: {
+          'ipAddress': 'admin_panel',
+          'userAgent': 'admin_dashboard',
           'documentType': document.documentType,
           'documentId': document.id,
           'rejectionReason': reasonController.text,
@@ -582,10 +593,8 @@ class _DocumentVerificationScreenState extends State<DocumentVerificationScreen>
   Future<void> _exportDocuments() async {
     try {
       setState(() => _isLoading = true);
-      
-      final csvData = await _analyticsService.exportDocumentsToCSV(
-        filters: _currentFilters,
-      );
+
+      final csvData = await _analyticsService.exportDocumentsToCSV();
 
       if (csvData.isNotEmpty) {
         // In a real app, you would save this to a file

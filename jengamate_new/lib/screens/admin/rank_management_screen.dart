@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/rank_model.dart';
 import 'package:jengamate/services/database_service.dart';
-import 'package:intl/intl.dart';
 
 class RankManagementScreen extends StatefulWidget {
   const RankManagementScreen({super.key});

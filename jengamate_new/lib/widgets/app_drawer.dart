@@ -5,7 +5,6 @@ import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:jengamate/utils/responsive.dart';
-import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/widgets/navigation_helper.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -175,18 +174,10 @@ class AppDrawer extends StatelessWidget {
 
           const Divider(),
 
-          // Admin section
+          // Admin section (removed Admin Tools from drawer)
           if (user?.role == UserRole.admin)
             Column(
               children: [
-                _buildDrawerItem(
-                  context,
-                  icon: Icons.admin_panel_settings,
-                  title: 'Admin Tools',
-                  onTap: () {
-                    context.go(AppRoutes.adminTools);
-                  },
-                ),
                 _buildDrawerItem(
                   context,
                   icon: Icons.analytics,

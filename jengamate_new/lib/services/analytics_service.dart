@@ -3,13 +3,11 @@ import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/models/product_model.dart';
 import 'package:jengamate/models/user_model.dart';
-import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/utils/logger.dart';
 import 'package:intl/intl.dart';
 
 class AnalyticsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final DatabaseService _databaseService = DatabaseService();
 
   // Revenue Analytics
   Future<Map<String, dynamic>> getRevenueAnalytics({
@@ -35,7 +33,7 @@ class AnalyticsService {
       for (var doc in ordersSnapshot.docs) {
         try {
           final order = OrderModel.fromFirestore(doc);
-          if (order.status == OrderStatus.completed.name) {
+          if (order.status == OrderStatus.completed) {
             totalRevenue += order.totalAmount;
             platformCommission += order.totalAmount * 0.1; // 10 platform fee
 
@@ -104,7 +102,7 @@ class AnalyticsService {
           totalUsers++;
 
           // Count by user type
-          final userType = (user.role ?? 'customer').toString();
+          final userType = user.role.name; // enum is non-nullable
           userTypes[userType] = (userTypes[userType] ?? 0) + 1;
 
           // Check if user is new
@@ -242,7 +240,7 @@ class AnalyticsService {
       for (var orderDoc in ordersSnapshot.docs) {
         try {
           final order = OrderModel.fromFirestore(orderDoc);
-          if (order.status == OrderStatus.completed.name) {
+          if (order.status == OrderStatus.completed) {
             for (var item in order.items) {
               final productSnapshot = await _firestore
                   .collection('products')

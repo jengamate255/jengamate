@@ -33,9 +33,9 @@ class _FilterDialogState extends State<FilterDialog> {
     super.initState();
     _isHot = widget.initialIsHot;
     _minPriceController =
-        TextEditingController(text: widget.initialMinPrice?.toString() ?? '');
+        TextEditingController(text: widget.initialMinPrice != null ? widget.initialMinPrice.toString() : '');
     _maxPriceController =
-        TextEditingController(text: widget.initialMaxPrice?.toString() ?? '');
+        TextEditingController(text: widget.initialMaxPrice != null ? widget.initialMaxPrice.toString() : '');
     _selectedCategory = widget.initialCategory;
   }
 

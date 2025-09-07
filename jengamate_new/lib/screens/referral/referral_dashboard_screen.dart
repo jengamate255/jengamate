@@ -237,9 +237,9 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
       SizedBox(width: spacing, height: spacing),
       _buildStatCard('Active Referrals', _activeReferrals.toString(), Icons.check_circle, Colors.green),
       SizedBox(width: spacing, height: spacing),
-      _buildStatCard('Total Earnings', '\$${_totalEarnings.toStringAsFixed(2)}', Icons.account_balance_wallet, Colors.purple),
+      _buildStatCard('Total Earnings', 'TSH ${_totalEarnings.toStringAsFixed(0)}', Icons.account_balance_wallet, Colors.purple),
       SizedBox(width: spacing, height: spacing),
-      _buildStatCard('Pending Earnings', '\$${_pendingEarnings.toStringAsFixed(2)}', Icons.pending, Colors.orange),
+      _buildStatCard('Pending Earnings', 'TSH ${_pendingEarnings.toStringAsFixed(0)}', Icons.pending, Colors.orange),
     ];
   }
 
@@ -324,11 +324,11 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
         leading: CircleAvatar(
           backgroundColor: statusColor.withValues(alpha: 0.2),
           child: Text(
-            (user.firstName?.isNotEmpty == true ? user.firstName![0] : 'U').toUpperCase(),
+            (user.firstName.isNotEmpty == true ? user.firstName[0] : 'U').toUpperCase(),
             style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
           ),
         ),
-        title: Text('${user.firstName ?? 'Unknown'} ${user.lastName ?? 'User'}'),
+        title: Text('${user.firstName} ${user.lastName}'),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -341,7 +341,7 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              '\$${referral.bonusAmount.toStringAsFixed(2)}',
+              'TSH ${referral.bonusAmount.toStringAsFixed(0)}',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: statusColor,
@@ -390,7 +390,7 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
             const SizedBox(height: 16),
             _buildInfoItem('1. Share your referral code with friends'),
             _buildInfoItem('2. They sign up using your code'),
-            _buildInfoItem('3. You earn \$25 when they make their first purchase'),
+            _buildInfoItem('3. You earn TSH 25,000 when they make their first purchase'),
             _buildInfoItem('4. They get a 10% discount on their first order'),
             const SizedBox(height: 16),
             Container(

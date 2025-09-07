@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jengamate/models/order_status.dart';
+import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/services/database_service.dart';
 
@@ -28,7 +28,7 @@ class _TrackingUpdateDialogState extends State<TrackingUpdateDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Order ID: ${widget.order.id}'),
+          Text('Order ID: ${widget.order.uid}'),
           const SizedBox(height: 16),
           DropdownButtonFormField<OrderStatus>(
             value: _selectedStatus,

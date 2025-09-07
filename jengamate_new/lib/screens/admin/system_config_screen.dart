@@ -87,7 +87,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
-        initialValue: _config[key]?.toString() ?? '',
+        initialValue: _config[key] != null ? _config[key].toString() : '',
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,

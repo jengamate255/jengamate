@@ -7,7 +7,7 @@ class AdminUserActivity {
   final DateTime timestamp;
   final String ipAddress;
   final String userAgent;
-  final Map<String, dynamic> metadata;
+  final Map<String, dynamic>? metadata;
 
   AdminUserActivity({
     required this.id,
@@ -16,24 +16,26 @@ class AdminUserActivity {
     required this.timestamp,
     required this.ipAddress,
     required this.userAgent,
-    required this.metadata,
+    this.metadata,
   });
 
-  factory AdminUserActivity.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory AdminUserActivity.fromMap(Map<String, dynamic> map) {
     return AdminUserActivity(
-      id: doc.id,
-      userId: data['userId'] ?? '',
-      action: data['action'] ?? '',
-      timestamp: (data['timestamp'] as Timestamp).toDate(),
-      ipAddress: data['ipAddress'] ?? '',
-      userAgent: data['userAgent'] ?? '',
-      metadata: Map<String, dynamic>.from(data['metadata'] ?? {}),
+      id: map['id'] ?? '',
+      userId: map['userId'] ?? '',
+      action: map['action'] ?? '',
+      timestamp: map['timestamp'] is Timestamp
+          ? map['timestamp'].toDate()
+          : DateTime.now(),
+      ipAddress: map['ipAddress'] ?? '',
+      userAgent: map['userAgent'] ?? '',
+      metadata: map['metadata'] as Map<String, dynamic>?,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'userId': userId,
       'action': action,
       'timestamp': Timestamp.fromDate(timestamp),
@@ -41,25 +43,5 @@ class AdminUserActivity {
       'userAgent': userAgent,
       'metadata': metadata,
     };
-  }
-
-  AdminUserActivity copyWith({
-    String? id,
-    String? userId,
-    String? action,
-    DateTime? timestamp,
-    String? ipAddress,
-    String? userAgent,
-    Map<String, dynamic>? metadata,
-  }) {
-    return AdminUserActivity(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      action: action ?? this.action,
-      timestamp: timestamp ?? this.timestamp,
-      ipAddress: ipAddress ?? this.ipAddress,
-      userAgent: userAgent ?? this.userAgent,
-      metadata: metadata ?? this.metadata,
-    );
   }
 }

@@ -104,10 +104,10 @@ class CommissionTiersScreen extends StatelessWidget {
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final badgeTextCtrl = TextEditingController(text: existing?.badgeText ?? '');
     final badgeColorCtrl = TextEditingController(text: existing?.badgeColor ?? 'bronze');
-    final minProductsCtrl = TextEditingController(text: existing?.minProducts.toString() ?? '0');
-    final minTotalValueCtrl = TextEditingController(text: existing?.minTotalValue.toString() ?? '0');
-    final ratePercentCtrl = TextEditingController(text: existing?.ratePercent.toString() ?? '0.02');
-    final orderCtrl = TextEditingController(text: existing?.order.toString() ?? '0');
+    final minProductsCtrl = TextEditingController(text: (existing?.minProducts ?? 0).toString());
+    final minTotalValueCtrl = TextEditingController(text: (existing?.minTotalValue ?? 0).toString());
+    final ratePercentCtrl = TextEditingController(text: (existing?.ratePercent ?? 0.02).toString());
+    final orderCtrl = TextEditingController(text: (existing?.order ?? 0).toString());
 
     await showDialog(
       context: context,

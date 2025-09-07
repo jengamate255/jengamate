@@ -10,11 +10,12 @@ import '../../models/order_model.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/error_display.dart';
 import '../chat/chat_screen.dart';
-import '../../services/auth_service.dart';
+import 'package:jengamate/services/auth_service.dart';
+import 'package:jengamate/services/invoice_service.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
-import 'order_payment_screen.dart';
+import 'package:jengamate/screens/order/invoice_details_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -78,15 +79,51 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   if (isCurrentUserBuyer)
                     Center(
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OrderPaymentScreen(orderId: order.id ?? ''),
-                            ),
-                          );
+                        onPressed: () async {
+                          final invoiceService = Provider.of<InvoiceService>(context, listen: false);
+                          try {
+                            // Show loading indicator
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext context) {
+                                return const Center(child: CircularProgressIndicator());
+                              },
+                            );
+                            
+                            // Check if invoice exists for this order
+                            final invoice = await invoiceService.getInvoiceByOrderId(order.id ?? '');
+                            
+                            // Close loading dialog
+                            Navigator.of(context).pop();
+                            
+                            if (invoice != null) {
+                              // Navigate to invoice details
+                              if (!mounted) return;
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => InvoiceDetailsScreen(orderId: order.id ?? ''),
+                                ),
+                              );
+                            } else {
+                              // If no invoice exists, show a message
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('No invoice found for this order.')),
+                              );
+                            }
+                          } catch (e) {
+                            // Close loading dialog if there's an error
+                            if (mounted) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error loading invoice: $e')),
+                              );
+                            }
+                          }
                         },
-                        icon: const Icon(Icons.payment),
+                        icon: const Icon(Icons.receipt_long),
                         label: const Text('View Invoice'),
                       ),
                     ),

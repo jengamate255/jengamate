@@ -1,6 +1,5 @@
 import 'package:jengamate/models/system_config_model.dart';
 import 'package:flutter/material.dart';
-import 'package:jengamate/models/system_config_model.dart';
 import 'package:jengamate/services/database_service.dart';
 
 class SystemConfigurationScreen extends StatefulWidget {

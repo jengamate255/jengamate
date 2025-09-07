@@ -6,6 +6,9 @@ class OrderModel {
   final String? id;
   final String customerId;
   final String customerName;
+  final String customerEmail; // Added
+  final String? customerPhone; // Added
+  final String? deliveryAddress; // Added
   final String supplierId;
   final String supplierName;
   final List<OrderItem> items;
@@ -35,6 +38,9 @@ class OrderModel {
     this.id,
     required this.customerId,
     required this.customerName,
+    required this.customerEmail, // Added
+    this.customerPhone, // Added
+    this.deliveryAddress, // Added
     required this.supplierId,
     required this.supplierName,
     required this.items,
@@ -70,9 +76,12 @@ class OrderModel {
     return OrderModel(
       id: docId ?? map['id'],
       customerId: map['customerId'] ?? '',
-      customerName: map['customerName'] ?? 'Unknown Customer',
+      customerName: map['customerName'] ?? 'Customer',
+      customerEmail: map['customerEmail'] ?? '', // Added
+      customerPhone: map['customerPhone'], // Added
+      deliveryAddress: map['deliveryAddress'], // Added
       supplierId: map['supplierId'] ?? '',
-      supplierName: map['supplierName'] ?? 'Unknown Supplier',
+      supplierName: map['supplierName'] ?? 'Supplier',
       items: (map['items'] as List<dynamic>?)
               ?.map((item) => OrderItem.fromMap(item as Map<String, dynamic>))
               .toList() ??
@@ -115,7 +124,8 @@ class OrderModel {
     return OrderStatus.pending;
   }
 
-  static DateTime _parseTimestamp(dynamic timestamp, {bool fallbackToNow = true}) {
+  static DateTime _parseTimestamp(dynamic timestamp,
+      {bool fallbackToNow = true}) {
     if (timestamp is Timestamp) {
       return timestamp.toDate();
     }
@@ -141,6 +151,9 @@ class OrderModel {
     return {
       'customerId': customerId,
       'customerName': customerName,
+      'customerEmail': customerEmail, // Added
+      'customerPhone': customerPhone, // Added
+      'deliveryAddress': deliveryAddress, // Added
       'supplierId': supplierId,
       'supplierName': supplierName,
       'items': items.map((item) => item.toMap()).toList(),
@@ -173,9 +186,11 @@ class OrderModel {
   }
 
   OrderModel copyWith({
-    String? id,
     String? customerId,
     String? customerName,
+    String? customerEmail,
+    String? customerPhone,
+    String? deliveryAddress,
     String? supplierId,
     String? supplierName,
     List<OrderItem>? items,
@@ -203,6 +218,9 @@ class OrderModel {
       id: id ?? this.id,
       customerId: customerId ?? this.customerId,
       customerName: customerName ?? this.customerName,
+      customerEmail: customerEmail ?? this.customerEmail,
+      customerPhone: customerPhone ?? this.customerPhone,
+      deliveryAddress: deliveryAddress ?? this.deliveryAddress,
       supplierId: supplierId ?? this.supplierId,
       supplierName: supplierName ?? this.supplierName,
       items: items ?? this.items,

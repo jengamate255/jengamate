@@ -27,6 +27,9 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   final TextEditingController _searchController = TextEditingController();
   final int _pageSize = 50;
   DocumentSnapshot? _lastDocument;
+  // Currency formatter for Tanzanian Shilling (TSH)
+  final NumberFormat _tzsFormatter =
+      NumberFormat.currency(locale: 'en_TZ', symbol: 'TSH ', decimalDigits: 2);
 
   @override
   void initState() {
@@ -187,7 +190,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
         final searchTerm = _searchController.text.toLowerCase().trim();
         if (searchTerm.isEmpty) return true;
 
-        return transaction.description?.toLowerCase().contains(searchTerm) ==
+        return transaction.description.toLowerCase().contains(searchTerm) ==
                 true ||
             transaction.id.toLowerCase().contains(searchTerm) ||
             transaction.referenceNumber?.toLowerCase().contains(searchTerm) ==
@@ -309,8 +312,25 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
 
   Widget _buildSummaryCard(
       String title, double amount, Color color, IconData icon) {
-    return Card(
-      elevation: Responsive.getResponsiveElevation(context),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withValues(alpha: 0.08),
+            Colors.white,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
       child: Padding(
         padding: Responsive.getResponsivePadding(context),
         child: Column(
@@ -318,10 +338,18 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  icon,
-                  color: color,
-                  size: Responsive.getResponsiveIconSize(context),
+                Container(
+                  height: 36,
+                  width: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 20,
+                  ),
                 ),
                 SizedBox(width: Responsive.getResponsiveSpacing(context)),
                 Expanded(
@@ -330,6 +358,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontSize: Responsive.getResponsiveFontSize(context,
                               mobile: 12, tablet: 14, desktop: 16),
+                          color: Colors.black87,
                         ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -338,7 +367,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
             ),
             SizedBox(height: Responsive.getResponsiveSpacing(context)),
             Text(
-              '\$${amount.toStringAsFixed(2)}',
+              _tzsFormatter.format(amount),
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: color,
                     fontWeight: FontWeight.bold,
@@ -516,7 +545,7 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              '${isIncome ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}',
+              _formatSignedAmount(transaction, isIncome: isIncome, color: color),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
@@ -638,16 +667,14 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow('ID', transaction.id),
-            _buildDetailRow(
-                'Amount', '\$${transaction.amount.toStringAsFixed(2)}'),
+            _buildDetailRow('Amount', _tzsFormatter.format(transaction.amount)),
             _buildDetailRow(
                 'Type', transaction.type.toString().split('.').last),
             _buildDetailRow(
                 'Status', transaction.status.toString().split('.').last),
             _buildDetailRow('Date',
                 DateFormat('MMM dd, yyyy HH:mm').format(transaction.createdAt)),
-            if (transaction.description != null)
-              _buildDetailRow('Description', transaction.description!),
+            _buildDetailRow('Description', transaction.description),
             if (transaction.referenceNumber != null)
               _buildDetailRow('Reference', transaction.referenceNumber!),
           ],
@@ -685,5 +712,13 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  // Helpers
+  String _formatSignedAmount(FinancialTransactionModel t,
+      {required bool isIncome, required Color color}) {
+    final formatted = _tzsFormatter.format(t.amount.abs());
+    final sign = isIncome ? '+' : '-';
+    return '$sign$formatted';
   }
 }

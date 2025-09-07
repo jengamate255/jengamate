@@ -1,0 +1,12 @@
+[build]
+  command = "flutter pub get && flutter build web --release"
+  publish = "build/web"
+
+[build.environment]
+  FLUTTER_ROOT = "/opt/hostedtoolcache/flutter/stable-3.16.9-stable/x64"
+  PUB_CACHE = "/opt/hostedtoolcache/flutter/stable-3.16.9-stable/x64/.pub-cache"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

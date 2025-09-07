@@ -122,8 +122,8 @@ class QuoteReviewScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(
-      BuildContext context, DatabaseService dbService, OrderService orderService) {
+  Widget _buildActionButtons(BuildContext context, DatabaseService dbService,
+      OrderService orderService) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
@@ -290,8 +290,8 @@ class QuoteReviewScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmQuote(
-      BuildContext context, DatabaseService dbService, OrderService orderService) async {
+  Future<void> _confirmQuote(BuildContext context, DatabaseService dbService,
+      OrderService orderService) async {
     // Create a local variable to hold the quote that might be updated
     QuoteModel currentQuote = quote;
 
@@ -400,6 +400,7 @@ class QuoteReviewScreen extends StatelessWidget {
         customerName: '',
         supplierId: currentQuote.supplierId ?? '',
         supplierName: '',
+        customerEmail: '',
         items: [
           OrderItem(
             productId: rfq.productId,

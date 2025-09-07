@@ -11,7 +11,9 @@ import 'package:jengamate/ui/design_system/components/jm_button.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.returnRoute});
+
+  final String? returnRoute;
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -73,8 +75,23 @@ class _LoginScreenState extends State<LoginScreen> {
           print('Failed to create login audit log: $e');
         }
 
-        // Successful login - navigate to dashboard. The StreamProvider will handle the user data.
-        context.go(AppRoutes.dashboard);
+        // Successful login - navigate to the return route if provided, otherwise to dashboard
+        if (widget.returnRoute != null && widget.returnRoute!.isNotEmpty) {
+          try {
+            // Try to navigate to the return route
+            context.go(widget.returnRoute!);
+          } catch (e) {
+            // If navigation fails, fall back to dashboard
+            if (mounted) {
+              context.go(AppRoutes.dashboard);
+            }
+          }
+        } else {
+          // Default to dashboard if no return route
+          if (mounted) {
+            context.go(AppRoutes.dashboard);
+          }
+        }
       } else {
         // This case should not happen with proper error handling in auth service
         ScaffoldMessenger.of(context).showSnackBar(

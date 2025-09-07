@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/commission_model.dart';
 import 'package:jengamate/services/database_service.dart';
-import 'package:intl/intl.dart';
 
 class CommissionSettingsScreen extends StatefulWidget {
   const CommissionSettingsScreen({super.key});
@@ -58,9 +57,10 @@ class _CommissionSettingsScreenState extends State<CommissionSettingsScreen> {
 
   Future<void> _loadCommissionSettings() async {
     try {
-      final settings = await _databaseService
-          .getCommissionRules(); // Reusing CommissionModel for settings
-      if (settings != null) {
+      final list = await _databaseService
+          .getCommissionRules(); // returns a list; use first as settings
+      if (list.isNotEmpty) {
+        final settings = list.first;
         setState(() {
           // Referral
           _directCommissionPercentageController.text =

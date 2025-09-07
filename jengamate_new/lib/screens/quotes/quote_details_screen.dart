@@ -21,8 +21,8 @@ class QuoteDetailsScreen extends StatelessWidget {
       ),
       body: FutureBuilder<List<UserModel?>>(
         future: Future.wait([
-          dbService.getUser(rfq.userId),
-          dbService.getUser(quote.supplierId),
+          dbService.getUser(rfq.userId ?? ''),
+          dbService.getUser(quote.supplierId ?? ''),
         ]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

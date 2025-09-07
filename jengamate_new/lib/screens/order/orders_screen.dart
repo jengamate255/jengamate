@@ -8,7 +8,6 @@ import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:jengamate/utils/theme.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});

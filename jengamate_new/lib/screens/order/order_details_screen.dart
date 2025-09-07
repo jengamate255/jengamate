@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/models/payment_model.dart';
+import 'package:jengamate/models/invoice_model.dart';
 import 'package:jengamate/services/order_service.dart';
+import 'package:jengamate/services/console_error_handler.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/models/enums/payment_enums.dart';
 import 'payment_screen.dart';
@@ -24,20 +26,21 @@ class OrderDetailsScreen extends StatefulWidget {
 }
 
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
-  final OrderService _orderService = OrderService();
+  late final OrderService _orderService;
   late Future<OrderModel?> _orderFuture;
   late Stream<List<PaymentModel>> _paymentsStream;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _orderService = Provider.of<OrderService>(context, listen: false);
     _loadOrder();
     _paymentsStream = _orderService.streamOrderPayments(widget.orderId);
   }
 
   void _loadOrder() {
     setState(() {
-      _orderFuture = _orderService.getOrderById(widget.orderId);
+      _orderFuture = _orderService.getOrderWithItems(widget.orderId);
     });
   }
 
@@ -102,7 +105,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Order #${order.id?.substring(0, 8) ?? ''}',
+                  'Order #${order.id != null && order.id!.length >= 8 ? order.id!.substring(0, 8) : order.id ?? ''}',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -184,18 +187,120 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Order Items',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Order Items (${order.items.length})',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                // Removed total amount display from order items to reduce redundancy
+              ],
             ),
             const SizedBox(height: JMSpacing.md),
-            // This would typically show actual items
-            // For now, showing a placeholder
-            ListTile(
-              title: const Text('Order Items'),
-              subtitle:
-                  Text('Total: TSH ${order.totalAmount.toStringAsFixed(2)}'),
-            ),
+            if (order.items.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(JMSpacing.lg),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.inventory, size: 48, color: Colors.grey),
+                      const SizedBox(height: JMSpacing.md),
+                      Text(
+                        'No items found in this order',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: JMSpacing.sm),
+                      Text(
+                        'Attempting to populate items from associated quotation...',
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: order.items.length,
+                itemBuilder: (context, index) {
+                  final item = order.items[index];
+                  final lineTotal = item.quantity * item.price;
+
+                  return Container(
+                    margin: EdgeInsets.only(
+                      bottom: index < order.items.length - 1 ? JMSpacing.sm : 0,
+                    ),
+                    padding: const EdgeInsets.all(JMSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Product Icon (placeholder)
+                        CircleAvatar(
+                          backgroundColor: Colors.blue.shade100,
+                          radius: 20,
+                          child: Text(
+                            item.productName.isNotEmpty
+                                ? item.productName[0].toUpperCase()
+                                : 'P',
+                            style: const TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: JMSpacing.md),
+                        // Product Details
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.productName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Quantity: ${item.quantity}',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade700,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  // Removed individual item price to reduce redundancy
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Line Total (removed to reduce price display redundancy)
+                      ],
+                    ),
+                  );
+                },
+              ),
           ],
         ),
       ),
@@ -478,23 +583,145 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     try {
       final orderId = order.id;
       if (orderId == null) {
+        print('❌ ERROR: Order ID is null');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Order ID is missing.')),
         );
         return;
       }
-      final invoice = await invoiceService.getInvoiceByOrderId(orderId);
-      if (invoice != null && mounted) {
-        context.push(AppRouteBuilders.invoiceDetailsPath(invoice.id));
+
+      print('🔍 Checking for existing invoice for order: $orderId');
+
+      // First, try to get existing invoice
+      InvoiceModel? invoice = await invoiceService.getInvoiceByOrderId(orderId);
+
+      // If no invoice exists, create one automatically
+      if (invoice == null) {
+        print('📄 No invoice found, creating new invoice...');
+        final createdInvoice = await _createInvoiceForOrder(order);
+        if (createdInvoice == null) {
+          print('❌ ERROR: _createInvoiceForOrder returned null');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Failed to create invoice for this order.')),
+          );
+          return;
+        }
+
+        // Ensure we have the ID from the created invoice
+        final invoiceId = createdInvoice.id;
+        print('📋 Created invoice ID: $invoiceId');
+        if (invoiceId == null || invoiceId.isEmpty) {
+          print('❌ ERROR: Invoice created but ID is null or empty');
+          print('   Invoice object: ${createdInvoice.toString()}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text(
+                    'Invoice created but ID is missing. Please refresh and try again.')),
+          );
+          return;
+        }
+
+        print('✅ Navigating to invoice: $invoiceId');
+        if (mounted) {
+          context.push(AppRouteBuilders.invoiceDetailsPath(invoiceId));
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invoice not found for this order.')),
-        );
+        // Invoice already exists, ensure it has a valid ID
+        final invoiceId = invoice.id;
+        print('📋 Found existing invoice ID: $invoiceId');
+        if (invoiceId == null || invoiceId.isEmpty) {
+          print('❌ ERROR: Existing invoice found but ID is null or empty');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invoice found but ID is invalid.')),
+          );
+          return;
+        }
+
+        print('✅ Navigating to existing invoice: $invoiceId');
+        if (mounted) {
+          context.push(AppRouteBuilders.invoiceDetailsPath(invoiceId));
+        }
       }
     } catch (e) {
+      print('❌ ERROR in _navigateToInvoice: $e');
+      print('   Stack trace: ${StackTrace.current}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to retrieve invoice: $e')),
       );
+    }
+  }
+
+  Future<InvoiceModel?> _createInvoiceForOrder(OrderModel order) async {
+    final invoiceService = Provider.of<InvoiceService>(context, listen: false);
+
+    try {
+      // Create invoice item using total amount from payment summary
+      ConsoleErrorHandler.logInfo(
+          'Creating invoice using total amount from payment summary: ${order.totalAmount}');
+
+      // Ensure we have a valid total amount
+      final totalAmount = order.totalAmount > 0
+          ? order.totalAmount
+          : 1000.0; // Fallback to 1000.0 if 0
+
+      // Create invoice items from order items or use total as fallback
+      final invoiceItems = order.items.isNotEmpty
+          // Use actual order items if available
+          ? order.items
+              .map((item) => InvoiceItem(
+                    id: '',
+                    description: item.productName.isNotEmpty
+                        ? item.productName
+                        : 'Order Item',
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                    productId: item.productId,
+                  ))
+              .toList()
+          // Fallback to single total item
+          : [
+              InvoiceItem(
+                id: '',
+                description: 'Order Services - Total Amount',
+                quantity: 1,
+                unitPrice: totalAmount,
+                productId: null,
+              ),
+            ];
+
+      ConsoleErrorHandler.logInfo(
+          'Invoice created with ${invoiceItems.length} items, total: $totalAmount');
+
+      // Create the invoice
+      final invoice = InvoiceModel(
+        id: '',
+        orderId: order.id!,
+        invoiceNumber:
+            'INV-${order.id != null && order.id!.length >= 8 ? order.id!.substring(0, 8).toUpperCase() : order.id!.toUpperCase()}',
+        customerId: order.customerId,
+        customerName: order.customerName,
+        customerEmail: order.customerEmail,
+        customerPhone: order.customerPhone,
+        customerAddress: order.deliveryAddress,
+        issueDate: DateTime.now(),
+        dueDate: DateTime.now().add(const Duration(days: 30)),
+        items: invoiceItems,
+        taxRate: 0, // No tax
+        discountAmount: 0, // No discount
+        status: 'sent',
+        paymentTerms: 30,
+        notes: order.notes ?? 'Thank you for your business!',
+      );
+
+      // Save the invoice
+      final createdInvoice = await invoiceService.createInvoice(invoice);
+      print('Created invoice ID: ${createdInvoice.id}');
+      print('Created invoice orderId: ${createdInvoice.orderId}');
+      return createdInvoice;
+    } catch (e) {
+      print('Error creating invoice: $e');
+      return null;
     }
   }
 

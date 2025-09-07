@@ -4,18 +4,20 @@ import 'package:jengamate/models/content_moderation.dart';
 import 'package:jengamate/services/admin_analytics_service.dart';
 import 'package:jengamate/widgets/advanced_filter_panel.dart';
 import 'package:jengamate/widgets/user_activity_timeline.dart';
+import 'package:jengamate/models/admin_user_activity.dart';
 
 class ContentModerationScreen extends StatefulWidget {
   const ContentModerationScreen({Key? key}) : super(key: key);
 
   @override
-  _ContentModerationScreenState createState() => _ContentModerationScreenState();
+  _ContentModerationScreenState createState() =>
+      _ContentModerationScreenState();
 }
 
 class _ContentModerationScreenState extends State<ContentModerationScreen> {
   final AdminAnalyticsService _analyticsService = AdminAnalyticsService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   Map<String, dynamic> _currentFilters = {};
   String _searchQuery = '';
   bool _isLoading = false;
@@ -148,7 +150,8 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
-                        Icon(stat['icon'] as IconData, color: stat['color'] as Color),
+                        Icon(stat['icon'] as IconData,
+                            color: stat['color'] as Color),
                         const SizedBox(height: 8),
                         Text(
                           stat['value'] as String,
@@ -262,19 +265,23 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
 
     // Apply filters
     if (_currentFilters['contentType'] != null) {
-      query = query.where('contentType', isEqualTo: _currentFilters['contentType']);
+      query =
+          query.where('contentType', isEqualTo: _currentFilters['contentType']);
     }
 
     if (_currentFilters['contentStatus'] != null) {
-      query = query.where('status', isEqualTo: _currentFilters['contentStatus']);
+      query =
+          query.where('status', isEqualTo: _currentFilters['contentStatus']);
     }
 
     if (_currentFilters['startDate'] != null) {
-      query = query.where('createdAt', isGreaterThanOrEqualTo: _currentFilters['startDate']);
+      query = query.where('createdAt',
+          isGreaterThanOrEqualTo: _currentFilters['startDate']);
     }
 
     if (_currentFilters['endDate'] != null) {
-      query = query.where('createdAt', isLessThanOrEqualTo: _currentFilters['endDate']);
+      query = query.where('createdAt',
+          isLessThanOrEqualTo: _currentFilters['endDate']);
     }
 
     return query.orderBy('createdAt', descending: true).snapshots();
@@ -282,11 +289,11 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
 
   bool _matchesSearch(ContentModeration content) {
     if (_searchQuery.isEmpty) return true;
-    
+
     return content.title.toLowerCase().contains(_searchQuery) ||
-           content.authorName.toLowerCase().contains(_searchQuery) ||
-           content.content.toLowerCase().contains(_searchQuery) ||
-           content.tags.any((tag) => tag.toLowerCase().contains(_searchQuery));
+        content.authorName.toLowerCase().contains(_searchQuery) ||
+        content.content.toLowerCase().contains(_searchQuery) ||
+        content.tags.any((tag) => tag.toLowerCase().contains(_searchQuery));
   }
 
   IconData _getContentIcon(String contentType) {
@@ -627,9 +634,9 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
       await _analyticsService.logUserActivity(
         userId: content.authorId,
         action: 'content_rejected',
-        ipAddress: 'admin_panel',
-        userAgent: 'admin_dashboard',
         metadata: {
+          'ipAddress': 'admin_panel',
+          'userAgent': 'admin_dashboard',
           'contentType': content.contentType,
           'contentId': content.id,
           'rejectionReason': reasonController.text,
@@ -701,9 +708,9 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
       await _analyticsService.logUserActivity(
         userId: content.authorId,
         action: 'content_flagged',
-        ipAddress: 'admin_panel',
-        userAgent: 'admin_dashboard',
         metadata: {
+          'ipAddress': 'admin_panel',
+          'userAgent': 'admin_dashboard',
           'contentType': content.contentType,
           'contentId': content.id,
           'flaggedReason': reasonController.text,
@@ -725,10 +732,8 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
   Future<void> _exportContent() async {
     try {
       setState(() => _isLoading = true);
-      
-      final csvData = await _analyticsService.exportContentToCSV(
-        filters: _currentFilters,
-      );
+
+      final csvData = await _analyticsService.exportContentToCSV();
 
       if (csvData.isNotEmpty) {
         // In a real app, you would save this to a file

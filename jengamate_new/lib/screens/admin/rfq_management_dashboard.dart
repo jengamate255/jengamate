@@ -6,7 +6,6 @@ import 'package:jengamate/services/reporting_service.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/config/app_routes.dart';
-import 'package:jengamate/utils/theme.dart';
 import 'package:jengamate/utils/logger.dart';
 import 'dart:async';
 

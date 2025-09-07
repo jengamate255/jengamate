@@ -67,10 +67,10 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                       const SizedBox(height: 8),
                       Text(
                           'Date: ${DateFormat.yMd().format(payment.createdAt)}'),
-                      Text('Method: ${payment.method.name}'),
-                      if (payment.referenceNumber != null)
-                        Text('Reference: ${payment.referenceNumber}'),
-                      if (payment.proofUrl != null)
+                      Text('Method: ${payment.paymentMethod}'),
+                      if (payment.transactionId != null)
+                        Text('Reference: ${payment.transactionId}'),
+                      if (payment.paymentProofUrl != null)
                         TextButton(
                           onPressed: () {
                             // TODO: Implement view proof of payment

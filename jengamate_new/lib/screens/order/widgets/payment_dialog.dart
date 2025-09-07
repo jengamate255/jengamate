@@ -127,16 +127,17 @@ class _PaymentDialogState extends State<PaymentDialog> {
                   ...(currentOrder.metadata ?? {}),
                   'paymentMethod': 'Bank Transfer',
                   'bankTransferReference': _referenceController.text.trim(),
-                },
-                status: OrderStatus.processing,
-                paymentProofs: [
-                  ...((currentOrder.paymentProofs) ?? []),
                   if (proofOfPaymentUrl != null)
-                    {
+                    'lastPaymentProof': {
                       'url': proofOfPaymentUrl,
                       'uploadedAt': DateTime.now().toIso8601String(),
                       'fileName': _pickedFile?.name,
                     },
+                },
+                status: OrderStatus.processing,
+                paymentProofs: [
+                  ...((currentOrder.paymentProofs) ?? []),
+                  if (proofOfPaymentUrl != null) proofOfPaymentUrl,
                 ],
               );
               await _dbService.updateOrder(updatedOrder);

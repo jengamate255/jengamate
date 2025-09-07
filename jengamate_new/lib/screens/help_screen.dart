@@ -1,18 +1,65 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:jengamate/ui/design_system/components/responsive_wrapper.dart' hide AdaptivePadding;
+import 'package:flutter/services.dart';
+import 'package:jengamate/ui/design_system/components/responsive_wrapper.dart'
+    hide AdaptivePadding;
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
-import 'package:jengamate/ui/design_system/components/jm_button.dart';
 
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
 
+  static const String _supportEmail = 'support@jengamate.com';
+  static const String _supportPhone = '+254700000000';
+  static const String _supportPhoneDisplay = '+254 700 000 000';
+  static const String _supportWhatsApp = '254700000000';
+
+  Future<void> _showCopyDialog(
+      BuildContext context, String title, String content) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                const Text(
+                    'Could not open the application. You can copy the details below:'),
+                const SizedBox(height: JMSpacing.sm),
+                SelectableText(content),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('COPY'),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: content));
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$title copied to clipboard')),
+                );
+              },
+            ),
+            TextButton(
+              child: const Text('CLOSE'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _launchEmail(BuildContext context) async {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
-      path: 'support@jengamate.com',
+      path: _supportEmail,
       query: 'subject=Support Request&body=Please describe your issue here.',
     );
 
@@ -23,12 +70,20 @@ class HelpScreen extends StatelessWidget {
             content: Text('Could not launch email client.'),
           ),
         );
+        if (kIsWeb) {
+          _showCopyDialog(context, 'Email Address', _supportEmail);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch email client.')),
+          );
+        }
       }
     }
   }
 
   Future<void> _launchWhatsApp(BuildContext context) async {
-    final Uri whatsappUri = Uri.parse('https://wa.me/254700000000?text=Hello, I need help with JengaMate');
+    final Uri whatsappUri = Uri.parse(
+        'https://wa.me/$_supportWhatsApp?text=Hello, I need help with JengaMate');
 
     if (!await launchUrl(whatsappUri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
@@ -37,12 +92,19 @@ class HelpScreen extends StatelessWidget {
             content: Text('Could not launch WhatsApp.'),
           ),
         );
+        if (kIsWeb) {
+          _showCopyDialog(context, 'WhatsApp Number', _supportWhatsApp);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch WhatsApp.')),
+          );
+        }
       }
     }
   }
 
   Future<void> _launchPhone(BuildContext context) async {
-    final Uri phoneUri = Uri.parse('tel:+254700000000');
+    final Uri phoneUri = Uri.parse('tel:$_supportPhone');
 
     if (!await launchUrl(phoneUri)) {
       if (context.mounted) {
@@ -51,6 +113,8 @@ class HelpScreen extends StatelessWidget {
             content: Text('Could not launch phone dialer.'),
           ),
         );
+        // `tel:` links are unreliable on web, so a copyable dialog is a good fallback.
+        _showCopyDialog(context, 'Phone Number', _supportPhone);
       }
     }
   }
@@ -117,7 +181,7 @@ class HelpScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.email, color: Colors.blue),
                     title: const Text('Email Support'),
-                    subtitle: const Text('support@jengamate.com'),
+                    subtitle: const Text(_supportEmail),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _launchEmail(context),
                   ),
@@ -125,7 +189,7 @@ class HelpScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.phone, color: Colors.green),
                     title: const Text('Phone Support'),
-                    subtitle: const Text('+254 700 000 000'),
+                    subtitle: const Text(_supportPhoneDisplay),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _launchPhone(context),
                   ),

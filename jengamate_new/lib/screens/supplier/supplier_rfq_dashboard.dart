@@ -3,7 +3,6 @@ import 'package:jengamate/models/product_interaction_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/product_interaction_service.dart';
 import 'package:jengamate/services/auth_service.dart';
-import 'package:jengamate/utils/logger.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 

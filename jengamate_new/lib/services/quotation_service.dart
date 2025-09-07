@@ -87,6 +87,7 @@ class QuotationService {
         customerId: quotation.engineerId,
         customerName: '', // Will need to be populated from user data
         supplierName: '', // Will need to be populated from user data
+        customerEmail: '',
         items: quotation.products
             .map((product) => OrderItem.fromMap(product))
             .toList(),

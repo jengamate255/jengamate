@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/user_model.dart';
-import 'package:jengamate/models/withdrawal_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
 

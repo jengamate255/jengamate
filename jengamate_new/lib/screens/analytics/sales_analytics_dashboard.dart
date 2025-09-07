@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jengamate/models/order_model.dart';
-import 'package:jengamate/models/order_status.dart';
+import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
@@ -340,8 +340,9 @@ class _SalesAnalyticsDashboardState extends State<SalesAnalyticsDashboard> {
                           dotData: FlDotData(show: false),
                           belowBarData: BarAreaData(
                             show: true,
-                            color:
-                                Theme.of(context).primaryColor.withOpacity(0.1),
+                            color: Theme.of(context)
+                                .primaryColor
+                                .withValues(alpha: 0.1),
                           ),
                         ),
                       ],
@@ -418,7 +419,9 @@ class _SalesAnalyticsDashboardState extends State<SalesAnalyticsDashboard> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              color: Theme.of(context)
+                  .primaryColor
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(

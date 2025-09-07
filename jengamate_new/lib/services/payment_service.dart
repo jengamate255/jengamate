@@ -7,7 +7,8 @@ import '../models/enums/order_enums.dart';
 class PaymentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<String> initiatePayment(String orderId, double amount, String userId) async {
+  Future<String> initiatePayment(
+      String orderId, double amount, String userId) async {
     final paymentRef = _firestore.collection('payments').doc();
     final payment = PaymentModel(
       id: paymentRef.id,
@@ -48,8 +49,30 @@ class PaymentService {
             .toList());
   }
 
-  Future<void> createPayment(PaymentModel payment) async {
-    await _firestore.collection('payments').doc(payment.id).set(payment.toMap());
+  Future<String> createPayment(PaymentModel payment) async {
+    try {
+      // Generate document ID if not provided
+      final String paymentId;
+      if (payment.id.isEmpty) {
+        // Generate a new Firestore document ID
+        final docRef = _firestore.collection('payments').doc();
+        paymentId = docRef.id;
+      } else {
+        paymentId = payment.id;
+      }
+
+      // Create updated payment with proper ID
+      final updatedPayment = payment.copyWith(id: paymentId);
+
+      await _firestore
+          .collection('payments')
+          .doc(paymentId)
+          .set(updatedPayment.toMap());
+
+      return paymentId;
+    } catch (e) {
+      throw Exception('Failed to create payment: $e');
+    }
   }
 
   Future<void> processPayment(String paymentId) async {

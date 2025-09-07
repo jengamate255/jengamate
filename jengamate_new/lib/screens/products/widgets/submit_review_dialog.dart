@@ -57,7 +57,7 @@ class _SubmitReviewDialogState extends State<SubmitReviewDialog> {
     );
 
     try {
-      await _dbService.addReview(review);
+      await _dbService.addReview(review.toMap());
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(

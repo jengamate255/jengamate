@@ -1,6 +1,5 @@
 import 'package:jengamate/models/inquiry.dart';
 import 'package:flutter/material.dart';
-import 'package:jengamate/models/inquiry_model.dart';
 import 'package:jengamate/models/quote_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/models/user_model.dart';
@@ -89,7 +88,7 @@ class _SubmitQuoteDialogState extends State<SubmitQuoteDialog> {
 
               final newQuote = QuoteModel(
                 id: FirebaseFirestore.instance.collection('quotes').doc().id,
-                rfqId: widget.inquiry.id,
+                rfqId: widget.inquiry.uid,
                 supplierId: currentUser.uid,
                 price: double.parse(_amountController.text),
                 notes: _detailsController.text,

@@ -1,20 +1,24 @@
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart'
+    as fb_auth; // Alias Firebase User
 import 'package:jengamate/utils/logger.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
-  final FirebaseAuth _auth;
+  final fb_auth.FirebaseAuth _auth;
 
-  AuthService({FirebaseAuth? firebaseAuth}) : _auth = firebaseAuth ?? FirebaseAuth.instance;
+  AuthService({fb_auth.FirebaseAuth? firebaseAuth})
+      : _auth = firebaseAuth ?? fb_auth.FirebaseAuth.instance;
 
   // Get current user
-  User? get currentUser => _auth.currentUser;
+  fb_auth.User? get currentUser => _auth.currentUser;
 
   // Auth state stream
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<fb_auth.User?> get authStateChanges => _auth.authStateChanges();
 
   // Email & Password Sign In
-  Future<UserCredential> signInWithEmailAndPassword(String email, String password) async {
+  Future<fb_auth.UserCredential> signInWithEmailAndPassword(
+      String email, String password) async {
     try {
       return await _auth.signInWithEmailAndPassword(
         email: email,
@@ -27,7 +31,8 @@ class AuthService {
   }
 
   // Email & Password Registration
-  Future<UserCredential> registerWithEmailAndPassword(String email, String password) async {
+  Future<fb_auth.UserCredential> registerWithEmailAndPassword(
+      String email, String password) async {
     try {
       return await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -44,10 +49,10 @@ class AuthService {
     try {
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {
+        verificationCompleted: (fb_auth.PhoneAuthCredential credential) async {
           await _auth.signInWithCredential(credential);
         },
-        verificationFailed: (FirebaseAuthException e) {
+        verificationFailed: (fb_auth.FirebaseAuthException e) {
           Logger.logError('Phone verification failed', e, StackTrace.current);
         },
         codeSent: (String verificationId, int? resendToken) {
@@ -62,9 +67,11 @@ class AuthService {
   }
 
   // Phone Authentication - Verify OTP
-  Future<UserCredential?> verifyOTP(String verificationId, String smsCode) async {
+  Future<fb_auth.UserCredential?> verifyOTP(
+      String verificationId, String smsCode) async {
     try {
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      fb_auth.PhoneAuthCredential credential =
+          fb_auth.PhoneAuthProvider.credential(
         verificationId: verificationId,
         smsCode: smsCode,
       );
@@ -79,6 +86,8 @@ class AuthService {
   Future<void> signOut() async {
     try {
       await _auth.signOut();
+      await Supabase.instance.client.auth
+          .signOut(); // Also sign out from Supabase
     } catch (e, s) {
       Logger.logError('Error signing out', e, s);
     }
@@ -123,7 +132,7 @@ class AuthService {
   // Reauthenticate user
   Future<bool> reauthenticateWithEmail(String email, String password) async {
     try {
-      AuthCredential credential = EmailAuthProvider.credential(
+      fb_auth.AuthCredential credential = fb_auth.EmailAuthProvider.credential(
         email: email,
         password: password,
       );
@@ -140,7 +149,7 @@ class AuthService {
     try {
       final user = currentUser;
       if (user == null) return null;
-      
+
       final tokenResult = await user.getIdTokenResult();
       return tokenResult.claims;
     } catch (e, s) {
@@ -209,7 +218,7 @@ class AuthService {
     try {
       final user = currentUser;
       if (user == null) return false;
-      
+
       await user.getIdToken(true); // Force refresh
       return true;
     } catch (e, s) {
@@ -229,5 +238,21 @@ class AuthService {
   // Stream for role changes
   Stream<String?> get roleStream {
     return customClaimsStream.map((claims) => claims?['role'] as String?);
+  }
+
+  // Supabase Integration: Sign in to Supabase with Firebase ID token
+  Future<void> signInSupabaseWithFirebaseToken(String firebaseIdToken) async {
+    try {
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider
+            .google, // Assuming Google as the provider, adjust if needed
+        idToken: firebaseIdToken,
+      );
+      Logger.log('Supabase signed in with Firebase ID token successfully');
+    } catch (e, s) {
+      Logger.logError('Error signing in Supabase with Firebase ID token', e, s);
+      // Don't rethrow - Supabase is optional for now
+      Logger.log('Continuing without Supabase authentication');
+    }
   }
 }

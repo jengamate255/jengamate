@@ -92,9 +92,8 @@ class InvoiceModel {
     this.lastSentAt,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) :
-    createdAt = createdAt ?? DateTime.now().toUtc(),
-    updatedAt = updatedAt ?? DateTime.now().toUtc();
+  })  : createdAt = createdAt ?? DateTime.now().toUtc(),
+        updatedAt = updatedAt ?? DateTime.now().toUtc();
 
   // Calculate subtotal (sum of all items before tax and discount)
   double get subtotal {
@@ -149,34 +148,48 @@ class InvoiceModel {
   // Create from Firestore document
   factory InvoiceModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     return InvoiceModel(
-      id: data['id'] ?? '',
-      invoiceNumber: data['invoiceNumber'] ?? '',
-      customerId: data['customerId'] ?? '',
-      orderId: data['orderId'],
-      customerName: data['customerName'] ?? '',
-      customerEmail: data['customerEmail'] ?? '',
-      customerPhone: data['customerPhone'],
-      customerAddress: data['customerAddress'],
-      customerCompany: data['customerCompany'] ?? '',
+      id: data['id'] is String ? data['id'] : '',
+      invoiceNumber:
+          data['invoiceNumber'] is String ? data['invoiceNumber'] : '',
+      customerId: data['customerId'] is String ? data['customerId'] : '',
+      orderId: data['orderId'] is String ? data['orderId'] : null,
+      customerName: data['customerName'] is String ? data['customerName'] : '',
+      customerEmail:
+          data['customerEmail'] is String ? data['customerEmail'] : '',
+      customerPhone:
+          data['customerPhone'] is String ? data['customerPhone'] : null,
+      customerAddress:
+          data['customerAddress'] is String ? data['customerAddress'] : null,
+      customerCompany:
+          data['customerCompany'] is String ? data['customerCompany'] : '',
       issueDate: (data['issueDate'] as Timestamp).toDate(),
       dueDate: (data['dueDate'] as Timestamp).toDate(),
       items: (data['items'] as List<dynamic>?)
-              ?.map((item) => InvoiceItem.fromMap(Map<String, dynamic>.from(item)))
+              ?.map((item) =>
+                  InvoiceItem.fromMap(Map<String, dynamic>.from(item)))
               .toList() ??
           [],
       taxRate: (data['taxRate'] ?? 0.0).toDouble(),
       discountAmount: (data['discountAmount'] ?? 0.0).toDouble(),
-      status: data['status'] ?? 'draft',
-      notes: data['notes'],
-      termsAndConditions: data['termsAndConditions'],
-      paidDate: data['paidDate'] != null ? (data['paidDate'] as Timestamp).toDate() : null,
-      paymentMethod: data['paymentMethod'],
-      referenceNumber: data['referenceNumber'],
-      pdfUrl: data['pdfUrl'],
+      status: data['status'] is String ? data['status'] : 'draft',
+      notes: data['notes'] is String ? data['notes'] : null,
+      termsAndConditions: data['termsAndConditions'] is String
+          ? data['termsAndConditions']
+          : null,
+      paidDate: data['paidDate'] != null
+          ? (data['paidDate'] as Timestamp).toDate()
+          : null,
+      paymentMethod:
+          data['paymentMethod'] is String ? data['paymentMethod'] : null,
+      referenceNumber:
+          data['referenceNumber'] is String ? data['referenceNumber'] : null,
+      pdfUrl: data['pdfUrl'] is String ? data['pdfUrl'] : null,
       paymentTerms: (data['paymentTerms'] ?? 30).toInt(),
-      lastSentAt: data['lastSentAt'] != null ? (data['lastSentAt'] as Timestamp).toDate() : null,
+      lastSentAt: data['lastSentAt'] != null
+          ? (data['lastSentAt'] as Timestamp).toDate()
+          : null,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
@@ -245,8 +258,10 @@ class InvoiceModel {
     final year = now.year.toString().substring(2);
     final month = now.month.toString().padLeft(2, '0');
     final day = now.day.toString().padLeft(2, '0');
-    final random = (DateTime.now().millisecondsSinceEpoch % 10000).toString().padLeft(4, '0');
-    
+    final random = (DateTime.now().millisecondsSinceEpoch % 10000)
+        .toString()
+        .padLeft(4, '0');
+
     return 'INV-$year$month$day-$random';
   }
 }

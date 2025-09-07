@@ -35,7 +35,8 @@ class UserActivityTimeline extends StatelessWidget {
     );
   }
 
-  Widget _buildActivityItem(BuildContext context, AdminUserActivity activity, int index) {
+  Widget _buildActivityItem(
+      BuildContext context, AdminUserActivity activity, int index) {
     final isLast = index == activities.length - 1;
     final icon = _getActivityIcon(activity.action);
     final color = _getActivityColor(activity.action);
@@ -89,7 +90,8 @@ class UserActivityTimeline extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            DateFormat('MMM dd, yyyy HH:mm').format(activity.timestamp),
+                            DateFormat('MMM dd, yyyy HH:mm')
+                                .format(activity.timestamp),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
@@ -103,14 +105,15 @@ class UserActivityTimeline extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           'IP: ${activity.ipAddress}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                         ),
                       ],
-                      if (activity.metadata.isNotEmpty) ...[
+                      if (activity.metadata?.isNotEmpty ?? false) ...[
                         const SizedBox(height: 8),
-                        _buildMetadataSection(activity.metadata),
+                        _buildMetadataSection(activity.metadata!),
                       ],
                     ],
                   ),
@@ -222,31 +225,31 @@ class UserActivityTimeline extends StatelessWidget {
       case 'update_profile':
         return 'Profile information updated';
       case 'upload_document':
-        final docType = activity.metadata['documentType'] ?? 'document';
+        final docType = activity.metadata?['documentType'] ?? 'document';
         return 'Uploaded $docType for verification';
       case 'submit_rfq':
         return 'Submitted new RFQ request';
       case 'submit_quote':
         return 'Submitted quote for RFQ';
       case 'approve':
-        final target = activity.metadata['target'] ?? 'user';
+        final target = activity.metadata?['target'] ?? 'user';
         return 'Approved $target';
       case 'reject':
-        final target = activity.metadata['target'] ?? 'user';
+        final target = activity.metadata?['target'] ?? 'user';
         return 'Rejected $target';
       case 'suspend':
-        final reason = activity.metadata['reason'] ?? '';
+        final reason = activity.metadata?['reason'] ?? '';
         return 'Account suspended${reason.isNotEmpty ? ': $reason' : ''}';
       case 'reactivate':
         return 'Account reactivated';
       case 'delete':
-        final target = activity.metadata['target'] ?? 'user';
+        final target = activity.metadata?['target'] ?? 'user';
         return 'Deleted $target';
       case 'view':
-        final target = activity.metadata['target'] ?? 'page';
+        final target = activity.metadata?['target'] ?? 'page';
         return 'Viewed $target';
       case 'download':
-        final file = activity.metadata['file'] ?? 'file';
+        final file = activity.metadata?['file'] ?? 'file';
         return 'Downloaded $file';
       default:
         return 'Activity: ${activity.action}';

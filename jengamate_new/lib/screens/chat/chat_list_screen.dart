@@ -1,7 +1,6 @@
 import 'package:jengamate/models/chat_room_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:jengamate/models/chat_room_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/widgets/avatar_widget.dart';

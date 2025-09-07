@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/invoice_model.dart';
 import 'package:jengamate/services/pdf_service.dart';
 import 'package:open_file/open_file.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 class PdfTestScreen extends StatelessWidget {
   const PdfTestScreen({super.key});
@@ -14,6 +12,7 @@ class PdfTestScreen extends StatelessWidget {
       id: 'test_${DateTime.now().millisecondsSinceEpoch}',
       invoiceNumber: 'INV-${DateTime.now().millisecondsSinceEpoch}',
       customerId: 'test_customer',
+      issueDate: DateTime.now(),
       customerName: 'Test Customer',
       customerEmail: 'test@example.com',
       customerPhone: '+254700000000',
@@ -24,22 +23,18 @@ class PdfTestScreen extends StatelessWidget {
           description: 'Test Product 1',
           quantity: 2,
           unitPrice: 1000.0,
-          tax: 0.16,
         ),
         InvoiceItem(
           id: 'item2',
           description: 'Test Product 2',
           quantity: 1,
           unitPrice: 2000.0,
-          tax: 0.16,
         ),
       ],
-      subtotal: 4000.0,
-      tax: 640.0,
-      total: 4640.0,
+      taxRate: 16.0,
+      discountAmount: 0.0,
       status: 'draft',
       notes: 'This is a test invoice',
-      terms: 'Payment due in 30 days',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 30)),

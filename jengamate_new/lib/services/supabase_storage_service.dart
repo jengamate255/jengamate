@@ -1,6 +1,8 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart' show Uint8List;
+import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:jengamate/services/supabase_service.dart';
 import 'package:jengamate/utils/logger.dart';
 
 class SupabaseStorageService {
@@ -9,40 +11,117 @@ class SupabaseStorageService {
 
   SupabaseStorageService({
     required SupabaseClient supabaseClient,
-    this.bucket = 'product_images',
+    this.bucket =
+        'payment_proofs', // Changed default bucket to match RLS policies
   }) : _supabaseClient = supabaseClient;
 
-  Future<String?> uploadImage({
+  /// Uploads an image to Supabase Storage
+  ///
+  /// [fileName] - The name to give the uploaded file
+  /// [folder] - The folder to upload the file to
+  /// [bytes] - The file bytes (required for web)
+  /// [file] - The file to upload (required for mobile/desktop)
+  ///
+  /// Returns the public URL of the uploaded file
+  @Deprecated('Use uploadFile instead with user-specific folders')
+  Future<String> uploadImage({
     required String fileName,
     required String folder,
     Uint8List? bytes,
     File? file,
   }) async {
     try {
-      final uploadPath = '$folder/$fileName';
+      return await uploadFile(
+        fileName: fileName,
+        folder: folder,
+        bytes: bytes,
+        file: file,
+      );
+    } catch (e, st) {
+      Logger.logError('Image upload failed: $e', e, st);
+      rethrow;
+    }
+  }
 
-      if (bytes != null) {
-        await _supabaseClient.storage.from(bucket).uploadBinary(
-              uploadPath,
-              bytes,
-              fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-            );
-      } else if (file != null) {
-        await _supabaseClient.storage.from(bucket).upload(
-              uploadPath,
-              file,
-              fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-            );
-      } else {
-        throw ArgumentError('Either bytes or file must be provided.');
+  /// Uploads a file to Supabase Storage with user-specific folder
+  ///
+  /// [fileName] - The name to give the uploaded file
+  /// [folder] - Optional subfolder within the user's folder
+  /// [bytes] - The file bytes (required for web)
+  /// [file] - The file to upload (required for mobile/desktop)
+  ///
+  /// Returns the public URL of the uploaded file
+  Future<String> uploadFile({
+    required String fileName,
+    String? folder,
+    Uint8List? bytes,
+    File? file,
+  }) async {
+    try {
+      // Get Firebase user ID for storage path
+      final supabaseUserId = _supabaseClient.auth.currentUser?.id;
+
+      // Try to get Firebase user ID as fallback
+      final firebaseUserId = FirebaseAuth.instance.currentUser?.uid;
+
+      // Use either Supabase user ID or Firebase user ID
+      final userId = supabaseUserId ?? firebaseUserId;
+
+      if (userId == null) {
+        // Use a temporary folder for unauthenticated users
+        Logger.log('No authenticated user, using temp folder');
+        throw Exception('User must be authenticated to upload files');
       }
 
-      final downloadUrl = _supabaseClient.storage.from(bucket).getPublicUrl(uploadPath);
-      Logger.log('Supabase upload successful: $downloadUrl');
-      return downloadUrl;
+      Logger.log(
+          'Using user ID for folder: $userId (Firebase: $firebaseUserId, Supabase: $supabaseUserId)');
+
+      // Create user-specific path
+      final userFolder = userId;
+      final uploadPath = folder != null
+          ? '$userFolder/$folder/$fileName'
+          : '$userFolder/$fileName';
+
+      Logger.log('Uploading file to path: $uploadPath');
+
+      // Handle upload based on platform
+      if (kIsWeb) {
+        if (bytes == null) {
+          throw ArgumentError('Bytes must be provided for web uploads');
+        }
+        await _supabaseClient.storage
+            .from(bucket)
+            .uploadBinary(uploadPath, bytes);
+      } else {
+        if (file == null) {
+          throw ArgumentError(
+              'File must be provided for mobile/desktop uploads');
+        }
+        await _supabaseClient.storage.from(bucket).upload(uploadPath, file);
+      }
+
+      // Get public URL (if bucket is public)
+      final publicUrl =
+          _supabaseClient.storage.from(bucket).getPublicUrl(uploadPath);
+
+      Logger.log('File uploaded successfully: $publicUrl');
+      return publicUrl;
     } catch (e, st) {
-      Logger.logError('Supabase upload failed: $e', e, st);
+      Logger.logError('Failed to upload file: $e', e, st);
       rethrow;
+    }
+  }
+
+  /// Gets a signed URL for a file (works with private buckets)
+  Future<String?> getSignedUrl(String filePath) async {
+    try {
+      final response = await _supabaseClient.storage
+          .from(bucket)
+          .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
+      return response;
+    } catch (e, st) {
+      Logger.logError('Failed to get signed URL: $e', e, st);
+      return null;
     }
   }
 

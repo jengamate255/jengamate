@@ -45,7 +45,7 @@ class _AdvancedRfqSubmissionScreenState
       );
 
       try {
-        await _dbService.createRFQ(newRfq);
+        await _dbService.addRFQ(newRfq);
         if (!mounted) return;
         // Show detailed success confirmation dialog
         await _showSuccessDialog();

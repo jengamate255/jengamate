@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:jengamate/models/stat_item.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
@@ -12,11 +12,9 @@ import 'package:jengamate/models/order_stats_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
 
-import 'package:jengamate/config/app_routes.dart';
 import 'package:go_router/go_router.dart';
-import 'package:jengamate/screens/admin/enhanced_analytics_dashboard.dart';
-import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
-import 'package:jengamate/ui/design_system/tokens/spacing.dart';
+import 'package:jengamate/screens/admin/admin_tools_screen.dart';
+import 'package:jengamate/utils/responsive.dart';
 
 class DashboardTabScreen extends StatelessWidget {
   const DashboardTabScreen({super.key});
@@ -76,6 +74,124 @@ class DashboardTabScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _salesLineChart(BuildContext context, List<double> data, Color color) {
+    if (data.isEmpty) {
+      return const SizedBox(height: 40);
+    }
+    final maxVal = data.reduce((a, b) => a > b ? a : b);
+    final spots = <FlSpot>[];
+    for (int i = 0; i < data.length; i++) {
+      spots.add(FlSpot(i.toDouble(), data[i]));
+    }
+    return SizedBox(
+      height: 120,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: (data.length - 1).toDouble(),
+          minY: 0,
+          maxY: (maxVal <= 0 ? 1.0 : maxVal) * 1.1,
+          gridData: const FlGridData(show: false),
+          titlesData: FlTitlesData(
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 18,
+                interval: (data.length / 6).clamp(1, data.length).toDouble(),
+                getTitlesWidget: (value, meta) {
+                  final int v = value.round();
+                  if (v < 0 || v >= data.length) return const SizedBox.shrink();
+                  final daysAgo = (data.length - 1) - v; // 0=today
+                  String label;
+                  if (daysAgo == 0) label = 'T';
+                  else if (daysAgo == 1) label = 'Y';
+                  else label = '${daysAgo}d';
+                  return Text(label, style: Theme.of(context).textTheme.labelSmall);
+                },
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          lineTouchData: LineTouchData(
+            enabled: true,
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (touchedSpots) {
+                return touchedSpots.map((ts) {
+                  final idx = ts.x.round();
+                  final daysAgo = (data.length - 1) - idx;
+                  final when = daysAgo == 0
+                      ? 'Today'
+                      : daysAgo == 1
+                          ? 'Yesterday'
+                          : '${daysAgo}d ago';
+                  return LineTooltipItem(
+                    '$when\n${_formatTsh(ts.y)}',
+                    const TextStyle(color: Colors.white, fontSize: 11),
+                  );
+                }).toList();
+              },
+            ),
+          ),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: color,
+              barWidth: 2.5,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(
+                show: true,
+                color: color.withValues(alpha: 0.15),
+                applyCutOffY: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sparklineBars(BuildContext context, List<double> data, Color color) {
+    final maxVal = data.isEmpty ? 0.0 : data.reduce((a, b) => a > b ? a : b);
+    final barCount = data.length;
+    final barWidth = 6.0;
+    final barSpacing = 4.0;
+    final height = 40.0;
+    return SizedBox(
+      height: height,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: List.generate(barCount, (i) {
+          final v = data[i];
+          final h = maxVal <= 0 ? 2.0 : ((v / maxVal) * (height - 2)).clamp(2.0, height - 2);
+          final daysAgo = (barCount - 1) - i; // 0 = today, 1 = yesterday
+          final label = daysAgo == 0
+              ? 'Today'
+              : daysAgo == 1
+                  ? 'Yesterday'
+                  : '${daysAgo}d ago';
+          return Padding(
+            padding: EdgeInsets.only(right: i == barCount - 1 ? 0 : barSpacing),
+            child: Tooltip(
+              message: '$label • ${_formatTsh(v)}',
+              child: Container(
+                width: barWidth,
+                height: h,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -237,7 +353,315 @@ class DashboardTabScreen extends StatelessWidget {
   }
 
   Widget _buildAdminUI(BuildContext context) {
-    return const EnhancedAnalyticsDashboard();
+    final db = DatabaseService();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildQuickActions(context),
+        const SizedBox(height: 24),
+        Text(
+          'Platform Overview',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: StatefulBuilder(
+              builder: (context, setLocalState) {
+                // 0 = All, 1 = 7d, 2 = 30d
+                int salesWindow = 0;
+                final spacing = 16.0;
+                Widget salesValueForWindow() {
+                  if (salesWindow == 1) {
+                    return StreamBuilder<double>(
+                      stream: db.streamTotalSalesAmountTSHWindow(days: 7),
+                      builder: (context, snapshot) => _kpiValue(context, _formatTsh(snapshot.data)),
+                    );
+                  } else if (salesWindow == 2) {
+                    return StreamBuilder<double>(
+                      stream: db.streamTotalSalesAmountTSHWindow(days: 30),
+                      builder: (context, snapshot) => _kpiValue(context, _formatTsh(snapshot.data)),
+                    );
+                  }
+                  return StreamBuilder<double>(
+                    stream: db.streamTotalSalesAmountTSH(),
+                    builder: (context, snapshot) => _kpiValue(context, _formatTsh(snapshot.data)),
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text('Total Sales window:'),
+                        ChoiceChip(
+                          label: const Text('All'),
+                          selected: salesWindow == 0,
+                          onSelected: (_) => setLocalState(() => salesWindow = 0),
+                        ),
+                        ChoiceChip(
+                          label: const Text('7d'),
+                          selected: salesWindow == 1,
+                          onSelected: (_) => setLocalState(() => salesWindow = 1),
+                        ),
+                        ChoiceChip(
+                          label: const Text('30d'),
+                          selected: salesWindow == 2,
+                          onSelected: (_) => setLocalState(() => salesWindow = 2),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: spacing,
+                      runSpacing: spacing,
+                      children: [
+                        _buildKpiCard(
+                          context,
+                          title: 'Total Users',
+                          icon: Icons.people,
+                          color: Colors.blue,
+                          value: StreamBuilder<int>(
+                            stream: db.streamTotalUsersCount(),
+                            builder: (context, snapshot) => _kpiValue(context, snapshot.data?.toString()),
+                          ),
+                        ),
+                        _buildKpiCard(
+                          context,
+                          title: 'Total Orders',
+                          icon: Icons.shopping_cart,
+                          color: Colors.green,
+                          value: StreamBuilder<int>(
+                            stream: db.streamTotalOrdersCount(),
+                            builder: (context, snapshot) => _kpiValue(context, snapshot.data?.toString()),
+                          ),
+                        ),
+                        _buildKpiCard(
+                          context,
+                          title: 'Pending Orders',
+                          icon: Icons.timelapse,
+                          color: Colors.orange,
+                          value: StreamBuilder<int>(
+                            stream: db.streamPendingOrdersCount(),
+                            builder: (context, snapshot) => _kpiValue(context, snapshot.data?.toString()),
+                          ),
+                        ),
+                        _buildKpiCard(
+                          context,
+                          title: salesWindow == 0
+                              ? 'Total Sales (All)'
+                              : salesWindow == 1
+                                  ? 'Total Sales (7d)'
+                                  : 'Total Sales (30d)',
+                          icon: Icons.payments,
+                          color: Colors.purple,
+                          value: salesValueForWindow(),
+                        ),
+                    _buildKpiCard(
+                      context,
+                      title: 'Completed Orders',
+                      icon: Icons.check_circle,
+                      color: Colors.teal,
+                      value: StreamBuilder<int>(
+                        stream: db.streamCompletedOrdersCount(),
+                        builder: (context, snapshot) => _kpiValue(context, snapshot.data?.toString()),
+                      ),
+                    ),
+                    _buildKpiCard(
+                      context,
+                      title: 'New Users (7d)',
+                      icon: Icons.person_add,
+                      color: Colors.indigo,
+                      value: StreamBuilder<int>(
+                        stream: db.streamNewUsersCount(days: 7),
+                        builder: (context, snapshot) => _kpiValue(context, snapshot.data?.toString()),
+                      ),
+                    ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sales Trend',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Last 7 days'),
+                          const SizedBox(height: 8),
+                          StreamBuilder<List<double>>(
+                            stream: db.streamDailySalesTSH(days: 7),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasError) {
+                                return Text(
+                                  'Needs index for orders(status, createdAt)',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                                );
+                              }
+                              final data = snapshot.data;
+                              if (data == null) {
+                                return const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                );
+                              }
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _salesLineChart(context, data, Colors.purple),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Total: ${_formatTsh(data.fold<double>(0, (s, v) => s + v))}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Last 30 days'),
+                          const SizedBox(height: 8),
+                          StreamBuilder<List<double>>(
+                            stream: db.streamDailySalesTSH(days: 30),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasError) {
+                                return Text(
+                                  'Needs index for orders(status, createdAt)',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                                );
+                              }
+                              final data = snapshot.data;
+                              if (data == null) {
+                                return const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                );
+                              }
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _salesLineChart(context, data, Colors.orange),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Total: ${_formatTsh(data.fold<double>(0, (s, v) => s + v))}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatTsh(double? v) {
+    if (v == null) return 'TSH 0';
+    // Whole-number TSH formatting without intl dependency here
+    final rounded = v.round().toString();
+    final buffer = StringBuffer();
+    for (int i = 0; i < rounded.length; i++) {
+      final idxFromEnd = rounded.length - i;
+      buffer.write(rounded[i]);
+      if (idxFromEnd > 1 && idxFromEnd % 3 == 1) buffer.write(',');
+    }
+    return 'TSH ${buffer.toString()}';
+  }
+
+  Widget _kpiValue(BuildContext context, String? value) {
+    if (value == null) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return Text(
+      value,
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+    );
+  }
+
+  Widget _buildKpiCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Widget value,
+  }) {
+    final isDesktop = Responsive.isDesktop(context);
+    final width = isDesktop ? 360.0 : 300.0;
+    return SizedBox(
+      width: width,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            DefaultTextStyle(
+              style: Theme.of(context).textTheme.headlineSmall ?? const TextStyle(fontSize: 20),
+              child: value,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -249,6 +673,10 @@ class DashboardTabScreen extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
+              // Add a bit of guaranteed bottom padding to avoid tiny overflows
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).padding.bottom + 56,
+              ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: Padding(
@@ -292,10 +720,29 @@ class DashboardTabScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.notifications_none_rounded,
-                                size: 28),
-                            onPressed: () {},
+                          Row(
+                            children: [
+                              if (currentUser?.role == UserRole.admin)
+                                IconButton(
+                                  tooltip: 'Admin Tools',
+                                  icon: const Icon(Icons.admin_panel_settings,
+                                      size: 26),
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const AdminToolsScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.notifications_none_rounded,
+                                  size: 28,
+                                ),
+                                onPressed: () {},
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -316,8 +763,8 @@ class DashboardTabScreen extends StatelessWidget {
 
                       // Sentry test widget removed.
 
-                      // Add bottom padding to prevent overflow
-                      const SizedBox(height: 32),
+                      // Extra spacing retained; combined with outer padding this prevents overflow
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),

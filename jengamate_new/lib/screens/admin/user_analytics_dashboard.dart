@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/models/enums/user_role.dart';
@@ -69,9 +68,9 @@ class UserAnalyticsDashboard extends StatelessWidget {
           crossAxisSpacing: isDesktop ? 16 : 8,
           children: [
             _buildMetricCard('Total Users', users.length.toString(), Icons.people, Colors.blue, isDesktop),
-            _buildMetricCard('Active Users', stats['active']?.toString() ?? '0', Icons.check_circle, Colors.green, isDesktop),
-            _buildMetricCard('Engineers', stats['engineers']?.toString() ?? '0', Icons.engineering, Colors.orange, isDesktop),
-            _buildMetricCard('Suppliers', stats['suppliers']?.toString() ?? '0', Icons.business, Colors.purple, isDesktop),
+            _buildMetricCard('Active Users', (stats['active'] ?? 0).toString(), Icons.check_circle, Colors.green, isDesktop),
+            _buildMetricCard('Engineers', (stats['engineers'] ?? 0).toString(), Icons.engineering, Colors.orange, isDesktop),
+            _buildMetricCard('Suppliers', (stats['suppliers'] ?? 0).toString(), Icons.business, Colors.purple, isDesktop),
           ],
         );
       },

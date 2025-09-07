@@ -61,7 +61,8 @@ class InquiryListScreen extends StatelessWidget {
                 final inquiry = inquiries[index];
                 return JMCard(
                   child: ListTile(
-                    title: Text('Inquiry #${inquiry.uid.substring(0, 8)}'),
+                    title: Text(
+                        'Inquiry #${inquiry.uid.length >= 8 ? inquiry.uid.substring(0, 8) : inquiry.uid}'),
                     subtitle: Text(
                         '${inquiry.products?.length ?? 0} products - ${inquiry.status}'),
                     trailing: const Icon(Icons.arrow_forward_ios),

@@ -326,7 +326,7 @@ class AnalyticsScreen extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0),
                           child: Text(
-                            '${product?.name ?? 'Unknown'} (Price: TSH ${product?.price.toStringAsFixed(2) ?? '0.00'})',
+                            '${product.name ?? 'Unknown'} (Price: TSH ${product.price.toStringAsFixed(2) ?? '0.00'})',
                             style: const TextStyle(fontSize: 16),
                           ),
                         );

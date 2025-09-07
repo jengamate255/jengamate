@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui';
+import 'dart:developer' as developer;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +13,7 @@ import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/services/theme_service.dart';
 import 'package:jengamate/services/notification_service.dart';
 import 'package:jengamate/services/invoice_service.dart';
+import 'package:jengamate/services/order_service.dart';
 import 'package:provider/provider.dart';
 import 'config/app_router.dart';
 import 'config/app_theme.dart';
@@ -51,9 +52,11 @@ Future<void> main() async {
             FirebaseCrashlytics.instance.recordFlutterFatalError(details);
           };
 
-          PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+          PlatformDispatcher.instance.onError =
+              (Object error, StackTrace stack) {
             if (kReleaseMode) {
-              FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+              FirebaseCrashlytics.instance
+                  .recordError(error, stack, fatal: true);
             }
             return true; // Error handled.
           };
@@ -126,6 +129,9 @@ class MyApp extends StatelessWidget {
             });
           },
           initialData: null,
+        ),
+        Provider<OrderService>(
+          create: (_) => OrderService(),
         ),
       ],
       child: Consumer<ThemeService>(

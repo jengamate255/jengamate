@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:jengamate/models/invoice_model.dart';
+import 'package:jengamate/models/email_template.dart';
 import 'package:jengamate/services/invoice_service.dart';
-import 'package:jengamate/utils/theme.dart';
+import 'package:jengamate/services/email_service.dart';
+import 'package:jengamate/services/console_error_handler.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jengamate/screens/order/payment_screen.dart';
+import 'package:jengamate/ui/design_system/components/jm_card.dart';
+import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 
 class InvoiceDetailsScreen extends StatefulWidget {
   final String invoiceId;
@@ -28,9 +32,12 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
 
   Future<void> _loadInvoice() async {
     try {
-      final invoiceService = Provider.of<InvoiceService>(context, listen: false);
-      final invoice = await invoiceService.getInvoice(widget.invoiceId);
-      
+      final invoiceService =
+          Provider.of<InvoiceService>(context, listen: false);
+      // Use auto-population method to ensure invoice items are populated
+      final invoice =
+          await invoiceService.getInvoiceWithItems(widget.invoiceId);
+
       if (mounted) {
         setState(() {
           _invoice = invoice;
@@ -38,6 +45,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
         });
       }
     } catch (e) {
+      ConsoleErrorHandler.logError(
+          'Failed to load invoice with populated items', e, StackTrace.current);
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -47,35 +56,88 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     }
   }
 
-
   void _navigateToPayment(InvoiceModel invoice) {
-    if (invoice.orderId == null) {
+    if (invoice.orderId == null || invoice.orderId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Order ID not found for this invoice.')),
+        const SnackBar(
+          content: Text('This invoice is not linked to an order.'
+              '\n\nStandalone invoices cannot be processed through payment.'
+              '\n\nPlease contact administrator if this requires payment processing.'),
+          duration: Duration(seconds: 5),
+        ),
       );
       return;
     }
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PaymentScreen(orderId: invoice.orderId!),
       ),
-    ).then((_) => _loadInvoice()); // Refresh invoice data after payment attempt
+    ).then((result) {
+      if (result != null && result is String) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result)),
+        );
+      }
+      _loadInvoice(); // Refresh invoice data after payment attempt
+    });
   }
 
   Future<void> _sendInvoice() async {
     if (_invoice == null) return;
 
+    // Validate that we have an email address to send to
+    if (_invoice!.customerEmail.isEmpty) {
+      _showEmailInputDialog();
+      return;
+    }
+
+    // Show loading dialog
+    _showSendingProgress();
+
     try {
-      final invoiceService = Provider.of<InvoiceService>(context, listen: false);
-      await invoiceService.sendInvoiceByEmail(_invoice!, email: _invoice!.customerEmail);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invoice sent to customer')),
-        );
+      final emailService = Provider.of<EmailService>(context, listen: false);
+
+      // Send invoice using branded template
+      final success = await emailService.sendInvoiceEmailQuickly(
+        invoice: _invoice!,
+        recipientEmail: _invoice!.customerEmail,
+      );
+
+      // Close loading dialog
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invoice sent successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Refresh invoice to get updated sent status
+          await _loadInvoice();
+        }
+        ConsoleErrorHandler.logSuccess('Invoice sent successfully');
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Failed to send invoice. Please try again.')),
+          );
+        }
       }
     } catch (e) {
+      // Close loading dialog
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      ConsoleErrorHandler.logError(
+          'Failed to send invoice', e, StackTrace.current);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to send invoice: $e')),
@@ -84,17 +146,168 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     }
   }
 
+  void _showSendingProgress() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Sending invoice email...'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEmailInputDialog() {
+    final TextEditingController emailController =
+        TextEditingController(text: _invoice!.customerEmail);
+    final _formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Send Invoice'),
+          content: Form(
+            key: _formKey,
+            child: TextFormField(
+              controller: emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email Address',
+                hintText: 'Enter customer email address',
+                prefixIcon: Icon(Icons.email),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Email address is required';
+                }
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                    .hasMatch(value)) {
+                  return 'Please enter a valid email address';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  final email = emailController.text.trim();
+
+                  // Close the dialog first
+                  Navigator.of(context).pop();
+
+                  // Show loading progress
+                  _showSendingProgress();
+
+                  // Send the invoice with the provided email
+                  try {
+                    final invoiceService =
+                        Provider.of<InvoiceService>(context, listen: false);
+                    final emailService =
+                        Provider.of<EmailService>(context, listen: false);
+
+                    // Update the invoice with the new email if it changed
+                    if (email != _invoice!.customerEmail) {
+                      final updatedInvoice =
+                          _invoice!.copyWith(customerEmail: email);
+                      await invoiceService.updateInvoice(updatedInvoice);
+                    }
+
+                    // Use the new EmailService with branded templates
+                    final success = await emailService.sendInvoiceEmailQuickly(
+                      invoice: _invoice!,
+                      recipientEmail: email,
+                    );
+
+                    // Close loading dialog
+                    if (mounted && Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    }
+
+                    if (success && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Invoice sent successfully!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      // Refresh to get updated sent status
+                      await _loadInvoice();
+                    } else if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text(
+                                'Failed to send invoice. Please try again.')),
+                      );
+                    }
+
+                    ConsoleErrorHandler.logSuccess(
+                        'Invoice sent successfully to $email');
+                  } catch (e) {
+                    // Close loading dialog
+                    if (mounted && Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    }
+
+                    ConsoleErrorHandler.logError(
+                        'Failed to send invoice', e, StackTrace.current);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to send invoice: $e')),
+                      );
+                    }
+                  }
+                }
+              },
+              child: const Text('Send'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _downloadPdf() async {
     if (_invoice == null) return;
 
     try {
-      final invoiceService = Provider.of<InvoiceService>(context, listen: false);
+      final invoiceService =
+          Provider.of<InvoiceService>(context, listen: false);
       final pdfUrl = await invoiceService.generatePdf(_invoice!);
-      
-      if (await canLaunchUrl(Uri.parse(pdfUrl))) {
-        await launchUrl(Uri.parse(pdfUrl));
-      } else {
-        throw 'Could not launch PDF viewer';
+
+      // Show success message that PDF was generated
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF downloaded successfully!')),
+        );
+      }
+
+      // Try to open PDF viewer (optional, don't throw if it fails)
+      try {
+        if (await canLaunchUrl(Uri.parse(pdfUrl))) {
+          await launchUrl(Uri.parse(pdfUrl));
+        } else {
+          ConsoleErrorHandler.logWarning(
+              'Could not launch PDF viewer - using software default');
+          // Don't show error message since PDF was already downloaded successfully
+        }
+      } catch (viewerError) {
+        ConsoleErrorHandler.logWarning(
+            'PDF viewer launch failed, but download succeeded: $viewerError');
+        // PDF was downloaded successfully, just couldn't open viewer
       }
     } catch (e) {
       if (mounted) {
@@ -108,14 +321,22 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Invoice Details'),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_invoice == null) {
-      return const Scaffold(
-        body: Center(child: Text('Invoice not found')),
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Invoice Details'),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+        body: const Center(child: Text('Invoice not found')),
       );
     }
 
@@ -126,156 +347,51 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Invoice Details'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: _downloadPdf,
+            tooltip: 'Download PDF',
           ),
           IconButton(
             icon: const Icon(Icons.email),
             onPressed: _sendInvoice,
+            tooltip: 'Send Invoice',
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(JMSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'INVOICE #${invoice.invoiceNumber}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Issued: ${dateFormat.format(invoice.issueDate)}',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    Text(
-                      'Due: ${dateFormat.format(invoice.dueDate)}',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(invoice.status).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    invoice.status.toUpperCase(),
-                    style: TextStyle(
-                      color: _getStatusColor(invoice.status),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
+            // Header Section
+            _buildHeaderCard(invoice, dateFormat),
 
-            // From / To Section
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // From
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'From',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const Text('JengaMate'),
-                      const Text('P.O. Box 12345'),
-                      const Text('Dar es Salaam, Tanzania'),
-                      const Text('Email: info@jengamate.co.tz'),
-                      const Text('Phone: +255 712 345 678'),
-                    ],
-                  ),
-                ),
-                // To
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Bill To',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(invoice.customerName),
-                      if (invoice.customerAddress != null)
-                        Text(invoice.customerAddress!),
-                      Text(invoice.customerEmail),
-                      if (invoice.customerPhone != null)
-                        Text(invoice.customerPhone!),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
+            const SizedBox(height: JMSpacing.lg),
 
-            // Items Table
-            _buildItemsTable(invoice, currencyFormat),
-            const SizedBox(height: 24),
+            // Billing Information Section
+            _buildBillingSection(invoice),
 
-            // Totals
-            _buildTotals(invoice, currencyFormat),
-            const SizedBox(height: 32),
+            const SizedBox(height: JMSpacing.lg),
 
-            // Notes & Terms
-            if (invoice.notes != null || invoice.termsAndConditions != null) ...[
-              const Divider(),
-              const SizedBox(height: 16),
-              if (invoice.notes != null) ...[
-                const Text(
-                  'Notes',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(invoice.notes!),
-                const SizedBox(height: 16),
-              ],
-              if (invoice.termsAndConditions != null) ...[
-                const Text(
-                  'Terms & Conditions',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(invoice.termsAndConditions!),
-              ],
+            // Items Section
+            _buildItemsSection(invoice, currencyFormat),
+
+            const SizedBox(height: JMSpacing.lg),
+
+            // Totals Section
+            _buildTotalsSection(invoice, currencyFormat),
+
+            const SizedBox(height: JMSpacing.lg),
+
+            // Notes Section
+            if (invoice.notes != null ||
+                invoice.termsAndConditions != null) ...[
+              _buildNotesSection(invoice),
             ],
-
-            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -283,87 +399,503 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     );
   }
 
-  Widget _buildItemsTable(InvoiceModel invoice, NumberFormat currencyFormat) {
-    return Table(
-      border: TableBorder.all(color: Colors.grey.shade200),
-      columnWidths: const {
-        0: FlexColumnWidth(3),
-        1: FlexColumnWidth(1),
-        2: FlexColumnWidth(1.5),
-        3: FlexColumnWidth(1.5),
-      },
-      children: [
-        // Header
-        TableRow(
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+  Widget _buildHeaderCard(InvoiceModel invoice, DateFormat dateFormat) {
+    return JMCard(
+      child: Container(
+        padding: const EdgeInsets.all(JMSpacing.md),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).primaryColor.withOpacity(0.1),
+              Colors.transparent
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          children: const [
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text(
-                'Description',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text(
-                'Qty',
-                style: TextStyle(fontWeight: FontWeight.bold),
-                textAlign: TextAlign.right,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text(
-                'Unit Price',
-                style: TextStyle(fontWeight: FontWeight.bold),
-                textAlign: TextAlign.right,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text(
-                'Total',
-                style: TextStyle(fontWeight: FontWeight.bold),
-                textAlign: TextAlign.right,
-              ),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(12),
         ),
-        // Items
-        ...invoice.items.map((item) => TableRow(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(item.description),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'INVOICE',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '#${invoice.invoiceNumber}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    item.quantity.toString(),
-                    textAlign: TextAlign.right,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(invoice.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _getStatusColor(invoice.status).withOpacity(0.3),
+                      width: 1,
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
                   child: Text(
-                    currencyFormat.format(item.unitPrice),
-                    textAlign: TextAlign.right,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    currencyFormat.format(item.total),
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    invoice.status.toUpperCase(),
+                    style: TextStyle(
+                      color: _getStatusColor(invoice.status),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      letterSpacing: 0.8,
+                    ),
                   ),
                 ),
               ],
-            )),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDateColumn(
+                      'Issue Date', dateFormat.format(invoice.issueDate)),
+                ),
+                Expanded(
+                  child: _buildDateColumn(
+                      'Due Date', dateFormat.format(invoice.dueDate)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateColumn(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildBillingSection(InvoiceModel invoice) {
+    return JMCard(
+      child: Padding(
+        padding: const EdgeInsets.all(JMSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Billing Information',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: JMSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // From (Company Info)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'From',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: JMSpacing.sm),
+                      const Text(
+                        'JengaMate Ltd',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const Text('P.O. Box 12345'),
+                      const Text('Dar es Salaam, Tanzania'),
+                      const Text('Email: info@jengamate.co.tz'),
+                      const Text('Phone: +255 712 345 678'),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: JMSpacing.md),
+                Container(
+                  width: 1,
+                  height: 120,
+                  color: Colors.grey.shade300,
+                ),
+                const SizedBox(width: JMSpacing.md),
+                // To (Customer Info)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bill To',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: JMSpacing.sm),
+                      Text(
+                        invoice.customerName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (invoice.customerAddress != null &&
+                          invoice.customerAddress!.isNotEmpty)
+                        Text(invoice.customerAddress!),
+                      if (invoice.customerPhone != null &&
+                          invoice.customerPhone!.isNotEmpty)
+                        Text('Phone: ${invoice.customerPhone}'),
+                      Text(invoice.customerEmail),
+                      if (invoice.customerCompany != null &&
+                          invoice.customerCompany!.isNotEmpty)
+                        Text('Company: ${invoice.customerCompany}'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemsSection(InvoiceModel invoice, NumberFormat currencyFormat) {
+    return JMCard(
+      child: Padding(
+        padding: const EdgeInsets.all(JMSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Invoice Items',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  '${invoice.items.length} item${invoice.items.length != 1 ? 's' : ''}',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: JMSpacing.md),
+            const Divider(),
+            const SizedBox(height: JMSpacing.md),
+            _buildItemsTable(invoice, currencyFormat),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTotalsSection(
+      InvoiceModel invoice, NumberFormat currencyFormat) {
+    return JMCard(
+      child: Padding(
+        padding: const EdgeInsets.all(JMSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Invoice Summary',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: JMSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(JMSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: _buildTotals(invoice, currencyFormat),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotesSection(InvoiceModel invoice) {
+    return JMCard(
+      child: Padding(
+        padding: const EdgeInsets.all(JMSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Additional Information',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: JMSpacing.md),
+            if (invoice.notes != null && invoice.notes!.isNotEmpty) ...[
+              _buildInfoSection('Notes', invoice.notes!),
+              const SizedBox(height: JMSpacing.md),
+            ],
+            if (invoice.termsAndConditions != null &&
+                invoice.termsAndConditions!.isNotEmpty) ...[
+              _buildInfoSection(
+                  'Terms & Conditions', invoice.termsAndConditions!),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoSection(String title, String content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: JMSpacing.xs),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(JMSpacing.sm),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Text(
+            content,
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildItemsTable(InvoiceModel invoice, NumberFormat currencyFormat) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Table(
+        border: TableBorder.symmetric(
+          inside: BorderSide(color: Colors.grey.shade200),
+        ),
+        columnWidths: const {
+          0: FlexColumnWidth(4), // Description - more space
+          1: FlexColumnWidth(
+              1.2), // Quantity - slightly more for better alignment
+          2: FlexColumnWidth(1.8), // Unit Price - more space for currency
+          3: FlexColumnWidth(1.8), // Total - more space for currency
+        },
+        children: [
+          // Header
+          TableRow(
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(8)),
+            ),
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text(
+                  'Description',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text(
+                  'Quantity',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text(
+                  'Unit Price',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text(
+                  'Total',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+          // Items
+          if (invoice.items.isEmpty) ...[
+            TableRow(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Text(
+                    'No items found',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox.shrink(),
+                const SizedBox.shrink(),
+                const SizedBox.shrink(),
+              ],
+            )
+          ] else
+            ...invoice.items.map((item) => TableRow(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                  ),
+                  children: [
+                    // Description - always show, with fallback
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(
+                        item.description.isNotEmpty
+                            ? item.description
+                            : 'Product Item',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    // Quantity - always show, with fallback
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(
+                        item.quantity > 0 ? item.quantity.toString() : '1',
+                        style: const TextStyle(
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    // Unit Price - always show, with fallback
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(
+                        item.unitPrice >= 0
+                            ? currencyFormat.format(item.unitPrice)
+                            : currencyFormat.format(0.0),
+                        style: const TextStyle(
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                    // Total - always show, calculated correctly
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(
+                        currencyFormat.format(
+                            (item.quantity > 0 ? item.quantity : 1) *
+                                (item.unitPrice >= 0 ? item.unitPrice : 0.0)),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
+                )),
+        ],
+      ),
     );
   }
 
@@ -371,7 +903,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     return Column(
       children: [
         // Subtotal
-        _buildTotalRow('Subtotal', invoice.subtotal, currencyFormat: currencyFormat),
+        _buildTotalRow('Subtotal', invoice.subtotal,
+            currencyFormat: currencyFormat),
         // Tax
         if (invoice.taxRate > 0) ...[
           _buildTotalRow(
@@ -452,6 +985,37 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
               style: const TextStyle(
                 color: Colors.green,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Don't show payment button for invoices without orderId
+    if (invoice.orderId == null || invoice.orderId!.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          border: Border(
+            top: BorderSide(color: Colors.orange.shade100, width: 1),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'This standalone invoice cannot be processed through payment. Contact administrator for manual processing.',
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ],

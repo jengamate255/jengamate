@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/quote_model.dart';
 import 'package:jengamate/services/database_service.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import FirebaseAuth
+// Import FirebaseAuth
 import 'package:provider/provider.dart'; // Import Provider
 import 'package:jengamate/services/auth_service.dart'; // Import AuthService
 import 'package:jengamate/utils/logger.dart'; // Import Logger

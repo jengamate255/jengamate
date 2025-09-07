@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/product_model.dart';
-import 'package:jengamate/screens/admin/add_edit_product_screen.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;

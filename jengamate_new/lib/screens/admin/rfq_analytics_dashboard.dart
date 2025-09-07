@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/product_interaction_model.dart';
 import 'package:jengamate/services/product_interaction_service.dart';
-import 'package:jengamate/utils/logger.dart';
 import 'package:intl/intl.dart';
 
 class RFQAnalyticsDashboard extends StatefulWidget {

@@ -4,7 +4,6 @@ import 'package:jengamate/services/audit_log_service.dart';
 import 'package:jengamate/services/database_service.dart';
 // import removed: responsive_helper no longer used
 
-import 'package:jengamate/utils/logger.dart';
 import 'package:intl/intl.dart';
 
 class AuditLogScreen extends StatefulWidget {
@@ -75,24 +74,22 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                   subtitle:
                       Text(DateFormat.yMMMd().add_jm().format(log.timestamp)),
                   onTap: () {
-                    if (log.details != null) {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Log Details'),
-                          content: SingleChildScrollView(
-                            child: Text(log.details.toString()),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Close'),
-                            ),
-                          ],
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Log Details'),
+                        content: SingleChildScrollView(
+                          child: Text(log.details.toString()),
                         ),
-                      );
-                    }
-                  },
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ],
+                      ),
+                    );
+                                    },
                 ),
               );
             },

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jengamate/models/order_model.dart';
-import 'package:jengamate/models/order_status.dart';
+import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:jengamate/screens/order/order_details_screen.dart';
 // import 'package:jengamate/screens/order/widgets/payment_dialog.dart'; // TODO: This file is missing, causing build errors.
@@ -26,7 +26,7 @@ class OrderCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => OrderDetailsScreen(orderId: order.id ?? ''),
+              builder: (context) => OrderDetailsScreen(orderId: order.uid),
             ),
           );
         },
@@ -83,8 +83,10 @@ class OrderCard extends StatelessWidget {
                   _buildInfoRow(Icons.person_outline,
                       'Buyer: ${order.customerId.substring(0, 8)}...'),
                   const SizedBox(height: 8),
-                  _buildInfoRow(Icons.store_outlined,
-                      'Supplier: ${order.supplierId?.substring(0, 8) ?? 'N/A'}...'),
+                  _buildInfoRow(
+                    Icons.store_outlined,
+                    'Supplier: ${order.supplierId.isNotEmpty ? order.supplierId.substring(0, order.supplierId.length.clamp(0, 8)) : 'N/A'}...',
+                  ),
                   const Divider(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

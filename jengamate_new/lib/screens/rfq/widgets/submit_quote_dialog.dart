@@ -97,7 +97,13 @@ class _SubmitQuoteDialogState extends State<SubmitQuoteDialog> {
               );
 
               await dbService.createQuote(newQuote);
-              await dbService.sendQuoteSubmissionNotification(newQuote);
+              await dbService.sendQuoteSubmissionNotification({
+                'id': newQuote.id,
+                'rfqId': newQuote.rfqId,
+                'supplierId': newQuote.supplierId,
+                'price': newQuote.price,
+                'notes': newQuote.notes,
+              });
 
               if (mounted) {
                 Navigator.pop(context);

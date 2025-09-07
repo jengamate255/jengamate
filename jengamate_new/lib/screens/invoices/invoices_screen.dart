@@ -4,7 +4,6 @@ import 'package:jengamate/models/invoice_model.dart';
 import 'package:jengamate/services/invoice_service.dart';
 import 'package:jengamate/screens/invoices/create_invoice_screen.dart';
 import 'package:jengamate/screens/invoices/invoice_details_screen.dart';
-import 'package:jengamate/utils/theme.dart';
 import 'package:intl/intl.dart';
 
 class InvoicesScreen extends StatelessWidget {

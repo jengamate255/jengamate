@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/models/notification_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
@@ -372,7 +371,7 @@ class _EmailNotificationsScreenState extends State<EmailNotificationsScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _getNotificationColor(notification.type).withOpacity(0.1),
+              color: _getNotificationColor(notification.type).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(

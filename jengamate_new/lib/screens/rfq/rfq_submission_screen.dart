@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/utils/logger.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/services/database_service.dart';
-import 'package:provider/provider.dart';
 import 'package:jengamate/utils/validators.dart';
 import 'package:jengamate/models/rfq_model.dart';
-import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/services/notification_service.dart';
 import 'package:jengamate/services/supplier_matching_service.dart';
 import 'package:jengamate/services/product_interaction_service.dart';
 import 'package:jengamate/models/user_model.dart';
-import 'package:jengamate/models/product_model.dart';
 
 class RFQSubmissionScreen extends StatefulWidget {
   final String productId;
@@ -71,9 +67,24 @@ class _RFQSubmissionScreenState extends State<RFQSubmissionScreen> {
 
     if (_currentUser == null) {
       if (mounted) {
+        // Show a more informative message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error: User not logged in. Please log in to submit an RFQ.')),
+          const SnackBar(
+            content: Text('Please log in to submit an RFQ.'),
+            duration: Duration(seconds: 3),
+          ),
         );
+        
+        // Redirect to login screen after a short delay
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed(
+            '/login',
+            arguments: {
+              'returnRoute': '/rfq-submission/${widget.productId}/${Uri.encodeComponent(widget.productName)}',
+            },
+          );
+        }
       }
       return;
     }

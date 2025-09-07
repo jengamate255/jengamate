@@ -657,7 +657,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
   Widget _buildCategoryDropdown() {
     // Get root categories only
     final rootCategories =
-        _categories.where((c) => c != null && c!.parentId == null).toList();
+        _categories.where((c) => c != null && c.parentId == null).toList();
 
     // Validate that selected category exists in root categories
     String? validatedSelectedCategoryId = _selectedCategoryId;

@@ -8,7 +8,6 @@ import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:jengamate/models/user_model.dart';
-import 'package:intl/intl.dart';
 
 class PaymentProcessingScreen extends StatefulWidget {
   final String orderId;
@@ -46,7 +45,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
   }
 
   Future<void> _loadOrder() async {
-    final order = await _dbService.getOrder(widget.orderId);
+    final order = await _dbService.getOrderByID(widget.orderId);
     if (order != null) {
       setState(() {
         _order = order;
@@ -320,7 +319,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
           ),
           borderRadius: BorderRadius.circular(8),
           color: isSelected
-              ? Theme.of(context).primaryColor.withOpacity(0.1)
+              ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
               : null,
         ),
         child: Row(
@@ -424,12 +423,13 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
         orderId: widget.orderId,
         userId: Provider.of<UserModel?>(context, listen: false)?.uid ?? '',
         amount: amount,
-        method: _selectedPaymentMethod,
         status: PaymentStatus.pending,
-        referenceNumber: reference,
-        notes: notes.isNotEmpty ? notes : null,
+        paymentMethod: _selectedPaymentMethod.name,
+        transactionId: reference.isNotEmpty ? reference : null,
+        paymentProofUrl: null,
         createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        completedAt: null,
+        metadata: notes.isNotEmpty ? {'notes': notes} : null,
       );
 
       // Save payment to database
@@ -438,15 +438,15 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
       // Update order with payment information
       final updatedOrder = _order!.copyWith(
         amountPaid: (_order!.amountPaid ?? 0) + amount,
-        paymentProofs: [
-          ...(_order!.paymentProofs ?? []),
-          {
+        metadata: {
+          ...(_order!.metadata ?? {}),
+          'lastPayment': {
             'amount': amount,
-            'method': _selectedPaymentMethod,
+            'method': _selectedPaymentMethod.name,
             'reference': reference,
             'date': DateTime.now().toIso8601String(),
-          }
-        ],
+          },
+        },
       );
 
       await _dbService.updateOrder(updatedOrder);

@@ -78,7 +78,10 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.login,
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) {
+          final returnTo = state.uri.queryParameters['returnTo'];
+          return LoginScreen(returnRoute: returnTo);
+        },
       ),
       GoRoute(
         path: AppRoutes.dashboard,
@@ -92,11 +95,19 @@ class AppRouter {
         path: AppRoutes.rfqSubmission,
         builder: (context, state) {
           final productId = state.pathParameters['productId']!;
-          final productName = state.pathParameters['productName']!;
+          final productName = Uri.decodeComponent(state.pathParameters['productName']!);
           return RFQSubmissionScreen(
             productId: productId,
             productName: productName,
           );
+        },
+        redirect: (context, state) {
+          final currentUser = Provider.of<UserModel?>(context, listen: false);
+          if (currentUser == null) {
+            // Redirect to login with return URL
+            return '${AppRoutes.login}?returnTo=${Uri.encodeComponent(state.uri.toString())}';
+          }
+          return null;
         },
       ),
       GoRoute(

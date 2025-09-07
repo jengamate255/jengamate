@@ -1,18 +1,14 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
-import 'package:jengamate/screens/categories/categories_screen.dart';
 import 'package:jengamate/screens/dashboard/dashboard_tab_screen.dart';
 import 'package:jengamate/screens/inquiry/inquiry_screen.dart';
 import 'package:jengamate/screens/products/products_screen.dart';
 import 'package:jengamate/screens/profile/profile_screen.dart';
 import 'package:jengamate/screens/admin/admin_tools_screen.dart';
 import 'package:jengamate/screens/supplier/supplier_rfq_dashboard.dart';
-import 'package:jengamate/screens/admin/add_edit_product_screen.dart';
-import 'package:jengamate/screens/admin/add_edit_category_screen.dart';
 import 'package:jengamate/screens/admin/product_management_screen.dart';
 import 'package:jengamate/screens/order/orders_screen.dart';
 import 'package:jengamate/screens/invoices/invoices_screen.dart';
@@ -94,7 +90,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'Orders',
         'Invoices',
         'Profile',
-        'Admin Tools'
       ];
     } else if (user.role == UserRole.supplier) {
       allowedScreenKeys = [
@@ -277,10 +272,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 setState(() {
                   _selectedIndex = index;
                 });
-                // Navigate to Admin Tools if selected
-                if (allowedScreenKeys[index] == 'Admin Tools') {
-                  context.go(AppRoutes.adminTools);
-                }
               },
               labelType: NavigationRailLabelType.all,
               minWidth: Responsive.isDesktop(context) ? 80 : 60,

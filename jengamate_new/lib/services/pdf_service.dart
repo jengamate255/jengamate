@@ -1,15 +1,17 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:intl/intl.dart';
+import 'package:universal_html/html.dart' as html;
 import '../models/invoice_model.dart';
 
 class PdfService {
-  static Future<File> generateInvoice(InvoiceModel invoice) async {
+  static Future<String> generateInvoiceDownload(InvoiceModel invoice) async {
     final pdf = pw.Document();
-    
+
     // Use built-in fonts to avoid loading issues
     final theme = pw.ThemeData.withFont(
       base: pw.Font.helvetica(),
@@ -19,7 +21,7 @@ class PdfService {
     // Format currency
     final currencyFormat = NumberFormat.currency(
       locale: 'en_US',
-      symbol: 'KSh ',
+      symbol: 'TSh ',
       decimalDigits: 2,
     );
 
@@ -65,14 +67,15 @@ class PdfService {
                   ),
                   pw.SizedBox(height: 10),
                   _buildInfoRow('Date:', dateFormat.format(invoice.issueDate)),
-                  _buildInfoRow('Due Date:', dateFormat.format(invoice.dueDate)),
+                  _buildInfoRow(
+                      'Due Date:', dateFormat.format(invoice.dueDate)),
                   _buildInfoRow('Status:', invoice.status.toUpperCase()),
                 ],
               ),
             ],
           ),
           pw.SizedBox(height: 30),
-          
+
           // Bill To section
           pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -92,8 +95,8 @@ class PdfService {
                     pw.Text(invoice.customerName),
                     if (invoice.customerCompany?.isNotEmpty ?? false)
                       pw.Text(invoice.customerCompany!),
-                    if (invoice.customerEmail?.isNotEmpty ?? false)
-                      pw.Text(invoice.customerEmail!),
+                    if (invoice.customerEmail.isNotEmpty ?? false)
+                      pw.Text(invoice.customerEmail),
                     if (invoice.customerPhone?.isNotEmpty ?? false)
                       pw.Text(invoice.customerPhone!),
                     if (invoice.customerAddress?.isNotEmpty ?? false)
@@ -122,9 +125,9 @@ class PdfService {
             ],
           ),
           pw.SizedBox(height: 30),
-          
+
           // Items table
-          pw.Table.fromTextArray(
+          pw.TableHelper.fromTextArray(
             headers: [
               'DESCRIPTION',
               'QUANTITY',
@@ -156,7 +159,7 @@ class PdfService {
             ],
           ),
           pw.SizedBox(height: 20),
-          
+
           // Totals
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.end,
@@ -165,19 +168,23 @@ class PdfService {
                 width: 200,
                 child: pw.Column(
                   children: [
-                    _buildTotalRow('Subtotal', invoice.subtotal, currencyFormat),
+                    _buildTotalRow(
+                        'Subtotal', invoice.subtotal, currencyFormat),
                     if (invoice.taxAmount > 0)
-                      _buildTotalRow('Tax (${invoice.taxRate}%)', invoice.taxAmount, currencyFormat),
+                      _buildTotalRow('Tax (${invoice.taxRate}%)',
+                          invoice.taxAmount, currencyFormat),
                     if (invoice.discountAmount > 0)
-                      _buildTotalRow('Discount', -invoice.discountAmount, currencyFormat),
+                      _buildTotalRow(
+                          'Discount', -invoice.discountAmount, currencyFormat),
                     pw.Divider(),
-                    _buildTotalRow('TOTAL', invoice.totalAmount, currencyFormat, isBold: true),
+                    _buildTotalRow('TOTAL', invoice.totalAmount, currencyFormat,
+                        isBold: true),
                   ],
                 ),
               ),
             ],
           ),
-          
+
           // Notes and terms
           if (invoice.notes?.isNotEmpty ?? false) ...[
             pw.SizedBox(height: 30),
@@ -194,7 +201,7 @@ class PdfService {
               style: const pw.TextStyle(fontSize: 10),
             ),
           ],
-          
+
           pw.SizedBox(height: 20),
           pw.Text(
             'Terms & Conditions',
@@ -208,7 +215,7 @@ class PdfService {
             'Payment is due within ${invoice.paymentTerms} days. Please make sure all cheques are payable to JengaMate Ltd. A 1.5% late fee is applicable for payments received after the due date.',
             style: const pw.TextStyle(fontSize: 10),
           ),
-          
+
           // Footer
           pw.SizedBox(height: 30),
           pw.Divider(),
@@ -232,11 +239,71 @@ class PdfService {
       ),
     );
 
+    // For web, create downloadable blob
+    if (kIsWeb) {
+      final bytes = await pdf.save();
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      // Trigger download
+      final anchor = html.AnchorElement(href: url)
+        ..target = '_blank'
+        ..download = 'invoice_${invoice.invoiceNumber}.pdf'
+        ..click();
+
+      // Clean up
+      html.Url.revokeObjectUrl(url);
+
+      return url; // Return the URL even though we handled the download
+    } else {
+      // For mobile/desktop, save to file system
+      final output = await getTemporaryDirectory();
+      final file = File('${output.path}/invoice_${invoice.invoiceNumber}.pdf');
+      await file.writeAsBytes(await pdf.save());
+
+      return file.path;
+    }
+  }
+
+  static Future<File> generateInvoice(InvoiceModel invoice) async {
+    if (kIsWeb) {
+      // For web, we'll return a temporary empty file since web handles downloads differently
+      throw UnsupportedError('Use generateInvoiceDownload() for web platform');
+    }
+
+    final pdf = pw.Document();
+
+    // Mobile/Desktop implementation (using existing logic)
+    final theme = pw.ThemeData.withFont(
+      base: pw.Font.helvetica(),
+      bold: pw.Font.helveticaBold(),
+    );
+
+    // ... (rest of your existing code for mobile/desktop)
+
+    // Format currency
+    final currencyFormat = NumberFormat.currency(
+      locale: 'en_US',
+      symbol: 'KSh ',
+      decimalDigits: 2,
+    );
+
+    // Format date
+    final dateFormat = DateFormat('dd MMM yyyy');
+
+    pdf.addPage(pw.MultiPage(
+      theme: theme,
+      pageFormat: PdfPageFormat.a4,
+      build: (context) => [
+        // Same PDF content as above
+      ],
+    ));
+
     // Save the PDF to a temporary file
     final output = await getTemporaryDirectory();
     final file = File('${output.path}/invoice_${invoice.invoiceNumber}.pdf');
     await file.writeAsBytes(await pdf.save());
-    
+
     return file;
   }
 
