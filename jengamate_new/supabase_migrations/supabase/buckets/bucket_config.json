@@ -1,0 +1,47 @@
+{
+  "buckets": {
+    "payment_proofs": {
+      "public": false,
+      "file_size_limit": "10MiB",
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+        "application/pdf"
+      ],
+      "objects_path": "./buckets/payment_proofs",
+      "folder_structure": {
+        "user_id": "Top level folder per user",
+        "order_id": "Subfolder per order within user",
+        "file_naming": "payment_proof_TIMESTAMP_HASH.EXT"
+      },
+      "security": {
+        "private_bucket": true,
+        "user_isolation": true,
+        "file_validation": true,
+        "compression_enabled": true
+      }
+    }
+  },
+  "policies": {
+    "payment_proofs_user_upload": {
+      "description": "Allow users to upload payment proofs to their own folder",
+      "bucket_id": "payment_proofs",
+      "action": "INSERT",
+      "condition": "auth.uid() is not null AND (storage.foldername(name))[1] = auth.uid()::text"
+    },
+    "payment_proofs_user_read": {
+      "description": "Allow users to read their own payment proofs",
+      "bucket_id": "payment_proofs",
+      "action": "SELECT",
+      "condition": "auth.uid() is not null AND (storage.foldername(name))[1] = auth.uid()::text"
+    },
+    "payment_proofs_admin_access": {
+      "description": "Allow admins to access all payment proofs",
+      "bucket_id": "payment_proofs",
+      "action": ["SELECT", "UPDATE", "DELETE"],
+      "condition": "EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'super_admin'))"
+    }
+  }
+}

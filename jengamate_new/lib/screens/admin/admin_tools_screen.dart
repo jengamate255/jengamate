@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/config/app_routes.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/services/tier_metadata_service.dart';
 import 'package:jengamate/screens/admin/providers/admin_metrics_provider.dart';
 import 'package:jengamate/screens/admin/image_migration_screen.dart';
@@ -19,9 +20,11 @@ class AdminToolsScreen extends StatelessWidget {
       : _autoRefresh = autoRefresh;
 
   int _calculateCrossAxisCount(double width) {
-    if (width < 600) return 1; // phones
+    if (width < 480) return 1; // small phones
+    if (width < 600) return 2; // phones
     if (width < 1000) return 2; // small/medium tablets
-    return 3; // large tablets / desktop
+    if (width < 1200) return 3; // large tablets
+    return 4; // desktop
   }
 
   @override
@@ -30,61 +33,56 @@ class AdminToolsScreen extends StatelessWidget {
           {
             'title': 'Financial Oversight',
             'icon': Icons.monetization_on,
-            'routeName': 'adminFinancialOversight',
+            'route': AppRoutes.financialOversight,
             'badgeCount': m.openAuditItems,
           },
           {
             'title': 'User Management',
             'icon': Icons.people,
-            'routeName': 'adminUserManagement',
+            'route': AppRoutes.userManagement,
             'badgeCount': m.pendingUserApprovals,
           },
           {
             'title': 'Withdrawal Management',
             'icon': Icons.account_balance_wallet,
-            'routeName': 'adminWithdrawalManagement',
+            'route': AppRoutes.withdrawals,
             'badgeCount': m.pendingWithdrawals,
           },
           {
             'title': 'Referral Management',
             'icon': Icons.group,
-            'routeName': 'adminReferralManagement',
+            'route': AppRoutes.referralManagement,
             'badgeCount': m.pendingReferrals,
           },
           {
             'title': 'Product Management',
             'icon': Icons.store,
-            'routeName': 'adminProductManagement',
+            'route': AppRoutes.products,
           },
           {
             'title': 'Category Management',
             'icon': Icons.category,
-            'routeName': 'adminCategoryManagement',
+            'route': AppRoutes.categories,
           },
           {
             'title': 'Analytics & Reporting',
             'icon': Icons.analytics,
-            'routeName': 'adminAnalyticsReporting',
+            'route': AppRoutes.analytics,
           },
           {
             'title': 'Commission Tools',
             'icon': Icons.attach_money,
-            'routeName': 'adminCommissionTools',
+            'route': AppRoutes.commission,
           },
           {
             'title': 'RFQ Management',
             'icon': Icons.request_quote,
-            'route': '/rfq-management-dashboard',
+            'route': AppRoutes.rfqManagementDashboard,
           },
           {
             'title': 'RFQ Analytics',
             'icon': Icons.analytics,
-            'route': '/rfq-analytics-dashboard',
-          },
-          {
-            'title': 'Commission Tiers',
-            'icon': Icons.stacked_bar_chart,
-            'routeName': 'adminCommissionTiers',
+            'route': AppRoutes.rfqAnalyticsDashboard,
           },
           {
             'title': 'Add/Edit Product',
@@ -94,17 +92,17 @@ class AdminToolsScreen extends StatelessWidget {
           {
             'title': 'Financial Dashboard',
             'icon': Icons.account_balance,
-            'route': '/financial-dashboard',
+            'route': AppRoutes.financialDashboard,
           },
           {
             'title': 'System Settings',
             'icon': Icons.settings,
-            'route': '/system-settings',
+            'route': AppRoutes.systemSettings,
           },
           {
             'title': 'Advanced Analytics',
             'icon': Icons.bar_chart,
-            'route': '/advanced-analytics',
+            'route': AppRoutes.advancedAnalytics,
           },
           {
             'title': 'Image Migration',
@@ -114,22 +112,22 @@ class AdminToolsScreen extends StatelessWidget {
           {
             'title': 'Audit Logs',
             'icon': Icons.history,
-            'route': '/enhanced-audit-logs',
+            'route': AppRoutes.enhancedAuditLogs,
           },
           {
             'title': 'Commission Tiers',
             'icon': Icons.layers,
-            'route': '/commission-tier-management',
+            'route': AppRoutes.commissionTierManagement,
           },
           {
             'title': 'Content Moderation',
             'icon': Icons.policy,
-            'route': '/content-moderation',
+            'route': AppRoutes.contentModeration,
           },
           {
             'title': 'Support Management',
             'icon': Icons.support_agent,
-            'route': '/admin-support',
+            'route': AppRoutes.adminSupport,
           },
         ];
 
@@ -151,7 +149,7 @@ class AdminToolsScreen extends StatelessWidget {
               children: [
                 const _PreloadTierMeta(),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
                   child: _KpiRow(metrics: metrics),
                 ),
                 if (metrics.error != null)
@@ -183,12 +181,12 @@ class AdminToolsScreen extends StatelessWidget {
                       final crossAxisCount =
                           _calculateCrossAxisCount(constraints.maxWidth);
                       final grid = GridView.builder(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: EdgeInsets.all(crossAxisCount == 1 ? 12.0 : 16.0),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 16.0,
-                          mainAxisSpacing: 16.0,
-                          childAspectRatio: 1.2,
+                          crossAxisSpacing: crossAxisCount == 1 ? 8.0 : 16.0,
+                          mainAxisSpacing: crossAxisCount == 1 ? 8.0 : 16.0,
+                          childAspectRatio: crossAxisCount == 1 ? 1.8 : 1.2,
                         ),
                         itemCount: metrics.loading ? 5 : adminTools.length,
                         itemBuilder: (context, index) {
@@ -201,11 +199,7 @@ class AdminToolsScreen extends StatelessWidget {
                             title: tool['title'],
                             icon: tool['icon'],
                             onTap: () {
-                              if (tool.containsKey('routeName')) {
-                                context.goNamed(tool['routeName']);
-                              } else {
-                                context.go(tool['route']);
-                              }
+                              context.go(tool['route']);
                             },
                             badgeCount: badgeCount,
                           );
@@ -388,6 +382,12 @@ class _AdminToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final iconSize = isMobile ? 36.0 : 48.0;
+    final spacing = isMobile ? 8.0 : 16.0;
+    final textSize = isMobile ? 12.0 : 14.0;
+
     final showBadge = (badgeCount ?? 0) > 0;
     return Card(
       elevation: 4,
@@ -403,31 +403,39 @@ class _AdminToolCard extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 48, color: Theme.of(context).primaryColor),
-                  const SizedBox(height: 16),
+                  Icon(icon, size: iconSize, color: Theme.of(context).primaryColor),
+                  SizedBox(height: spacing),
                   Text(
                     title,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: textSize,
+                    ),
                   ),
                 ],
               ),
             ),
             if (showBadge)
               Positioned(
-                right: 12,
-                top: 12,
+                right: isMobile ? 8 : 12,
+                top: isMobile ? 8 : 12,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 6 : 8,
+                    vertical: isMobile ? 2 : 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.redAccent,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     badgeCount!.toString(),
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: isMobile ? 10 : 12,
+                    ),
                   ),
                 ),
               ),

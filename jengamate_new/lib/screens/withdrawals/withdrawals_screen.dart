@@ -3,6 +3,7 @@ import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/withdrawal_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/screens/withdrawals/request_withdrawal_screen.dart';
 
@@ -11,7 +12,7 @@ class WithdrawalsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context, listen: false);
+    final currentUser = Provider.of<UserStateProvider>(context).currentUser;
     final dbService = DatabaseService();
 
     if (currentUser == null ||
@@ -29,7 +30,7 @@ class WithdrawalsScreen extends StatelessWidget {
         title: const Text('Withdrawals'),
       ),
       body: StreamBuilder<List<WithdrawalModel>>(
-        stream: dbService.streamWithdrawals(currentUser.uid),
+        stream: currentUser != null ? dbService.streamWithdrawals(currentUser.uid) : Stream.empty(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

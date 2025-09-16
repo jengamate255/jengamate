@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 class Quote {
   final String id;
@@ -29,7 +29,7 @@ class Quote {
       supplierName: data['supplierName'] ?? '',
       price: (data['price'] ?? 0).toDouble(),
       description: data['description'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] is String) ? DateTime.parse(data['createdAt']) : _parseOptionalDateTime(data['createdAt']) ?? DateTime.now(),
       isAccepted: data['isAccepted'] ?? false,
     );
   }
@@ -41,12 +41,54 @@ class Quote {
       'supplierName': supplierName,
       'price': price,
       'description': description,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
       'isAccepted': isAccepted,
     };
   }
 
-  factory Quote.fromFirestore(DocumentSnapshot doc) {
-    return Quote.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+  factory Quote.fromFirestore(Map<String, dynamic> data, {required String docId}) {
+    return Quote.fromMap(data, docId);
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate(); // This is the key fix!
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    return null;
   }
 }

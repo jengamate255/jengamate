@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/models/payment_model.dart';
 import 'package:jengamate/models/enums/payment_enums.dart';
@@ -421,7 +422,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
       final payment = PaymentModel(
         id: '', // Will be set by Firestore
         orderId: widget.orderId,
-        userId: Provider.of<UserModel?>(context, listen: false)?.uid ?? '',
+        userId: Provider.of<UserStateProvider>(context).currentUser?.uid ?? '',
         amount: amount,
         status: PaymentStatus.pending,
         paymentMethod: _selectedPaymentMethod.name,

@@ -287,7 +287,7 @@ class StatusAutomationService {
         .where('status', whereIn: ['sent', 'partially_paid', 'overdue']).get();
 
     return querySnapshot.docs
-        .map((doc) => InvoiceModel.fromFirestore(doc))
+        .map((doc) => InvoiceModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id))
         .toList();
   }
 
@@ -559,7 +559,7 @@ class StatusAutomationService {
         .get();
 
     return querySnapshot.docs
-        .map((doc) => InvoiceModel.fromFirestore(doc))
+        .map((doc) => InvoiceModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id))
         .toList();
   }
 
@@ -573,7 +573,7 @@ class StatusAutomationService {
         .where('status', whereIn: ['sent', 'partially_paid']).get();
 
     return querySnapshot.docs
-        .map((doc) => InvoiceModel.fromFirestore(doc))
+        .map((doc) => InvoiceModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id))
         .toList();
   }
 }

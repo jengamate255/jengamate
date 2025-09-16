@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import '../models/invoice_model.dart';
 import '../services/bulk_operations_service.dart';
 import '../services/invoice_service.dart';

@@ -4,9 +4,21 @@ import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/audit_log_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/models/admin_user_activity.dart';
+import 'package:jengamate/services/offline_cache_service.dart';
+import 'package:jengamate/models/order_model.dart';
+import 'package:jengamate/models/commission_model.dart';
+import 'package:jengamate/models/content_report_model.dart';
+import 'package:jengamate/models/rfq_model.dart';
+import 'package:jengamate/models/document_verification.dart';
+import 'package:jengamate/models/enums/order_enums.dart';
+import 'package:jengamate/models/enums/user_role.dart';
+import 'package:jengamate/utils/logger.dart'; // Added
+import 'package:jengamate/services/document_verification_service.dart'; // Added
 
 class AdminAnalyticsService {
   final DatabaseService _dbService = DatabaseService();
+  final OfflineCacheService _cacheService = OfflineCacheService();
+  final DocumentVerificationService _documentVerificationService = DocumentVerificationService(); // Added
 
   // System Health - basic status check
   Stream<Map<String, dynamic>> getSystemHealth() {
@@ -29,30 +41,97 @@ class AdminAnalyticsService {
 
   // Dashboard Stats - key metrics
   Stream<Map<String, dynamic>> getDashboardStats() async* {
-    // Use existing database service methods
-    final usersStream = _dbService.streamTotalUsersCount();
-    final ordersStream = _dbService.streamTotalOrdersCount();
+    final now = DateTime.now();
+    final cacheKey = 'dashboard_stats_${now.year}-${now.month}-${now.day}';
+    Map<String, dynamic>? cachedStats = _cacheService.getData(cacheKey);
+
+    if (cachedStats != null) {
+      yield cachedStats;
+      Logger.log('Dashboard stats loaded from cache.');
+    }
 
     await for (final _ in Stream.periodic(const Duration(seconds: 5))) {
       try {
-        final users = await usersStream.first;
-        final orders = await ordersStream.first;
+        final totalUsers = await _dbService.streamTotalUsersCount().first;
+        final totalOrders = await _dbService.streamTotalOrdersCount().first;
+        final pendingDocuments = (await _dbService
+                .streamAllInquiries()
+                .first)
+            .where((inquiry) => inquiry.status == 'pending')
+            .length; // Placeholder: use DocumentVerificationService for real count
+        final activeRFQs = (await _dbService.streamAllRFQs().first)
+            .where((rfq) => rfq.status == 'active' || rfq.status == 'open')
+            .length; // Placeholder: use RFQService if available
+        final flaggedContent = (await _dbService.getContentReports())
+            .where((report) => report.status == 'pending')
+            .length; // Placeholder: use ContentModerationService
 
-        yield {
-          'totalUsers': users,
-          'totalOrders': orders,
-          'pendingDocuments': 12, // Placeholder - implement actual count
-          'activeRFQs': 8, // Placeholder - implement actual count
-          'flaggedContent': 3, // Placeholder - implement actual count
+        final stats = {
+          'totalUsers': totalUsers,
+          'totalOrders': totalOrders,
+          'pendingDocuments': pendingDocuments,
+          'activeRFQs': activeRFQs,
+          'flaggedContent': flaggedContent,
         };
+
+        _cacheService.saveData(cacheKey, stats);
+        yield stats;
+        Logger.log('Dashboard stats fetched from network and cached.');
       } catch (e) {
-        yield {
-          'totalUsers': 0,
-          'totalOrders': 0,
-          'pendingDocuments': 0,
-          'activeRFQs': 0,
-          'flaggedContent': 0,
+        Logger.logError('Error fetching dashboard stats', e);
+        yield cachedStats ?? {}; // Yield cached data or empty map on error
+      }
+    }
+  }
+
+  // Revenue Report - detailed breakdown
+  Stream<Map<String, dynamic>> getRevenueReport({int days = 30}) async* {
+    final cacheKey = 'revenue_report_$days';
+    Map<String, dynamic>? cachedReport = _cacheService.getData(cacheKey);
+
+    if (cachedReport != null) {
+      yield cachedReport;
+      Logger.log('Revenue report loaded from cache.');
+    }
+
+    await for (final _ in Stream.periodic(const Duration(minutes: 5))) { // Update every 5 minutes
+      try {
+        final cutoff = DateTime.now().subtract(Duration(days: days));
+        final orders = await _dbService.getOrders(null).first;
+        final relevantOrders = orders.where((order) => order.createdAt.isAfter(cutoff)).toList();
+
+        double totalRevenue = 0;
+        Map<String, double> revenueByDay = {};
+        Map<String, double> revenueByProduct = {};
+
+        for (var order in relevantOrders) {
+          if (order.status == OrderStatus.completed) {
+            totalRevenue += order.totalAmount;
+
+            // Revenue by day
+            final dayKey = DateTime(order.createdAt.year, order.createdAt.month, order.createdAt.day).toIso8601String().split('T').first;
+            revenueByDay[dayKey] = (revenueByDay[dayKey] ?? 0) + order.totalAmount;
+
+            // Revenue by product
+            for (var item in order.items) {
+              revenueByProduct[item.productId] = (revenueByProduct[item.productId] ?? 0) + item.totalPrice;
+            }
+          }
+        }
+
+        final report = {
+          'totalRevenue': totalRevenue,
+          'revenueByDay': revenueByDay,
+          'revenueByProduct': revenueByProduct,
+          'reportGeneratedAt': DateTime.now().toIso8601String(),
         };
+
+        _cacheService.saveData(cacheKey, report);
+        yield report;
+        Logger.log('Revenue report fetched from network and cached.');
+      } catch (e) {
+        Logger.logError('Error fetching revenue report', e);
+        yield cachedReport ?? {}; // Yield cached data or empty map on error
       }
     }
   }
@@ -96,44 +175,224 @@ class AdminAnalyticsService {
 
   // Document Analytics - for DocumentVerificationScreen
   Stream<Map<String, dynamic>> getDocumentAnalytics() {
-    return Stream.periodic(const Duration(seconds: 30), (int count) {
-      return {
-        'totalDocuments': 150,
-        'pendingVerification': 23,
-        'verifiedDocuments': 127,
-        'rejectionRate': '8.5%',
-        'averageVerificationTime': '2.3 hours',
-      };
-    });
+    return _documentVerificationService.getDocumentAnalytics();
   }
 
   // User Analytics - for UserManagementScreen
-  Stream<Map<String, dynamic>> getUserAnalytics() {
-    return Stream.periodic(const Duration(seconds: 30), (int count) {
-      return {
-        'totalUsers': 456,
-        'activeUsers': 234,
-        'newUsersToday': 12,
-        'suspendedUsers': 5,
-        'verificationPending': 34,
-        'engineersCount': 89,
-        'suppliersCount': 67,
-      };
-    });
+  Stream<Map<String, dynamic>> getUserAnalytics() async* {
+    while (true) {
+      final cacheKey = 'user_analytics_daily';
+      Map<String, dynamic>? cachedAnalytics = _cacheService.getData(cacheKey);
+
+      if (cachedAnalytics != null) {
+        yield cachedAnalytics;
+        Logger.log('User analytics loaded from cache.');
+      } else {
+        try {
+          final totalUsers = await _dbService.streamTotalUsersCount().first;
+          final newUsersToday = await _dbService.streamNewUsersCount(days: 1).first;
+          final allUsers = await _dbService.streamAllUsers().first;
+
+          int activeUsers = 0;
+          int suspendedUsers = 0;
+          int verificationPending = 0;
+          int engineersCount = 0;
+          int suppliersCount = 0;
+
+          for (var user in allUsers) {
+            // Placeholder for active users logic (e.g., last login within 30 days)
+            // For now, let's just count users with a specific role.
+            if (user.role == UserRole.engineer) {
+              engineersCount++;
+            } else if (user.role == UserRole.supplier) {
+              suppliersCount++;
+            }
+
+            // Assuming 'isApproved' can be used for suspension logic and identityVerificationSubmitted for pending
+            if (!user.isApproved) {
+              suspendedUsers++;
+            }
+            if (user.identityVerificationSubmitted && !user.identityVerificationApproved) {
+              verificationPending++;
+            }
+          }
+
+          final analytics = {
+            'totalUsers': totalUsers,
+            'activeUsers': activeUsers, // Needs proper implementation
+            'newUsersToday': newUsersToday,
+            'suspendedUsers': suspendedUsers,
+            'verificationPending': verificationPending,
+            'engineersCount': engineersCount,
+            'suppliersCount': suppliersCount,
+          };
+
+          _cacheService.saveData(cacheKey, analytics);
+          yield analytics;
+          Logger.log('User analytics fetched from network and cached.');
+        } catch (e) {
+          Logger.logError('Error fetching user analytics', e);
+          yield {};
+        }
+      }
+
+      await Future.delayed(const Duration(seconds: 30));
+    }
   }
 
   // Content Analytics - for ContentModerationScreen
-  Stream<Map<String, dynamic>> getContentAnalytics() {
-    return Stream.periodic(const Duration(seconds: 30), (int count) {
-      return {
-        'totalContent': 2456,
-        'flaggedContent': 23,
-        'reportedContent': 15,
-        'underReview': 8,
-        'autoModerated': 1234,
-        'manualReviews': 89,
-      };
-    });
+  Stream<Map<String, dynamic>> getContentAnalytics() async* {
+    while (true) {
+      final cacheKey = 'content_analytics_daily';
+      Map<String, dynamic>? cachedAnalytics = _cacheService.getData(cacheKey);
+
+      if (cachedAnalytics != null) {
+        yield cachedAnalytics;
+        Logger.log('Content analytics loaded from cache.');
+      } else {
+        try {
+          final allContentReports = await _dbService.getContentReports();
+          final totalContent = allContentReports.length;
+          final flaggedContent = allContentReports.where((report) => report.status == 'pending').length;
+          final reportedContent = allContentReports.where((report) => report.status == 'reported').length;
+          final underReview = allContentReports.where((report) => report.status == 'under_review').length;
+
+          // Placeholders for autoModerated and manualReviews
+          final autoModerated = 0;
+          final manualReviews = 0;
+
+          final analytics = {
+            'totalContent': totalContent,
+            'flaggedContent': flaggedContent,
+            'reportedContent': reportedContent,
+            'underReview': underReview,
+            'autoModerated': autoModerated,
+            'manualReviews': manualReviews,
+          };
+
+          _cacheService.saveData(cacheKey, analytics);
+          yield analytics;
+          Logger.log('Content analytics fetched from network and cached.');
+        } catch (e) {
+          Logger.logError('Error fetching content analytics', e);
+          yield {};
+        }
+      }
+
+      await Future.delayed(const Duration(seconds: 30));
+    }
+  }
+
+  // Product Performance Report
+  Stream<Map<String, dynamic>> getProductPerformanceReport({int days = 30}) async* {
+    final cacheKey = 'product_performance_report_$days';
+    Map<String, dynamic>? cachedReport = _cacheService.getData(cacheKey);
+
+    if (cachedReport != null) {
+      yield cachedReport;
+      Logger.log('Product performance report loaded from cache.');
+    }
+
+    await for (final _ in Stream.periodic(const Duration(minutes: 5))) { // Update every 5 minutes
+      try {
+        final cutoff = DateTime.now().subtract(Duration(days: days));
+        final products = await _dbService.getAllProducts(); // Assuming getAllProducts fetches all products
+        final orders = await _dbService.getOrders(null).first; // Assuming getOrders gets all orders
+
+        Map<String, int> productViews = {}; // Placeholder for product views, needs separate tracking
+        Map<String, double> productRevenue = {};
+        Map<String, int> productOrders = {};
+
+        for (var product in products) {
+          productRevenue[product.id] = 0.0;
+          productOrders[product.id] = 0;
+        }
+
+        for (var order in orders) {
+          if (order.createdAt.isAfter(cutoff) && order.status == OrderStatus.completed) {
+            for (var item in order.items) {
+              productRevenue[item.productId] = (productRevenue[item.productId] ?? 0.0) + item.totalPrice;
+              productOrders[item.productId] = (productOrders[item.productId] ?? 0) + item.quantity;
+            }
+          }
+        }
+
+        // Combine product data with calculated metrics
+        List<Map<String, dynamic>> productPerformance = products.map((product) => {
+          'productId': product.id,
+          'productName': product.name,
+          'category': product.category,
+          'totalRevenue': productRevenue[product.id] ?? 0.0,
+          'totalOrders': productOrders[product.id] ?? 0,
+          'totalViews': productViews[product.id] ?? 0, // Placeholder
+        }).toList();
+
+        productPerformance.sort((a, b) => (b['totalRevenue'] as double).compareTo(a['totalRevenue'] as double));
+
+        final report = {
+          'productPerformance': productPerformance,
+          'reportGeneratedAt': DateTime.now().toIso8601String(),
+        };
+
+        _cacheService.saveData(cacheKey, report);
+        yield report;
+        Logger.log('Product performance report fetched from network and cached.');
+      } catch (e) {
+        Logger.logError('Error fetching product performance report', e);
+        yield cachedReport ?? {};
+      }
+    }
+  }
+
+  // Commission Report
+  Stream<Map<String, dynamic>> getCommissionReport({int days = 30}) async* {
+    final cacheKey = 'commission_report_$days';
+    Map<String, dynamic>? cachedReport = _cacheService.getData(cacheKey);
+
+    if (cachedReport != null) {
+      yield cachedReport;
+      Logger.log('Commission report loaded from cache.');
+    }
+
+    await for (final _ in Stream.periodic(const Duration(minutes: 5))) { // Update every 5 minutes
+      try {
+        final cutoff = DateTime.now().subtract(Duration(days: days));
+        final commissions = await _dbService.streamAllCommissions().first; // Assuming streamAllCommissions fetches all commissions
+
+        double totalCommissionsEarned = 0.0;
+        double totalCommissionsPaid = 0.0;
+        double totalCommissionsPending = 0.0;
+        Map<String, double> commissionsByUser = {};
+
+        for (var commission in commissions) {
+          if (commission.createdAt.isAfter(cutoff)) {
+            totalCommissionsEarned += commission.total;
+
+            if (commission.status == 'paid') {
+              totalCommissionsPaid += commission.total;
+            } else if (commission.status == 'pending') {
+              totalCommissionsPending += commission.total;
+            }
+            commissionsByUser[commission.userId] = (commissionsByUser[commission.userId] ?? 0.0) + commission.total;
+          }
+        }
+
+        final report = {
+          'totalCommissionsEarned': totalCommissionsEarned,
+          'totalCommissionsPaid': totalCommissionsPaid,
+          'totalCommissionsPending': totalCommissionsPending,
+          'commissionsByUser': commissionsByUser,
+          'reportGeneratedAt': DateTime.now().toIso8601String(),
+        };
+
+        _cacheService.saveData(cacheKey, report);
+        yield report;
+        Logger.log('Commission report fetched from network and cached.');
+      } catch (e) {
+        Logger.logError('Error fetching commission report', e);
+        yield cachedReport ?? {};
+      }
+    }
   }
 
   // User Activities - used by multiple screens

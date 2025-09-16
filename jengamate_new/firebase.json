@@ -16,6 +16,9 @@
   "firestore": {
     "indexes": "./firestore.indexes.json"
   },
+  "storage": {
+    "rules": "./firestore_rules/storage.rules"
+  },
   "flutter": {
     "platforms": {
       "android": {

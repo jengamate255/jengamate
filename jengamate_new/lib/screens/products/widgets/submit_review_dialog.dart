@@ -3,6 +3,7 @@ import 'package:jengamate/models/review_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 class SubmitReviewDialog extends StatefulWidget {
   final String productId;
@@ -50,7 +51,7 @@ class _SubmitReviewDialogState extends State<SubmitReviewDialog> {
     final review = ReviewModel(
       id: '',
       productId: widget.productId,
-      userId: currentUser.uid,
+      userId: currentUser?.uid,
             userName: currentUser.displayName,
       rating: _currentRating.toDouble(),
       comment: _commentController.text.trim(),

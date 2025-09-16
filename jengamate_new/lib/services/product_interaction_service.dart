@@ -205,7 +205,7 @@ class ProductInteractionService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => ProductInteractionModel.fromFirestore(doc))
+            .map((doc) => ProductInteractionModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id))
             .toList());
   }
 
@@ -217,7 +217,7 @@ class ProductInteractionService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => RFQTrackingModel.fromFirestore(doc))
+            .map((doc) => RFQTrackingModel.fromFirestore(doc.data() as Map<String, dynamic>, docId: doc.id))
             .toList());
   }
 
@@ -228,7 +228,7 @@ class ProductInteractionService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => RFQTrackingModel.fromFirestore(doc))
+            .map((doc) => RFQTrackingModel.fromFirestore(doc.data() as Map<String, dynamic>, docId: doc.id))
             .toList());
   }
 
@@ -333,6 +333,42 @@ class ProductInteractionService {
       });
     } catch (e, s) {
       Logger.logError('Error updating product analytics', e, s);
+    }
+  }
+
+  Future<void> recordQuote({
+    required String rfqId,
+    required String supplierId,
+    required double quoteAmount,
+    DateTime? estimatedDeliveryDate,
+    String? notes,
+  }) async {
+    try {
+      final quoteData = {
+        'rfqId': rfqId,
+        'supplierId': supplierId,
+        'quoteAmount': quoteAmount,
+        'estimatedDeliveryDate': estimatedDeliveryDate?.toIso8601String(),
+        'notes': notes,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+      await _firestore.collection('quotes').add(quoteData);
+
+      // Update RFQ status to 'quoted' and log event
+      final rfqDoc = await _firestore.collection(_rfqTrackingCollection).where('rfqId', isEqualTo: rfqId).limit(1).get();
+      if (rfqDoc.docs.isNotEmpty) {
+        final productData = rfqDoc.docs.first.data();
+        final productId = productData['productId'] as String? ?? 'unknown_product_id';
+        final productName = productData['productName'] as String? ?? 'unknown_product_name';
+        await _updateProductAnalytics(productId, productName, 'quote_received');
+      } else {
+        await _updateProductAnalytics('unknown_product_id', 'unknown_product_name', 'quote_received'); // Fallback if RFQ doc not found
+      }
+      
+      Logger.logEvent('quote_submitted', parameters: {'rfq_id': rfqId, 'supplier_id': supplierId, 'quote_amount': quoteAmount});
+    } catch (e, s) {
+      Logger.logError('Error recording quote', e, s);
+      rethrow;
     }
   }
 

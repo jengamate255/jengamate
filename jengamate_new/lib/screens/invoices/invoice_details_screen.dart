@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/invoice_model.dart';
-import 'package:jengamate/models/email_template.dart';
+import 'package:jengamate/models/user_model.dart'; // Import UserModel
 import 'package:jengamate/services/invoice_service.dart';
 import 'package:jengamate/services/email_service.dart';
 import 'package:jengamate/services/console_error_handler.dart';
@@ -511,6 +512,23 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   }
 
   Widget _buildBillingSection(InvoiceModel invoice) {
+    final currentUser = context.watch<UserModel?>(); // Access the current user
+
+    String billToName = invoice.customerName;
+    String? billToPhone = invoice.customerPhone;
+    String? billToAddress = invoice.customerAddress;
+    String billToEmail = invoice.customerEmail;
+    String? billToCompany = invoice.customerCompany;
+
+    // If the invoice is for the current user, use their profile data
+    if (currentUser != null && currentUser?.uid == invoice.customerId) {
+      billToName = currentUser.displayName;
+      billToPhone = currentUser.phoneNumber ?? invoice.customerPhone; // Prefer user's phone
+      billToAddress = currentUser.address ?? invoice.customerAddress; // Prefer user's address
+      billToEmail = currentUser.email ?? invoice.customerEmail; // Prefer user's email
+      billToCompany = currentUser.companyName ?? invoice.customerCompany; // Prefer user's company
+    }
+
     return JMCard(
       child: Padding(
         padding: const EdgeInsets.all(JMSpacing.md),
@@ -579,22 +597,19 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                       ),
                       const SizedBox(height: JMSpacing.sm),
                       Text(
-                        invoice.customerName,
+                        billToName,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 16,
                         ),
                       ),
-                      if (invoice.customerAddress != null &&
-                          invoice.customerAddress!.isNotEmpty)
-                        Text(invoice.customerAddress!),
-                      if (invoice.customerPhone != null &&
-                          invoice.customerPhone!.isNotEmpty)
-                        Text('Phone: ${invoice.customerPhone}'),
-                      Text(invoice.customerEmail),
-                      if (invoice.customerCompany != null &&
-                          invoice.customerCompany!.isNotEmpty)
-                        Text('Company: ${invoice.customerCompany}'),
+                      if (billToAddress != null && billToAddress.isNotEmpty)
+                        Text(billToAddress),
+                      if (billToPhone != null && billToPhone.isNotEmpty)
+                        Text('Phone: $billToPhone'),
+                      Text(billToEmail),
+                      if (billToCompany != null && billToCompany.isNotEmpty)
+                        Text('Company: $billToCompany'),
                     ],
                   ),
                 ),
@@ -717,7 +732,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
             color: Colors.black87,
           ),
         ),
-        const SizedBox(height: JMSpacing.xs),
+        const SizedBox(height: JMSpacing.xxs),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(JMSpacing.sm),

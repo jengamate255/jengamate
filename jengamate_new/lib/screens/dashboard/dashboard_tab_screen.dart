@@ -11,6 +11,7 @@ import 'package:jengamate/models/commission_model.dart';
 import 'package:jengamate/models/order_stats_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/screens/admin/admin_tools_screen.dart';
@@ -161,9 +162,9 @@ class DashboardTabScreen extends StatelessWidget {
   Widget _sparklineBars(BuildContext context, List<double> data, Color color) {
     final maxVal = data.isEmpty ? 0.0 : data.reduce((a, b) => a > b ? a : b);
     final barCount = data.length;
-    final barWidth = 6.0;
-    final barSpacing = 4.0;
-    final height = 40.0;
+    const barWidth = 6.0;
+    const barSpacing = 4.0;
+    const height = 40.0;
     return SizedBox(
       height: height,
       child: Row(
@@ -288,7 +289,7 @@ class DashboardTabScreen extends StatelessWidget {
 
     return StreamBuilder<Map<String, int>>(
       stream: dbService
-          .streamOrderStats(currentUser.uid)
+          .streamOrderStats(currentUser.uid ?? '')
           .map((m) => m.map((k, v) => MapEntry(k, (v as num).toInt()))),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -373,7 +374,7 @@ class DashboardTabScreen extends StatelessWidget {
               builder: (context, setLocalState) {
                 // 0 = All, 1 = 7d, 2 = 30d
                 int salesWindow = 0;
-                final spacing = 16.0;
+                const spacing = 16.0;
                 Widget salesValueForWindow() {
                   if (salesWindow == 1) {
                     return StreamBuilder<double>(
@@ -666,7 +667,41 @@ class DashboardTabScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
+
+    // Show loading state if user data is still loading
+    if (userState.isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading your dashboard...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Show error state if no user data
+    if (currentUser == null) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red),
+              SizedBox(height: 16),
+              Text('Unable to load user data'),
+              Text('Please try logging in again'),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -692,27 +727,16 @@ class DashboardTabScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (currentUser == null)
-                                  const Text(
-                                    'Loading...',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )
-                                else
-                                  Text(
-                                    'Welcome back, ${currentUser.displayName}!',
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
                                 Text(
-                                  currentUser == null
-                                      ? ''
-                                      : '@${(currentUser.email?.split('@').first ?? 'user')}',
+                                  'Welcome back, ${currentUser.displayName}!',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  '@${(currentUser.email?.split('@').first ?? 'user')}',
                                   style: const TextStyle(
                                       color: AppTheme.subTextColor),
                                   overflow: TextOverflow.ellipsis,

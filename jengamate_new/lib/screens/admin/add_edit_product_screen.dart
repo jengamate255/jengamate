@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:jengamate/utils/logger.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:jengamate/models/product_model.dart';
@@ -9,10 +10,11 @@ import 'package:jengamate/services/storage_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
+// import 'package:file_picker/file_picker.dart'; // Temporarily commented out due to dependency conflicts
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/models/category_model.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final ProductModel? product;
@@ -45,7 +47,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
 
   XFile? _pickedImage;
   String? _videoUrl;
-  PlatformFile? _pickedVideo;
+  // PlatformFile? _pickedVideo; // Temporarily commented out due to dependency conflicts
 
   List<CategoryModel?> _categories = [];
   List<CategoryModel?> _subCategories = [];
@@ -118,13 +120,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
             if (prod.subCategoryId != null && prod.subCategoryId!.isNotEmpty) {
               final sub = _categories.cast<CategoryModel?>().firstWhere(
                     (c) => c?.id == prod.subCategoryId,
-                    orElse: () => null,
+                    orElse: () => null as CategoryModel?,
                   );
               if (sub != null && sub.parentId != null) {
                 // Verify parent exists and is a root category
                 final parent = _categories.cast<CategoryModel?>().firstWhere(
                       (c) => c?.id == sub.parentId && c?.parentId == null,
-                      orElse: () => null,
+                      orElse: () => null as CategoryModel?,
                     );
                 if (parent != null) {
                   _selectedCategoryId = parent.id;
@@ -136,14 +138,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
               // Ensure we select a root if categoryId points to a child
               final found = _categories.cast<CategoryModel?>().firstWhere(
                     (c) => c?.id == prod.categoryId,
-                    orElse: () => null,
+                    orElse: () => null as CategoryModel?,
                   );
               if (found != null) {
                 if (found.parentId != null) {
                   // This is a subcategory, find its parent
                   final parent = _categories.cast<CategoryModel?>().firstWhere(
                         (c) => c?.id == found.parentId && c?.parentId == null,
-                        orElse: () => null,
+                        orElse: () => null as CategoryModel?,
                       );
                   if (parent != null) {
                     _selectedCategoryId = parent.id;
@@ -160,7 +162,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
         });
       }
     } catch (e) {
-      print("Error fetching categories: $e");
+      Logger.log("Error fetching categories: $e");
       // Reset state on error
       if (mounted) {
         setState(() {
@@ -183,7 +185,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
           if (initialSubCategoryId != null) {
             final subCategory = _subCategories.firstWhere(
               (sc) => sc!.id == initialSubCategoryId,
-              orElse: () => null,
+              orElse: () => null as CategoryModel?,
             );
             if (subCategory != null) {
               _selectedSubCategoryId = subCategory.id;
@@ -192,7 +194,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
         });
       }
     } catch (e) {
-      print("Error fetching sub-categories: $e");
+      Logger.log("Error fetching sub-categories: $e");
     }
   }
 
@@ -206,13 +208,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
           _pickedImage = XFile.fromData(bytes, name: url.split('/').last);
         });
       } else {
-        print('Failed to load image from URL: ${response.statusCode}');
+        Logger.log('Failed to load image from URL: ${response.statusCode}');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load image.')),
         );
       }
     } catch (e) {
-      print('Error loading image from URL: $e');
+      Logger.log('Error loading image from URL: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('An error occurred while loading the image.')),
@@ -244,6 +246,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
   }
 
   Future<void> _pickVideo() async {
+    // Temporarily disabled due to file_picker dependency conflicts
+    /*
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.video,
     );
@@ -253,19 +257,24 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
       _pickedVideo = result.files.first;
       _videoUrl = null;
     });
+    */
   }
 
   void _removeVideo() {
     setState(() {
-      _pickedVideo = null;
+      // _pickedVideo = null; // Temporarily commented out due to dependency conflicts
       _videoUrl = null;
     });
   }
 
   Future<void> _saveProduct() async {
+    print('_saveProduct called'); // Debug log
     if (_formKey.currentState!.validate()) {
-      final user = Provider.of<UserModel?>(context, listen: false);
+      print('Form validation passed'); // Debug log
+      final userState = Provider.of<UserStateProvider>(context);
+      final user = userState.currentUser;
       if (user == null) {
+        print('User is null'); // Debug log
         // Simplified check as role check is below
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -273,6 +282,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
         );
         return;
       }
+      print('User found: ${user.uid}'); // Debug log
 
       showDialog(
         context: context,
@@ -319,7 +329,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
           updatedAt: DateTime.now(),
         );
 
+        print('About to save product: ${productData.id}'); // Debug log
         await _databaseService.addOrUpdateProductModel(productData);
+        print('Product saved successfully'); // Debug log
 
         if (mounted) {
           Navigator.of(context).pop(); // Dismiss loading indicator
@@ -334,6 +346,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
           );
         }
       }
+    } else {
+      print('Form validation failed'); // Debug log
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields correctly.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -443,7 +463,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
                             },
                           ),
                           const SizedBox(width: 8),
-                          Text(
+                          const Text(
                               '1 existing'), // Placeholder for existing image count
                         ],
                       ),
@@ -466,7 +486,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
                             },
                           ),
                           const SizedBox(width: 8),
-                          Text(
+                          const Text(
                               '1 new, 0 existing'), // Placeholder for new image count
                         ],
                       ),
@@ -481,14 +501,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen>
                     onPressed: _pickVideo,
                     child: const Text('Choose Video'),
                   ),
-                  if (_videoUrl != null || _pickedVideo != null)
+                  if (_videoUrl != null /* || _pickedVideo != null */)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Row(
                         children: [
                           Expanded(
                             child: Text(
-                              _pickedVideo?.name ??
+                              /* _pickedVideo?.name ?? */
                                   (_videoUrl
                                           ?.split('/')
                                           .last

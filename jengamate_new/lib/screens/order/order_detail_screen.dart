@@ -4,6 +4,7 @@ import 'package:jengamate/models/product_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/services/order_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/services/payment_service.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import '../../models/order_model.dart';

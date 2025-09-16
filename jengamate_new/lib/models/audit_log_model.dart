@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 class AuditLogModel {
   final String uid;
@@ -38,7 +38,9 @@ class AuditLogModel {
       targetType: map['targetType'] ?? '',
       targetId: map['targetId'] ?? '',
       targetName: map['targetName'] ?? '',
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      timestamp: (map['timestamp'] is String)
+          ? DateTime.parse(map['timestamp'])
+          : _parseOptionalDateTime(map['timestamp']) ?? DateTime.now(),
       details: map['details'] ?? '',
       metadata: map['metadata'] as Map<String, dynamic>?,
       ipAddress: map['ipAddress'],
@@ -46,9 +48,23 @@ class AuditLogModel {
     );
   }
 
-  factory AuditLogModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return AuditLogModel.fromMap(data);
+  factory AuditLogModel.fromFirestore(Map<String, dynamic> docData, {required String docId}) {
+    return AuditLogModel(
+      uid: docId,
+      actorId: docData['actorId'] ?? '',
+      actorName: docData['actorName'] ?? '',
+      action: docData['action'] ?? '',
+      targetType: docData['targetType'] ?? '',
+      targetId: docData['targetId'] ?? '',
+      targetName: docData['targetName'] ?? '',
+      timestamp: (docData['timestamp'] is String)
+          ? DateTime.parse(docData['timestamp'])
+          : _parseOptionalDateTime(docData['timestamp']) ?? DateTime.now(),
+      details: docData['details'] ?? '',
+      metadata: docData['metadata'] as Map<String, dynamic>?,
+      ipAddress: docData['ipAddress'],
+      userAgent: docData['userAgent'],
+    );
   }
 
   Map<String, dynamic> toMap() {
@@ -60,7 +76,7 @@ class AuditLogModel {
       'targetType': targetType,
       'targetId': targetId,
       'targetName': targetName,
-      'timestamp': Timestamp.fromDate(timestamp),
+      'timestamp': timestamp.toIso8601String(), // Convert DateTime to ISO 8601 string
       'details': details,
       'metadata': metadata,
       'ipAddress': ipAddress,
@@ -109,7 +125,13 @@ class AuditLogModel {
     required String email,
     String? ipAddress,
     String? userAgent,
+    Map<String, dynamic>? additionalMetadata,
   }) {
+    final Map<String, dynamic> metadata = {'email': email, 'loginMethod': 'email'};
+    if (additionalMetadata != null) {
+      metadata.addAll(additionalMetadata);
+    }
+
     return AuditLogModel(
       uid: '',
       actorId: userId,
@@ -120,7 +142,7 @@ class AuditLogModel {
       targetName: userName,
       timestamp: DateTime.now(),
       details: 'User logged into the system',
-      metadata: {'email': email, 'loginMethod': 'email'},
+      metadata: metadata,
       ipAddress: ipAddress,
       userAgent: userAgent,
     );
@@ -140,6 +162,29 @@ class AuditLogModel {
       targetName: userName,
       timestamp: DateTime.now(),
       details: 'User logged out of the system',
+    );
+  }
+
+  static AuditLogModel register({
+    required String userId,
+    required String userName,
+    required String email,
+    String? ipAddress,
+    String? userAgent,
+  }) {
+    return AuditLogModel(
+      uid: '',
+      actorId: userId,
+      actorName: userName,
+      action: 'REGISTER',
+      targetType: 'USER',
+      targetId: userId,
+      targetName: userName,
+      timestamp: DateTime.now(),
+      details: 'User registered in the system',
+      metadata: {'email': email, 'registrationMethod': 'email'},
+      ipAddress: ipAddress,
+      userAgent: userAgent,
     );
   }
 
@@ -218,5 +263,47 @@ class AuditLogModel {
       default:
         return action.replaceAll('_', ' ').toLowerCase();
     }
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate(); // This is the key fix!
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    return null;
   }
 }

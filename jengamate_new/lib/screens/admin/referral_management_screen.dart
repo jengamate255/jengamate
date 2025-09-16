@@ -85,7 +85,7 @@ class _ReferralManagementScreenState extends State<ReferralManagementScreen> {
     }
 
     return query.snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => ReferralModel.fromFirestore(doc)).toList());
+        snapshot.docs.map((doc) => ReferralModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id)).toList());
   }
 
   @override

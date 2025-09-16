@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/screens/inquiry/inquiry_details_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
@@ -14,7 +15,8 @@ class InquiryListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
     final dbService = DatabaseService();
 
     return Scaffold(
@@ -35,7 +37,7 @@ class InquiryListScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       JMSkeleton(height: 18, width: 180),
-                      SizedBox(height: JMSpacing.xs),
+                      SizedBox(height: JMSpacing.xxs),
                       JMSkeleton(height: 14, width: 240),
                     ],
                   ),

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/inquiry.dart';
 import 'package:jengamate/services/database_service.dart';
-import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/config/app_routes.dart';
-import 'package:jengamate/ui/design_system/components/responsive_wrapper.dart'
-    hide AdaptivePadding;
-import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
+import 'package:jengamate/ui/design_system/components/responsive_wrapper.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:jengamate/screens/inquiry/inquiry_details_screen.dart';
@@ -34,7 +32,8 @@ class _InquiryScreenState extends State<InquiryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
 
     final bool isAdmin = currentUser?.role == UserRole.admin;
     final Stream<List<Inquiry>> stream = isAdmin
@@ -97,11 +96,17 @@ class _InquiryScreenState extends State<InquiryScreen> {
           ),
         ],
       ),
-      body: AdaptivePadding(
-        child: Column(
-          children: [
-            const SizedBox(height: JMSpacing.md),
-            TextField(
+      body: Column(
+        children: [
+          // Search bar at the top with minimal padding
+          Padding(
+            padding: EdgeInsets.only(
+              left: JMSpacing.md,
+              right: JMSpacing.md,
+              top: JMSpacing.xxs,
+              bottom: JMSpacing.xxs,
+            ),
+            child: TextField(
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
@@ -117,15 +122,25 @@ class _InquiryScreenState extends State<InquiryScreen> {
                 filled: true,
                 fillColor:
                     Theme.of(context).colorScheme.surfaceContainerHighest,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: JMSpacing.md,
+                  vertical: JMSpacing.sm,
+                ),
               ),
             ),
-            const SizedBox(height: JMSpacing.md),
-            // Date range filter chips
-            Align(
+          ),
+          // Date range filter chips with minimal spacing
+          Padding(
+            padding: EdgeInsets.only(
+              left: JMSpacing.md,
+              right: JMSpacing.md,
+              bottom: JMSpacing.xxs,
+            ),
+            child: Align(
               alignment: Alignment.centerLeft,
               child: Wrap(
-                spacing: JMSpacing.sm.toDouble(),
-                runSpacing: 0,
+                spacing: JMSpacing.xxs.toDouble(),
+                runSpacing: JMSpacing.xxs.toDouble(),
                 children: [
                   FilterChip(
                     label: const Text('All'),
@@ -145,7 +160,7 @@ class _InquiryScreenState extends State<InquiryScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: JMSpacing.md),
+          ),
             Expanded(
               child: StreamBuilder<List<Inquiry>>(
                 stream: stream,
@@ -163,12 +178,13 @@ class _InquiryScreenState extends State<InquiryScreen> {
                       children: [
                         const Text('No inquiries found.'),
                         const SizedBox(height: JMSpacing.md),
-                        if (currentUser?.role == UserRole.engineer || isAdmin)
-                          ElevatedButton.icon(
-                            onPressed: () => context.go(AppRoutes.newInquiry),
-                            icon: const Icon(Icons.add),
-                            label: const Text('New Inquiry'),
-                          ),
+                        (currentUser?.role == UserRole.engineer || isAdmin)
+                            ? ElevatedButton.icon(
+                                onPressed: () => context.go(AppRoutes.newInquiry),
+                                icon: const Icon(Icons.add),
+                                label: const Text('New Inquiry'),
+                              )
+                            : const SizedBox.shrink(),
                       ],
                     );
                   }
@@ -220,13 +236,13 @@ class _InquiryScreenState extends State<InquiryScreen> {
                       inquiries; // Simple assignment without triggering rebuild
 
                   return ListView.builder(
-                    padding: const EdgeInsets.all(JMSpacing.sm),
+                    padding: const EdgeInsets.symmetric(horizontal: JMSpacing.sm),
                     itemCount: inquiries.length,
                     itemBuilder: (context, index) {
                       final inquiry = inquiries[index];
                       final selected = _selectedIds.contains(inquiry.uid);
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: JMSpacing.sm),
+                        padding: EdgeInsets.only(bottom: JMSpacing.xxs),
                         child: JMCard(
                           child: ListTile(
                             leading: _selectionMode
@@ -278,62 +294,61 @@ class _InquiryScreenState extends State<InquiryScreen> {
                 },
               ),
             ),
-            if (_selectionMode)
-              SafeArea(
-                top: false,
-                child: Row(
-                  children: [
-                    TextButton(
-                      onPressed: () => setState(() => _selectedIds.clear()),
-                      child: const Text('Clear'),
-                    ),
-                    const SizedBox(width: JMSpacing.sm),
-                    TextButton(
-                      onPressed: () => setState(() => _selectedIds
-                          .addAll(_visibleInquiries.map((e) => e.uid))),
-                      child: const Text('Select all (visible)'),
-                    ),
-                    const Spacer(),
-                    PopupMenuButton<String>(
-                      tooltip: 'Change status',
-                      icon: const Icon(Icons.flag_outlined),
-                      onSelected: (value) async {
-                        final ids = _selectedIds.toList();
-                        for (final id in ids) {
-                          await dbService.updateInquiryStatus(id, value);
-                        }
-                        if (mounted) setState(() => _selectedIds.clear());
-                        if (mounted)
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Status updated')));
-                      },
-                      itemBuilder: (context) => const [
-                        PopupMenuItem(value: 'open', child: Text('Open')),
-                        PopupMenuItem(
-                            value: 'in_progress', child: Text('In Progress')),
-                        PopupMenuItem(
-                            value: 'waiting_for_response',
-                            child: Text('Waiting for Response')),
-                        PopupMenuItem(
-                            value: 'resolved', child: Text('Resolved')),
-                        PopupMenuItem(value: 'closed', child: Text('Closed')),
-                      ],
-                    ),
-                    const SizedBox(width: JMSpacing.sm),
-                    TextButton.icon(
-                      onPressed: () async {
-                        // Simple assign to user dialog reusing search
-                        await _openBulkAssignDialog();
-                      },
-                      icon: const Icon(Icons.person_add_alt),
-                      label: const Text('Assign'),
-                    ),
-                  ],
-                ),
+          if (_selectionMode)
+            SafeArea(
+              top: false,
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () => setState(() => _selectedIds.clear()),
+                    child: const Text('Clear'),
+                  ),
+                  const SizedBox(width: JMSpacing.sm),
+                  TextButton(
+                    onPressed: () => setState(() => _selectedIds
+                        .addAll(_visibleInquiries.map((e) => e.uid))),
+                    child: const Text('Select all (visible)'),
+                  ),
+                  const Spacer(),
+                  PopupMenuButton<String>(
+                    tooltip: 'Change status',
+                    icon: const Icon(Icons.flag_outlined),
+                    onSelected: (value) async {
+                      final ids = _selectedIds.toList();
+                      for (final id in ids) {
+                        await dbService.updateInquiryStatus(id, value);
+                      }
+                      if (mounted) setState(() => _selectedIds.clear());
+                      if (mounted)
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Status updated')));
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'open', child: Text('Open')),
+                      PopupMenuItem(
+                          value: 'in_progress', child: Text('In Progress')),
+                      PopupMenuItem(
+                          value: 'waiting_for_response',
+                          child: Text('Waiting for Response')),
+                      PopupMenuItem(
+                          value: 'resolved', child: Text('Resolved')),
+                      PopupMenuItem(value: 'closed', child: Text('Closed')),
+                    ],
+                  ),
+                  const SizedBox(width: JMSpacing.sm),
+                  TextButton.icon(
+                    onPressed: () async {
+                      // Simple assign to user dialog reusing search
+                      await _openBulkAssignDialog();
+                    },
+                    icon: const Icon(Icons.person_add_alt),
+                    label: const Text('Assign'),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
-      ),
       floatingActionButton: (currentUser?.role == UserRole.engineer ||
               currentUser?.role == UserRole.admin)
           ? FloatingActionButton.extended(

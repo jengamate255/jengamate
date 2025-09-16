@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/auth/login_screen.dart';
 import 'package:jengamate/auth/approval_pending_screen.dart';
 import 'package:jengamate/models/user_model.dart';
-import 'package:jengamate/screens/dashboard_screen.dart';
+import 'package:jengamate/screens/dashboard/dashboard_screen.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});

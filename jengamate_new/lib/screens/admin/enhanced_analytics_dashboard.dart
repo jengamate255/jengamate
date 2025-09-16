@@ -207,7 +207,7 @@ class _EnhancedAnalyticsDashboardState
               })
           .toList()
         ..sort(
-            (a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
+            (a, b) => _parseDateTime(a['date']).compareTo_parseDateTime(b['date']));
 
       // Calculate cumulative values
       int runningTotal = 0;

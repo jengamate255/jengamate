@@ -1,8 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
+import 'package:jengamate/models/email_template_type.dart'; // Import the consolidated enum
 
 class EmailTemplate {
   final String id;
   final String name;
+  final String subject;
   final String subjectTemplate;
   final String htmlBodyTemplate;
   final String textBodyTemplate;
@@ -17,6 +19,7 @@ class EmailTemplate {
   EmailTemplate({
     required this.id,
     required this.name,
+    required this.subject,
     required this.subjectTemplate,
     required this.htmlBodyTemplate,
     required this.textBodyTemplate,
@@ -41,18 +44,17 @@ class EmailTemplate {
       'isActive': isActive,
       'variables': variables,
       'type': type.toString().split('.').last, // Store as string
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'createdAt': createdAt.toIso8601String(), // Convert DateTime to ISO 8601 string
+      'updatedAt': updatedAt.toIso8601String(), // Convert DateTime to ISO 8601 string
     };
   }
 
   // Create from Firestore document
-  factory EmailTemplate.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>? ?? {};
-
+  factory EmailTemplate.fromFirestore(Map<String, dynamic> data, {required String docId}) {
     return EmailTemplate(
-      id: doc.id,
+      id: docId,
       name: data['name'] ?? '',
+      subject: data['subject'] ?? '',
       subjectTemplate: data['subjectTemplate'] ?? '',
       htmlBodyTemplate: data['htmlBodyTemplate'] ?? '',
       textBodyTemplate: data['textBodyTemplate'] ?? '',
@@ -60,8 +62,8 @@ class EmailTemplate {
       isActive: data['isActive'] ?? true,
       variables: List<String>.from(data['variables'] ?? []),
       type: _parseEmailTemplateType(data['type'] ?? 'invoice'),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      createdAt: (data['createdAt'] is String) ? DateTime.parse(data['createdAt']) : null,
+      updatedAt: (data['updatedAt'] is String) ? DateTime.parse(data['updatedAt']) : null,
     );
   }
 
@@ -69,6 +71,7 @@ class EmailTemplate {
   EmailTemplate copyWith({
     String? id,
     String? name,
+    String? subject,
     String? subjectTemplate,
     String? htmlBodyTemplate,
     String? textBodyTemplate,
@@ -82,6 +85,7 @@ class EmailTemplate {
     return EmailTemplate(
       id: id ?? this.id,
       name: name ?? this.name,
+      subject: subject ?? this.subject,
       subjectTemplate: subjectTemplate ?? this.subjectTemplate,
       htmlBodyTemplate: htmlBodyTemplate ?? this.htmlBodyTemplate,
       textBodyTemplate: textBodyTemplate ?? this.textBodyTemplate,
@@ -113,6 +117,7 @@ class EmailTemplate {
   static EmailTemplate get invoiceTemplate => EmailTemplate(
         id: 'default-invoice',
         name: 'Invoice Email',
+        subject: 'Invoice #{invoice_number} from JengaMate Ltd', // Add subject
         subjectTemplate: 'Invoice #{invoice_number} from JengaMate Ltd',
         htmlBodyTemplate: _defaultInvoiceHtmlTemplate,
         textBodyTemplate: _defaultInvoiceTextTemplate,
@@ -220,11 +225,4 @@ JengaMate Ltd | Construction & Building Materials
 Dar es Salaam, Tanzania | {company_email} | {company_phone}
 This is an automated invoice notification. Please do not reply to this email.
 ''';
-}
-
-enum EmailTemplateType {
-  invoice,
-  receipt,
-  reminder,
-  overdue,
 }

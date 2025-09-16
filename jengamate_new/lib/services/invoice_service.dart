@@ -40,6 +40,9 @@ class InvoiceService {
   // Update an existing invoice
   Future<void> updateInvoice(InvoiceModel invoice) async {
     try {
+      if (invoice.id.isEmpty) {
+        throw Exception('Cannot update invoice: Empty invoice ID provided');
+      }
       await _firestore
           .collection(_collectionName)
           .doc(invoice.id)
@@ -66,7 +69,7 @@ class InvoiceService {
         print('📋 Found invoice document ID: ${doc.id}');
         print('📄 Document data: ${doc.data()}');
 
-        final invoice = InvoiceModel.fromFirestore(doc);
+        final invoice = InvoiceModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id);
         print('🧾 Parsed invoice object ID: ${invoice.id}');
 
         if (invoice.id == null || invoice.id!.isEmpty) {
@@ -96,9 +99,12 @@ class InvoiceService {
   // Get a single invoice by ID
   Future<InvoiceModel?> getInvoice(String id) async {
     try {
+      if (id.isEmpty) {
+        throw Exception('Cannot get invoice: Empty invoice ID provided');
+      }
       final doc = await _firestore.collection(_collectionName).doc(id).get();
       if (doc.exists) {
-        return InvoiceModel.fromFirestore(doc);
+        return InvoiceModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id);
       }
       return null;
     } catch (e) {
@@ -128,7 +134,7 @@ class InvoiceService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => InvoiceModel.fromFirestore(doc))
+            .map((doc) => InvoiceModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id))
             .toList());
   }
 
@@ -140,7 +146,7 @@ class InvoiceService {
         .snapshots()
         .asyncMap((snapshot) async {
       final invoices =
-          snapshot.docs.map((doc) => InvoiceModel.fromFirestore(doc)).toList();
+          snapshot.docs.map((doc) => InvoiceModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id)).toList();
 
       // Auto-populate missing items for all invoices
       final populatedInvoices = <InvoiceModel>[];
@@ -345,7 +351,7 @@ class InvoiceService {
           '📊 Found $totalCount invoices to check for missing items');
 
       for (final doc in invoicesSnapshot.docs) {
-        final invoice = InvoiceModel.fromFirestore(doc);
+        final invoice = InvoiceModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id);
 
         // Check if invoice has missing items
         if (invoice.items.isEmpty ||

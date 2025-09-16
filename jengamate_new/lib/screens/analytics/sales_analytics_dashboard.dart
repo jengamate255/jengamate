@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/services/database_service.dart';
@@ -9,6 +10,10 @@ import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:csv/csv.dart'; // Import csv
+import 'dart:html' as html; // Import dart:html for web downloads
+import 'dart:convert'; // Import dart:convert for utf8
+import 'package:jengamate/screens/inventory/inventory_management_screen.dart'; // Import InventoryManagementScreen
 
 class SalesAnalyticsDashboard extends StatefulWidget {
   const SalesAnalyticsDashboard({super.key});
@@ -21,11 +26,11 @@ class SalesAnalyticsDashboard extends StatefulWidget {
 class _SalesAnalyticsDashboardState extends State<SalesAnalyticsDashboard> {
   final DatabaseService _dbService = DatabaseService();
   String _selectedPeriod = '30'; // 7, 30, 90, 365 days
-  String _selectedMetric = 'revenue'; // revenue, orders, customers
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
 
     return Scaffold(
       appBar: AppBar(
@@ -484,26 +489,27 @@ class _SalesAnalyticsDashboardState extends State<SalesAnalyticsDashboard> {
                 }
 
                 final orders = snapshot.data!;
-                final insights = _getCustomerInsights(orders);
+                final insightsList = _getCustomerInsights(orders);
+                final insights = insightsList.isNotEmpty ? insightsList.first : {};
 
                 return Column(
                   children: [
                     _buildInsightItem(
-                      'New Customers',
-                      insights['newCustomers'].toString(),
+                      'Total Customers',
+                      insights['totalCustomers']?.toString() ?? '0',
                       Icons.person_add,
                       Colors.green,
                     ),
                     _buildInsightItem(
-                      'Repeat Customers',
-                      insights['repeatCustomers'].toString(),
-                      Icons.people,
+                      'Average Order Value',
+                      'TSh ${NumberFormat('#,##0.00').format(insights['averageOrderValue'] ?? 0.0)}',
+                      Icons.monetization_on,
                       Colors.blue,
                     ),
                     _buildInsightItem(
-                      'Customer Retention Rate',
-                      '${insights['retentionRate'].toStringAsFixed(1)}%',
-                      Icons.trending_up,
+                      'Repeat Customer Rate',
+                      '${(insights['repeatCustomerRate'] ?? 0.0).toStringAsFixed(1)}%',
+                      Icons.repeat,
                       Colors.orange,
                     ),
                   ],
@@ -639,23 +645,67 @@ class _SalesAnalyticsDashboardState extends State<SalesAnalyticsDashboard> {
   }
 
   List<Map<String, dynamic>> _getTopProducts(List<OrderModel> orders) {
-    // Placeholder - would analyze actual product data
-    return [
-      {'name': 'Product A', 'orders': 15, 'revenue': 250000},
-      {'name': 'Product B', 'orders': 12, 'revenue': 180000},
-      {'name': 'Product C', 'orders': 8, 'revenue': 120000},
-      {'name': 'Product D', 'orders': 6, 'revenue': 90000},
-      {'name': 'Product E', 'orders': 4, 'revenue': 60000},
-    ];
+    final Map<String, Map<String, dynamic>> productStats = {};
+
+    for (final order in orders) {
+      if (order.status == OrderStatus.completed) {
+        for (final item in order.items) {
+          final productId = item.productId;
+          productStats.putIfAbsent(productId, () => {
+            'id': productId,
+            'name': item.productName, // Use productName instead of description
+            'orders': 0,
+            'revenue': 0.0,
+          });
+          productStats[productId]?['orders'] += item.quantity;
+          productStats[productId]?['revenue'] += (item.quantity * item.price); // Use item.price instead of item.unitPrice
+        }
+      }
+    }
+
+    final List<Map<String, dynamic>> sortedProducts = productStats.values.toList();
+    sortedProducts.sort((a, b) => (b['revenue'] as double).compareTo(a['revenue'] as double));
+
+    return sortedProducts;
   }
 
-  Map<String, dynamic> _getCustomerInsights(List<OrderModel> orders) {
-    // Placeholder - would analyze actual customer data
-    return {
-      'newCustomers': 25,
-      'repeatCustomers': 18,
-      'retentionRate': 72.0,
+  List<Map<String, dynamic>> _getCustomerInsights(List<OrderModel> orders) {
+    final Map<String, dynamic> insights = {
+      'totalCustomers': 0,
+      'averageOrderValue': 0.0,
+      'repeatCustomerRate': 0.0,
     };
+
+    if (orders.isEmpty) {
+      return [insights];
+    }
+
+    final Set<String> allCustomers = {};
+    final Set<String> repeatCustomers = {};
+    final Map<String, int> customerOrderCount = {};
+    double totalOrderValue = 0.0;
+
+    for (final order in orders) {
+      allCustomers.add(order.customerId);
+      customerOrderCount.update(order.customerId, (value) => value + 1,
+          ifAbsent: () => 1);
+      totalOrderValue += order.totalAmount;
+    }
+
+    for (final entry in customerOrderCount.entries) {
+      if (entry.value > 1) {
+        repeatCustomers.add(entry.key);
+      }
+    }
+
+    insights['totalCustomers'] = allCustomers.length;
+    insights['averageOrderValue'] =
+        totalOrderValue / orders.length;
+    insights['repeatCustomerRate'] = allCustomers.isEmpty
+        ? 0.0
+        : (repeatCustomers.length / allCustomers.length) * 100;
+
+    return [insights];
   }
 
   Map<String, int> _getOrderPerformance(List<OrderModel> orders) {
@@ -679,22 +729,64 @@ class _SalesAnalyticsDashboardState extends State<SalesAnalyticsDashboard> {
     };
   }
 
-  void _exportAnalytics() {
-    // TODO: Implement analytics export
+  void _exportAnalytics() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Analytics export feature coming soon!'),
+        content: Text('Exporting analytics...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    final orders = await _dbService.getOrders(Provider.of<UserStateProvider>(context).currentUser?.uid ?? '').first;
+
+    if (orders.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No order data to export.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Prepare data for CSV
+    List<List<dynamic>> csvData = [
+      ['Order ID', 'Customer ID', 'Total Amount', 'Status', 'Created At'] // Header
+    ];
+    for (var order in orders) {
+      csvData.add([
+        order.id,
+        order.customerId,
+        order.totalAmount,
+        order.status.toString().split('.').last,
+        DateFormat('yyyy-MM-dd HH:mm').format(order.createdAt),
+      ]);
+    }
+
+    String csv = const ListToCsvConverter().convert(csvData);
+
+    // Download the CSV file
+    final bytes = utf8.encode(csv);
+    final blob = html.Blob([bytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.AnchorElement(href: url)
+      ..setAttribute('download', 'sales_analytics_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv')
+      ..click();
+    html.Url.revokeObjectUrl(url);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Analytics exported successfully!'),
         duration: Duration(seconds: 2),
       ),
     );
   }
 
   void _viewAllProducts() {
-    // TODO: Navigate to products screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Products screen coming soon!'),
-        duration: Duration(seconds: 2),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const InventoryManagementScreen(),
       ),
     );
   }

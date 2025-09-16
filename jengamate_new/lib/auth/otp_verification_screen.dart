@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/ui/design_system/components/jm_button.dart';
@@ -10,6 +11,7 @@ import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:jengamate/models/enums/user_role.dart';
+import 'package:jengamate/services/database_service.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String verificationId;
@@ -35,6 +37,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
   bool _isLoading = false;
+  final DatabaseService _dbService = DatabaseService();
 
   @override
   void dispose() {
@@ -60,32 +63,32 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       );
 
       if (result != null && result.user != null) {
-        // TODO: Implement user creation in Firestore database.
-        // The AuthService does not currently have a method to create user profiles.
-        // A new method like `createUserProfile` should be added to `auth_service.dart`
-        // or a separate `database_service.dart` to store user details.
-        /* 
-        await authService.createUserInDatabase(
-          uid: result.user!.uid, 
+        await _dbService.createUserProfile(
+          uid: result.user!.uid,
           name: widget.name,
           phoneNumber: widget.phoneNumber,
           company: widget.company,
           role: widget.role,
         );
-        */
         // Navigate to dashboard or pending approval screen
-        context.go(AppRoutes.dashboard);
+        if (mounted) {
+          context.go(AppRoutes.dashboard);
+        }
       } else {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Verification failed')),
-        );
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Verification failed')),
+          );
+        }
       }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
     }
   }
 

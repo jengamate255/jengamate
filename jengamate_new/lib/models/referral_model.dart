@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 class ReferralModel {
   final String id;
@@ -17,14 +17,13 @@ class ReferralModel {
     this.status = 'pending',
   }) : createdAt = createdAt ?? DateTime.now();
 
-  factory ReferralModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  factory ReferralModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
     return ReferralModel(
-      id: doc.id,
+      id: docId,
       referrerId: data['referrerId'] ?? '',
       referredUserId: data['referredUserId'] ?? '',
       bonusAmount: (data['bonusAmount'] ?? 0.0).toDouble(),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] is String) ? DateTime.parse(data['createdAt']) : _parseOptionalDateTime(data['createdAt']) ?? DateTime.now(),
       status: data['status'] ?? 'pending',
     );
   }
@@ -34,7 +33,7 @@ class ReferralModel {
       'referrerId': referrerId,
       'referredUserId': referredUserId,
       'bonusAmount': bonusAmount,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
       'status': status,
     };
   }
@@ -55,5 +54,47 @@ class ReferralModel {
       createdAt: createdAt ?? this.createdAt,
       status: status ?? this.status,
     );
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate(); // This is the key fix!
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    return null;
   }
 }

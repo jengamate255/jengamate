@@ -1,9 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/models/order_item_model.dart';
 
 class OrderModel {
-  final String? id;
+  final String? id; // This will now be the Supabase UUID
+  final String? externalId; // To store the Firebase document ID
   final String customerId;
   final String customerName;
   final String customerEmail; // Added
@@ -36,6 +37,7 @@ class OrderModel {
 
   OrderModel({
     this.id,
+    this.externalId, // Initialize externalId
     required this.customerId,
     required this.customerName,
     required this.customerEmail, // Added
@@ -74,7 +76,8 @@ class OrderModel {
 
   factory OrderModel.fromMap(Map<String, dynamic> map, {String? docId}) {
     return OrderModel(
-      id: docId ?? map['id'],
+      id: map['id'], // Assuming 'id' from Supabase is a UUID
+      externalId: docId ?? map['externalId'], // Use docId (Firebase) or externalId from map
       customerId: map['customerId'] ?? '',
       customerName: map['customerName'] ?? 'Customer',
       customerEmail: map['customerEmail'] ?? '', // Added
@@ -90,8 +93,8 @@ class OrderModel {
       status: _parseOrderStatus(map['status']),
       paymentMethod: map['paymentMethod'] ?? 'unknown',
       platformFee: map['platformFee'],
-      createdAt: _parseTimestamp(map['createdAt'], fallbackToNow: true),
-      updatedAt: _parseTimestamp(map['updatedAt'], fallbackToNow: false),
+      createdAt: _parseDateTime(map['createdAt']),
+      updatedAt: _parseDateTime(map['updatedAt']),
       metadata: map['metadata'] as Map<String, dynamic>?,
       buyerId: map['buyerId'],
       currency: map['currency'] ?? 'TSh',
@@ -102,8 +105,7 @@ class OrderModel {
       paymentProofs: map['paymentProofs'] != null
           ? List<String>.from(map['paymentProofs'])
           : null,
-      expectedDeliveryDate:
-          _parseOptionalTimestamp(map['expectedDeliveryDate']),
+      expectedDeliveryDate: _parseOptionalDateTime(map['expectedDeliveryDate']),
       notes: map['notes'],
       isLocked: map['isLocked'] ?? false,
       isDelivered: map['isDelivered'] ?? false,
@@ -124,31 +126,68 @@ class OrderModel {
     return OrderStatus.pending;
   }
 
-  static DateTime _parseTimestamp(dynamic timestamp,
-      {bool fallbackToNow = true}) {
-    if (timestamp is Timestamp) {
-      return timestamp.toDate();
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    
+    if (value is String) {
+      return DateTime.parse(value);
     }
-    if (fallbackToNow) {
-      return DateTime.now();
+    
+    if (value is DateTime) {
+      return value;
     }
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    
     return DateTime.now();
   }
 
-  static DateTime? _parseOptionalTimestamp(dynamic timestamp) {
-    if (timestamp is Timestamp) {
-      return timestamp.toDate();
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    
+    if (value is String) {
+      return DateTime.tryParse(value);
     }
+    
+    if (value is DateTime) {
+      return value;
+    }
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    
     return null;
   }
 
-  factory OrderModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return OrderModel.fromMap(data, docId: doc.id);
+  factory OrderModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
+    return OrderModel.fromMap({
+      ...data,
+      'id': data['id'] ?? docId, // Use docId as fallback if 'id' is missing
+      'externalId': docId, // Firebase document ID
+    });
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id, // Supabase UUID
+      'externalId': externalId, // Firebase document ID
       'customerId': customerId,
       'customerName': customerName,
       'customerEmail': customerEmail, // Added
@@ -161,8 +200,8 @@ class OrderModel {
       'status': status.name,
       'paymentMethod': paymentMethod,
       'platformFee': platformFee,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'metadata': metadata,
       'buyerId': buyerId,
       'currency': currency,
@@ -171,9 +210,7 @@ class OrderModel {
       'quotationId': quotationId,
       'rfqId': rfqId,
       'paymentProofs': paymentProofs,
-      'expectedDeliveryDate': expectedDeliveryDate != null
-          ? Timestamp.fromDate(expectedDeliveryDate!)
-          : null,
+      'expectedDeliveryDate': expectedDeliveryDate?.toIso8601String(),
       'notes': notes,
       'isLocked': isLocked,
       'isDelivered': isDelivered,
@@ -181,11 +218,9 @@ class OrderModel {
     };
   }
 
-  Map<String, dynamic> toFirestore() {
-    return toMap();
-  }
-
   OrderModel copyWith({
+    String? id,
+    String? externalId,
     String? customerId,
     String? customerName,
     String? customerEmail,
@@ -216,6 +251,7 @@ class OrderModel {
   }) {
     return OrderModel(
       id: id ?? this.id,
+      externalId: externalId ?? this.externalId,
       customerId: customerId ?? this.customerId,
       customerName: customerName ?? this.customerName,
       customerEmail: customerEmail ?? this.customerEmail,

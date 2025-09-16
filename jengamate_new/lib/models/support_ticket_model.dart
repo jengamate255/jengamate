@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 import 'package:flutter/material.dart';
 
 class SupportTicket {
@@ -53,11 +53,9 @@ class SupportTicket {
       category: map['category'] ?? 'general',
       priority: map['priority'] ?? 'medium',
       status: map['status'] ?? 'open',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp).toDate(),
-      resolvedAt: map['resolvedAt'] != null
-          ? (map['resolvedAt'] as Timestamp).toDate()
-          : null,
+      createdAt: (map['createdAt'] is String) ? DateTime.parse(map['createdAt']) : _parseOptionalDateTime(map['createdAt']) ?? DateTime.now(),
+      updatedAt: (map['updatedAt'] is String) ? DateTime.parse(map['updatedAt']) : _parseOptionalDateTime(map['updatedAt']) ?? DateTime.now(),
+      resolvedAt: (map['resolvedAt'] is String) ? DateTime.parse(map['resolvedAt']) : null,
       assignedTo: map['assignedTo'],
       assignedToName: map['assignedToName'],
       resolution: map['resolution'],
@@ -66,9 +64,11 @@ class SupportTicket {
     );
   }
 
-  factory SupportTicket.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return SupportTicket.fromMap(data);
+  factory SupportTicket.fromFirestore(Map<String, dynamic> data, {required String docId}) {
+    return SupportTicket.fromMap({
+      ...data,
+      'uid': docId,
+    });
   }
 
   Map<String, dynamic> toMap() {
@@ -82,9 +82,9 @@ class SupportTicket {
       'category': category,
       'priority': priority,
       'status': status,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
-      'resolvedAt': resolvedAt != null ? Timestamp.fromDate(resolvedAt!) : null,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'resolvedAt': resolvedAt?.toIso8601String(),
       'assignedTo': assignedTo,
       'assignedToName': assignedToName,
       'resolution': resolution,
@@ -300,5 +300,47 @@ class SupportTicket {
       updatedAt: DateTime.now(),
       tags: ['billing'],
     );
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate(); // This is the key fix!
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    return null;
   }
 }

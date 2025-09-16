@@ -81,20 +81,20 @@ class _DeletedCommissionsScreenState extends State<DeletedCommissionsScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.restore),
-                      onPressed: () {
-                        // TODO: Implement restore functionality
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Restoring commission ${commission.id}')),
-                        );
+                      onPressed: () async {
+                        await _databaseService.restoreCommission(commission.id);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Commission ${commission.id} restored')),
+                          );
+                        }
                       },
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_forever),
                       onPressed: () {
                         // TODO: Implement permanent delete functionality
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Permanently deleting commission ${commission.id}')),
-                        );
+                        _showDeleteConfirmationDialog(context, commission.id);
                       },
                     ),
                   ],
@@ -135,19 +135,66 @@ class _DeletedCommissionsScreenState extends State<DeletedCommissionsScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.restore),
-                  onPressed: () {
-                    // TODO: Implement restore functionality
+                  onPressed: () async {
+                    await _databaseService.restoreCommission(commission.id);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Commission ${commission.id} restored')),
+                      );
+                    }
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_forever),
                   onPressed: () {
                     // TODO: Implement permanent delete functionality
+                    _showDeleteConfirmationDialog(context, commission.id);
                   },
                 ),
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, String commissionId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Permanent Deletion'),
+          content: const Text('Are you sure you want to permanently delete this commission? This action cannot be undone.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await _databaseService.deleteCommissionPermanently(commissionId);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Commission permanently deleted')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error deleting commission: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Delete Permanently'),
+            ),
+          ],
         );
       },
     );

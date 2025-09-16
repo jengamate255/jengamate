@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 class CategoryModel {
   final String id;
@@ -18,10 +18,9 @@ class CategoryModel {
   // Add uid getter for compatibility
   String get uid => id;
 
-  factory CategoryModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  factory CategoryModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
     return CategoryModel(
-      id: doc.id,
+      id: docId,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
       imageUrl: data['imageUrl'] ?? '',

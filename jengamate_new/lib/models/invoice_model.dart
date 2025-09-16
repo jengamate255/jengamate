@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 import 'package:intl/intl.dart';
 
 class InvoiceItem {
@@ -114,7 +114,7 @@ class InvoiceModel {
     ).format(amount);
   }
 
-  // Convert to map for Firestore
+  // Convert to map for Supabase
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -126,73 +126,125 @@ class InvoiceModel {
       'customerPhone': customerPhone,
       'customerAddress': customerAddress,
       'customerCompany': customerCompany,
-      'issueDate': Timestamp.fromDate(issueDate),
-      'dueDate': Timestamp.fromDate(dueDate),
+      'issueDate': issueDate.toIso8601String(),
+      'dueDate': dueDate.toIso8601String(),
       'items': items.map((item) => item.toMap()).toList(),
       'taxRate': taxRate,
       'discountAmount': discountAmount,
       'status': status,
       'notes': notes,
       'termsAndConditions': termsAndConditions,
-      'paidDate': paidDate != null ? Timestamp.fromDate(paidDate!) : null,
+      'paidDate': paidDate?.toIso8601String(),
       'paymentMethod': paymentMethod,
       'referenceNumber': referenceNumber,
       'pdfUrl': pdfUrl,
       'paymentTerms': paymentTerms,
-      'lastSentAt': lastSentAt != null ? Timestamp.fromDate(lastSentAt!) : null,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'lastSentAt': lastSentAt?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
-  // Create from Firestore document
-  factory InvoiceModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-
+  // Create from Map (e.g., from Supabase JSON response)
+  factory InvoiceModel.fromMap(Map<String, dynamic> map) {
     return InvoiceModel(
-      id: data['id'] is String ? data['id'] : '',
+      id: map['id'] is String ? map['id'] : '',
       invoiceNumber:
-          data['invoiceNumber'] is String ? data['invoiceNumber'] : '',
-      customerId: data['customerId'] is String ? data['customerId'] : '',
-      orderId: data['orderId'] is String ? data['orderId'] : null,
-      customerName: data['customerName'] is String ? data['customerName'] : '',
+          map['invoiceNumber'] is String ? map['invoiceNumber'] : '',
+      customerId: map['customerId'] is String ? map['customerId'] : '',
+      orderId: map['orderId'] is String ? map['orderId'] : null,
+      customerName: map['customerName'] is String ? map['customerName'] : '',
       customerEmail:
-          data['customerEmail'] is String ? data['customerEmail'] : '',
+          map['customerEmail'] is String ? map['customerEmail'] : '',
       customerPhone:
-          data['customerPhone'] is String ? data['customerPhone'] : null,
+          map['customerPhone'] is String ? map['customerPhone'] : null,
       customerAddress:
-          data['customerAddress'] is String ? data['customerAddress'] : null,
+          map['customerAddress'] is String ? map['customerAddress'] : null,
       customerCompany:
-          data['customerCompany'] is String ? data['customerCompany'] : '',
-      issueDate: (data['issueDate'] as Timestamp).toDate(),
-      dueDate: (data['dueDate'] as Timestamp).toDate(),
-      items: (data['items'] as List<dynamic>?)
+          map['customerCompany'] is String ? map['customerCompany'] : '',
+      issueDate: _parseDateTime(map['issueDate']),
+      dueDate: _parseDateTime(map['dueDate']),
+      items: (map['items'] as List<dynamic>?)
               ?.map((item) =>
                   InvoiceItem.fromMap(Map<String, dynamic>.from(item)))
               .toList() ??
           [],
-      taxRate: (data['taxRate'] ?? 0.0).toDouble(),
-      discountAmount: (data['discountAmount'] ?? 0.0).toDouble(),
-      status: data['status'] is String ? data['status'] : 'draft',
-      notes: data['notes'] is String ? data['notes'] : null,
-      termsAndConditions: data['termsAndConditions'] is String
-          ? data['termsAndConditions']
+      taxRate: (map['taxRate'] ?? 0.0).toDouble(),
+      discountAmount: (map['discountAmount'] ?? 0.0).toDouble(),
+      status: map['status'] is String ? map['status'] : 'draft',
+      notes: map['notes'] is String ? map['notes'] : null,
+      termsAndConditions: map['termsAndConditions'] is String
+          ? map['termsAndConditions']
           : null,
-      paidDate: data['paidDate'] != null
-          ? (data['paidDate'] as Timestamp).toDate()
-          : null,
+      paidDate: _parseOptionalDateTime(map['paidDate']),
       paymentMethod:
-          data['paymentMethod'] is String ? data['paymentMethod'] : null,
+          map['paymentMethod'] is String ? map['paymentMethod'] : null,
       referenceNumber:
-          data['referenceNumber'] is String ? data['referenceNumber'] : null,
-      pdfUrl: data['pdfUrl'] is String ? data['pdfUrl'] : null,
-      paymentTerms: (data['paymentTerms'] ?? 30).toInt(),
-      lastSentAt: data['lastSentAt'] != null
-          ? (data['lastSentAt'] as Timestamp).toDate()
-          : null,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+          map['referenceNumber'] is String ? map['referenceNumber'] : null,
+      pdfUrl: map['pdfUrl'] is String ? map['pdfUrl'] : null,
+      paymentTerms: (map['paymentTerms'] ?? 30).toInt(),
+      lastSentAt: _parseOptionalDateTime(map['lastSentAt']),
+      createdAt: _parseDateTime(map['createdAt']),
+      updatedAt: _parseDateTime(map['updatedAt']),
     );
+  }
+
+  // Create from Firestore document (now also uses fromMap)
+  factory InvoiceModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
+    return InvoiceModel.fromMap({
+      ...data,
+      'id': docId, // Ensure the Firebase document ID is used as the InvoiceModel's ID
+    });
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    
+    if (value is DateTime) {
+      return value;
+    }
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    
+    if (value is DateTime) {
+      return value;
+    }
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    
+    return null;
   }
 
   // Create a copy with some fields updated

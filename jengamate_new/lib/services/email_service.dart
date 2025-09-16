@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/email_template.dart';
+import 'package:uuid/uuid.dart'; // Import uuid
+import '../models/email_template_type.dart'; // Import EmailTemplateType
 import '../models/invoice_model.dart';
-import '../models/order_model.dart';
 import '../utils/logger.dart' as utils_logger;
 
 class EmailService {
@@ -13,28 +13,45 @@ class EmailService {
   // Template Management
 
   // Create a new email template
-  Future<void> saveTemplate(EmailTemplate template) async {
+  Future<void> createEmailTemplate(EmailTemplate template) async {
+    try {
+      final String newId = template.id.isEmpty ? const Uuid().v4() : template.id;
+      final newTemplate = template.copyWith(id: newId);
+      await _firestore
+          .collection(_collectionName)
+          .doc(newTemplate.id)
+          .set(newTemplate.toMap());
+      utils_logger.Logger.log(
+          '✅ Email template "${newTemplate.name}" created successfully');
+    } catch (e) {
+      utils_logger.Logger.logError('Failed to create email template: $e', e);
+      rethrow;
+    }
+  }
+
+  // Update an existing email template
+  Future<void> updateEmailTemplate(EmailTemplate template) async {
     try {
       await _firestore
           .collection(_collectionName)
           .doc(template.id)
-          .set(template.toMap());
+          .update(template.toMap()); // Use update for partial updates
       utils_logger.Logger.log(
-          '✅ Email template "${template.name}" saved successfully');
+          '✅ Email template "${template.name}" updated successfully');
     } catch (e) {
-      utils_logger.Logger.logError('Failed to save email template: $e', e);
+      utils_logger.Logger.logError('Failed to update email template: $e', e);
       rethrow;
     }
   }
 
   // Get all email templates
-  Stream<List<EmailTemplate>> getAllTemplates() {
+  Stream<List<EmailTemplate>> streamEmailTemplates() {
     return _firestore
         .collection(_collectionName)
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => EmailTemplate.fromFirestore(doc))
+            .map((doc) => EmailTemplate.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id))
             .toList());
   }
 
@@ -47,7 +64,7 @@ class EmailService {
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => EmailTemplate.fromFirestore(doc))
+            .map((doc) => EmailTemplate.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id))
             .toList());
   }
 
@@ -56,7 +73,7 @@ class EmailService {
     try {
       final doc = await _firestore.collection(_collectionName).doc(id).get();
       if (doc.exists) {
-        return EmailTemplate.fromFirestore(doc);
+        return EmailTemplate.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id);
       }
       return null;
     } catch (e) {
@@ -78,7 +95,7 @@ class EmailService {
           .get();
 
       if (snapshot.docs.isNotEmpty) {
-        return EmailTemplate.fromFirestore(snapshot.docs.first);
+        return EmailTemplate.fromFirestore(snapshot.docs.first.data() as Map<String, dynamic>, docId: snapshot.docs.first.id);
       }
 
       // If no custom template exists, return built-in default
@@ -105,7 +122,7 @@ class EmailService {
   Future<void> initializeBuiltInTemplates() async {
     try {
       // Initialize invoice template
-      await saveTemplate(EmailTemplate.invoiceTemplate);
+      await createEmailTemplate(EmailTemplate.invoiceTemplate);
 
       // Log initialization
       utils_logger.Logger.log('🔧 Built-in email templates initialized');
@@ -230,6 +247,52 @@ class EmailService {
     }
   }
 
+  // Send a test email for a given template type to a recipient
+  Future<bool> sendTestEmail(EmailTemplateType type, String recipientEmail) async {
+    try {
+      final template = await getDefaultTemplate(type);
+      if (template == null) {
+        utils_logger.Logger.log('❌ No email template available for type $type');
+        return false;
+      }
+
+      // Generate dummy variables for testing
+      final Map<String, dynamic> testVariables = {
+        'customer_name': 'Test User',
+        'invoice_number': 'INV-TEST-123',
+        'invoice_total': 'TSH 100,000.00',
+        'due_date': _formatDate(DateTime.now().add(const Duration(days: 7))),
+        'payment_date': _formatDate(DateTime.now()),
+        'days_overdue': '5',
+        'payment_url': 'https://example.com/pay/test',
+        'pdf_url': 'https://example.com/download/test.pdf',
+        'company_name': 'JengaMate Test Ltd',
+        'company_email': 'test@jengamate.co.tz',
+        'company_phone': '+255 777 000 000',
+      };
+
+      final resolvedSubject = replaceVariables(template.subject, testVariables);
+      final resolvedHtmlBody = replaceVariables(template.htmlBodyTemplate, testVariables);
+      final resolvedTextBody = replaceVariables(template.textBodyTemplate, testVariables);
+
+      final success = await _sendEmailViaMailto(
+        recipientEmail,
+        resolvedSubject,
+        resolvedHtmlBody,
+        resolvedTextBody,
+        null, // No PDF for test emails
+      );
+
+      if (success) {
+        utils_logger.Logger.log('📧 Test email of type $type sent to $recipientEmail');
+      }
+      return success;
+    } catch (e) {
+      utils_logger.Logger.logError('Failed to send test email of type $type: $e', e);
+      return false;
+    }
+  }
+
   // Private Helper Methods
 
   EmailTemplate? _getBuiltInDefaultTemplate(EmailTemplateType type) {
@@ -242,8 +305,8 @@ class EmailService {
         return _createReminderTemplate();
       case EmailTemplateType.overdue:
         return _createOverdueTemplate();
-      default:
-        return EmailTemplate.invoiceTemplate;
+      case EmailTemplateType.other:
+        return null; // Explicitly return null for other types
     }
   }
 
@@ -252,6 +315,7 @@ class EmailService {
     return EmailTemplate(
       id: 'built-in-receipt',
       name: 'Payment Receipt',
+      subject: 'Payment Receipt for Invoice #{invoice_number}',
       subjectTemplate: 'Payment Receipt for Invoice #{invoice_number}',
       htmlBodyTemplate: _receiptHtmlTemplate,
       textBodyTemplate: _receiptTextTemplate,
@@ -270,6 +334,7 @@ class EmailService {
     return EmailTemplate(
       id: 'built-in-reminder',
       name: 'Payment Reminder',
+      subject: 'Friendly Reminder: Payment Due Soon',
       subjectTemplate: 'Friendly Reminder: Payment Due Soon',
       htmlBodyTemplate: _reminderHtmlTemplate,
       textBodyTemplate: _reminderTextTemplate,
@@ -289,6 +354,7 @@ class EmailService {
     return EmailTemplate(
       id: 'built-in-overdue',
       name: 'Overdue Notice',
+      subject: 'OVERDUE: Action Required on Invoice #{invoice_number}',
       subjectTemplate: 'OVERDUE: Action Required on Invoice #{invoice_number}',
       htmlBodyTemplate: _overdueHtmlTemplate,
       textBodyTemplate: _overdueTextTemplate,

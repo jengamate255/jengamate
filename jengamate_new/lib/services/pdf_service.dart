@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
 import 'package:intl/intl.dart';
 import 'package:universal_html/html.dart' as html;
 import '../models/invoice_model.dart';
@@ -361,6 +360,21 @@ class PdfService {
 
   static Future<void> openFile(File file) async {
     final url = file.path;
-    await OpenFile.open(url);
+
+    if (kIsWeb) {
+      // For web, create a download link
+      final bytes = await file.readAsBytes();
+      final blob = html.Blob([bytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..target = '_blank'
+        ..download = file.path.split('/').last;
+      anchor.click();
+      html.Url.revokeObjectUrl(url);
+    } else {
+      // For mobile/desktop, try to launch the URL
+      // Note: This is a simplified approach - you might want to use url_launcher
+      throw UnsupportedError('File opening not supported on this platform');
+    }
   }
 }

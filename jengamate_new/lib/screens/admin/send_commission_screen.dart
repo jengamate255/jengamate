@@ -4,6 +4,7 @@ import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/services/commission_tier_service.dart';
 
 class SendCommissionScreen extends StatefulWidget {

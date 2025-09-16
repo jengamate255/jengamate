@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 class ContentModeration {
   final String id;
@@ -33,21 +33,16 @@ class ContentModeration {
     required this.tags,
   });
 
-  factory ContentModeration.fromFirestore(DocumentSnapshot doc) {
-    final data = (doc.data() as Map<String, dynamic>? ?? {});
+  factory ContentModeration.fromFirestore(Map<String, dynamic> data, {required String docId}) {
     return ContentModeration(
-      id: doc.id,
+      id: docId,
       title: (data['title'] ?? '').toString(),
       authorId: (data['authorId'] ?? '').toString(),
       authorName: (data['authorName'] ?? '').toString(),
       contentType: (data['contentType'] ?? 'post').toString(),
       status: (data['status'] ?? 'pending').toString(),
-      createdAt: (data['createdAt'] is Timestamp)
-          ? (data['createdAt'] as Timestamp).toDate()
-          : null,
-      updatedAt: (data['updatedAt'] is Timestamp)
-          ? (data['updatedAt'] as Timestamp).toDate()
-          : null,
+      createdAt: (data['createdAt'] is String) ? DateTime.parse(data['createdAt']) : null,
+      updatedAt: (data['updatedAt'] is String) ? DateTime.parse(data['updatedAt']) : null,
       moderatedBy: (data['moderatedBy'] as String?),
       rejectionReason: (data['rejectionReason'] as String?),
       flaggedReason: (data['flaggedReason'] as String?),

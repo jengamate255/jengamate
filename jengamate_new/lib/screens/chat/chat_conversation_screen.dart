@@ -3,15 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/chat_message_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/services/supabase_chat_service.dart'; // Add this import
 import 'package:jengamate/widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:intl/intl.dart';
+import 'package:jengamate/models/product_model.dart'; // Add this import
+import 'package:jengamate/ui/design_system/tokens/spacing.dart'; // Add this import
+import 'package:jengamate/ui/design_system/components/jm_card.dart'; // Add this import
 
 class ChatConversationScreen extends StatefulWidget {
   final String chatRoomId;
   final String otherUserName;
   final String otherUserId;
   final String currentUserId; // The ID of the currently logged-in user
+  final ProductModel? product;
 
   const ChatConversationScreen({
     Key? key,
@@ -19,6 +25,7 @@ class ChatConversationScreen extends StatefulWidget {
     required this.otherUserName,
     required this.otherUserId,
     required this.currentUserId,
+    this.product,
   }) : super(key: key);
 
   @override
@@ -28,6 +35,7 @@ class ChatConversationScreen extends StatefulWidget {
 class _ChatConversationScreenState extends State<ChatConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final DatabaseService _dbService = DatabaseService();
+  final SupabaseChatService _supabaseChatService = SupabaseChatService(); // Add this line
   UserModel? _chatPartner;
 
   @override
@@ -58,21 +66,22 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final message = ChatMessage(
       uid: '',
       chatRoomId: widget.chatRoomId,
-      senderId: currentUser.uid,
-      senderName: currentUser.displayName,
+      senderId: currentUser.uid ?? '',
+      senderName: currentUser.displayName, // Assuming senderName is available
       content: _messageController.text.trim(),
       messageType: 'text',
       timestamp: DateTime.now(),
       isRead: false,
     );
 
-    await _dbService.addMessage(message);
+    await _supabaseChatService.addMessage(message); // Modified line
     _messageController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
 
     if (currentUser == null) {
       return Scaffold(
@@ -97,9 +106,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       ),
       body: Column(
         children: [
+          if (widget.product != null) _buildProductDetailsCard(widget.product!),
           Expanded(
             child: StreamBuilder<List<ChatMessage>>(
-              stream: _dbService.streamMessages(widget.chatRoomId),
+              stream: _supabaseChatService.streamMessages(widget.chatRoomId), // Modified line
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -144,7 +154,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                             Text(
                               DateFormat('hh:mm a')
                                   .format(message.timestamp.toLocal()),
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontSize: 10, color: Colors.black54),
                             ),
                           ],
@@ -178,6 +188,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 ),
                 const SizedBox(width: 8.0),
                 FloatingActionButton(
+                  heroTag: "chatConversationSend",
                   onPressed: _sendMessage,
                   mini: true,
                   child: const Icon(Icons.send),
@@ -186,6 +197,50 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProductDetailsCard(ProductModel product) {
+    return JMCard(
+      margin: const EdgeInsets.all(JMSpacing.md),
+      child: Padding(
+        padding: const EdgeInsets.all(JMSpacing.sm),
+        child: Row(
+          children: [
+            if (product.imageUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(JMSpacing.xxs), // Changed JMSpacing.xs to JMSpacing.xxs
+                child: Image.network(
+                  product.imageUrl,
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            const SizedBox(width: JMSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: JMSpacing.xxs),
+                  Text(
+                    'TSH ${product.price.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

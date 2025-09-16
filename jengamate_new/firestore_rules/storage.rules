@@ -30,5 +30,27 @@ service firebase.storage {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Identity documents for verification
+    match /identity_documents/{userId}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // General identity documents (for admins/moderators)
+    match /identity_documents/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Temporary uploads (for testing and development)
+    match /temp/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Catch-all for any other authenticated uploads
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
   }
 }

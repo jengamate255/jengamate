@@ -8,6 +8,7 @@ import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/utils/logger.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
 
 class ReferralDashboardScreen extends StatefulWidget {
   const ReferralDashboardScreen({super.key});
@@ -17,13 +18,11 @@ class ReferralDashboardScreen extends StatefulWidget {
 }
 
 class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
-  final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
   
   List<ReferralModel> _referrals = [];
   List<UserModel> _referredUsers = [];
   bool _isLoading = true;
-  String? _currentUserId;
   String _referralCode = '';
   double _totalEarnings = 0.0;
   double _pendingEarnings = 0.0;
@@ -41,9 +40,8 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
     try {
       final user = _authService.currentUser;
       if (user != null) {
-        _currentUserId = user.uid;
         _referralCode = _generateReferralCode(user.uid);
-        await _loadReferralData();
+        await _loadReferralData(user.uid);
       }
     } catch (e) {
       Logger.logError('Error initializing referral data', e, StackTrace.current);
@@ -57,14 +55,12 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
     return 'REF${userId.substring(0, 6).toUpperCase()}';
   }
 
-  Future<void> _loadReferralData() async {
-    if (_currentUserId == null) return;
-
+  Future<void> _loadReferralData(String userId) async {
     try {
       final dbService = DatabaseService();
 
       // Load real referral data from database
-      final referralData = await dbService.getUserReferrals(_currentUserId!);
+      final referralData = await dbService.getUserReferrals(userId);
       _referrals = referralData.map((data) => ReferralModel(
         id: data['id'] ?? '',
         referrerId: data['referrerId'] ?? '',
@@ -121,7 +117,7 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadReferralData,
+            onPressed: () => _loadReferralData(_authService.currentUser!.uid),
           ),
         ],
       ),
@@ -401,7 +397,7 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.lightbulb_outline, color: Colors.blue),
+                  const Icon(Icons.lightbulb_outline, color: Colors.blue),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -424,7 +420,7 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle, color: Colors.green, size: 20),
+          const Icon(Icons.check_circle, color: Colors.green, size: 20),
           const SizedBox(width: 8),
           Expanded(child: Text(text)),
         ],
@@ -446,19 +442,70 @@ class _ReferralDashboardScreenState extends State<ReferralDashboardScreen> {
   }
 
   void _inviteFriends() {
-    // TODO: Implement invite friends functionality (email, SMS, etc.)
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Invite Friends'),
-        content: const Text('Invite friends feature coming soon! For now, you can share your referral code.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.email),
+                title: const Text('Invite via Email'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _sendEmailInvite();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.sms),
+                title: const Text('Invite via SMS'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _sendSMSInvite();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share),
+                title: const Text('Share via Other Apps'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareReferralCode();
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  Future<void> _sendEmailInvite() async {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: '',
+      query: encodeQueryParameters(<String, String>{
+        'subject': 'Join JengaMate and Get a Discount!',
+        'body': 'Hey! Check out JengaMate and use my referral code $_referralCode to get 10% off your first order. Download the app today!',
+      }),
+    );
+    await launchUrl(emailLaunchUri);
+  }
+
+  Future<void> _sendSMSInvite() async {
+    final Uri smsLaunchUri = Uri(
+      scheme: 'sms',
+      path: '',
+      queryParameters: <String, String>{
+        'body': 'Hey! Join JengaMate using my referral code $_referralCode and get 10% off your first order. Download the app today!',
+      },
+    );
+    await launchUrl(smsLaunchUri);
+  }
+
+  String? encodeQueryParameters(Map<String, String> params) {
+    return params.entries
+        .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
   }
 }

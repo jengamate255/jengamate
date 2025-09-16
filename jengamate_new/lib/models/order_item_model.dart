@@ -28,4 +28,7 @@ class OrderItem {
       'price': price,
     };
   }
+
+  // Computed property for total price
+  double get totalPrice => quantity * price;
 }

@@ -20,7 +20,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Map<String, dynamic> _currentFilters = {};
   String _searchQuery = '';
   bool _isLoading = false;
-  bool _showFilters = false;
 
   @override
   void dispose() {
@@ -57,47 +56,73 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   Widget _buildSearchBar() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
+      padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
+      child: Column(
         children: [
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search users by name, email, or phone...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: isMobile
+                      ? 'Search users...'
+                      : 'Search users by name, email, or phone...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                            },
+                          )
+                        : null,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value.toLowerCase();
+                    });
+                  },
                 ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : null,
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value.toLowerCase();
-                });
-              },
-            ),
+              if (!isMobile) ...[
+                const SizedBox(width: 8),
+                if (_currentFilters.isNotEmpty)
+                  Chip(
+                    label: Text('${_currentFilters.length} filters'),
+                    onDeleted: () {
+                      setState(() {
+                        _currentFilters.clear();
+                      });
+                    },
+                  ),
+              ],
+            ],
           ),
-          const SizedBox(width: 8),
-          if (_currentFilters.isNotEmpty)
-            Chip(
-              label: Text('${_currentFilters.length} filters'),
-              onDeleted: () {
-                setState(() {
-                  _currentFilters.clear();
-                });
-              },
+          if (isMobile && _currentFilters.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Chip(
+                  label: Text('${_currentFilters.length} filters'),
+                  onDeleted: () {
+                    setState(() {
+                      _currentFilters.clear();
+                    });
+                  },
+                ),
+              ),
             ),
         ],
       ),
@@ -140,37 +165,82 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           },
         ];
 
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isMobile = screenWidth < 600;
+
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            children: stats.map((stat) {
-              return Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Icon(stat['icon'] as IconData,
-                            color: stat['color'] as Color),
-                        const SizedBox(height: 8),
-                        Text(
-                          stat['value'] as String,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+          padding: EdgeInsets.symmetric(horizontal: isMobile ? 12.0 : 16.0),
+          child: isMobile
+            ? Column(
+                children: stats.map((stat) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
+                        child: Row(
+                          children: [
+                            Icon(stat['icon'] as IconData,
+                                color: stat['color'] as Color,
+                                size: isMobile ? 24 : 32),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    stat['value'] as String,
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 18 : 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: stat['color'] as Color,
+                                    ),
+                                  ),
+                                  Text(
+                                    stat['title'] as String,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontSize: isMobile ? 12 : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          stat['title'] as String,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+                  );
+                }).toList(),
+              )
+            : Row(
+                children: stats.map((stat) {
+                  return Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Icon(stat['icon'] as IconData,
+                                color: stat['color'] as Color),
+                            const SizedBox(height: 8),
+                            Text(
+                              stat['value'] as String,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              stat['title'] as String,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
         );
       },
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/commission_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 import '../../models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
@@ -11,7 +12,8 @@ class CommissionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
     final dbService = DatabaseService();
 
     if (currentUser == null ||
@@ -29,7 +31,7 @@ class CommissionScreen extends StatelessWidget {
         title: const Text('My Commission'),
       ),
       body: StreamBuilder<List<CommissionModel>>(
-        stream: dbService.streamUserCommissions(currentUser.uid),
+        stream: currentUser != null ? dbService.streamUserCommissions(currentUser.uid) : Stream.empty(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

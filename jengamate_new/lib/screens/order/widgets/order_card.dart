@@ -4,12 +4,14 @@ import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:jengamate/screens/order/order_details_screen.dart';
-// import 'package:jengamate/screens/order/widgets/payment_dialog.dart'; // TODO: This file is missing, causing build errors.
+import 'package:jengamate/screens/order/widgets/payment_dialog.dart'; // Import the new PaymentDialog
+import 'package:jengamate/services/order_service.dart'; // Import OrderService
 
 class OrderCard extends StatelessWidget {
   final OrderModel order;
+  final OrderService _orderService = OrderService(); // Instantiate OrderService
 
-  const OrderCard({super.key, required this.order});
+  OrderCard({super.key, required this.order});
 
   @override
   Widget build(BuildContext context) {
@@ -107,14 +109,21 @@ class OrderCard extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          // TODO: Re-implement payment dialog. The original PaymentDialog file is missing.
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Payment functionality is currently unavailable.'),
+                        onPressed: () async {
+                          final double totalPaid = await _orderService.getTotalPaidAmount(order.uid);
+                          final result = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => PaymentDialog(
+                              orderId: order.uid,
+                              totalAmount: order.totalAmount,
+                              paidAmount: totalPaid,
                             ),
                           );
+                          if (result == true) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Payment recorded successfully!')),
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,

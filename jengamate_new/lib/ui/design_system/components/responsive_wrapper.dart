@@ -99,7 +99,7 @@ class ResponsiveWrapper extends StatelessWidget {
 
   const ResponsiveWrapper({
     super.key,
-    this.child,
+    this.child = null,
     this.mobileLayout,
     this.tabletLayout,
     this.desktopLayout,

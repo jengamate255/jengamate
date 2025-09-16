@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:jengamate/screens/admin/admin_tools_screen.dart';
 import 'package:jengamate/screens/admin/providers/admin_metrics_provider.dart';

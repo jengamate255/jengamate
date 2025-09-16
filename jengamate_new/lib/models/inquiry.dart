@@ -1,4 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
+import 'package:uuid/uuid.dart';
 
 class Inquiry {
   final String uid;
@@ -47,11 +48,13 @@ class Inquiry {
   });
 
   factory Inquiry.fromMap(Map<String, dynamic> map) {
-    // Validate required fields to prevent incomplete inquiry errors
+    final String _uid = map['uid'] is String && (map['uid'] as String).isNotEmpty
+        ? map['uid'] as String
+        : const Uuid().v4();
+
     final userId = map['userId'] ?? 'unknown_user'; // Provide a default
     final subject = map['subject'] ?? 'No Subject'; // Provide a default
-    final uid = map['uid'] ??
-        ''; // uid is used for display, so empty might be okay if it's a new inquiry being created
+    // Validate required fields to prevent incomplete inquiry errors
 
     // Silently assign defaults for missing fields to reduce console noise
     if (userId == 'unknown_user') {
@@ -87,7 +90,7 @@ class Inquiry {
     }
 
     return Inquiry(
-      uid: map['uid'] is String ? map['uid'] : '',
+      uid: _uid,
       userId: map['userId'] is String ? map['userId'] : 'unknown_user',
       userName: map['userName'] is String ? map['userName'] : 'Unknown User',
       userEmail: map['userEmail'] is String ? map['userEmail'] : 'Unknown',
@@ -98,10 +101,10 @@ class Inquiry {
       category: map['category'] is String ? map['category'] : 'general',
       priority: map['priority'] is String ? map['priority'] : 'medium',
       status: map['status'] is String ? map['status'] : 'open',
-      createdAt: _parseTimestamp(map['createdAt'], fallbackToNow: true),
-      updatedAt: _parseTimestamp(map['updatedAt'], fallbackToNow: false),
+      createdAt: _parseDateTime(map['createdAt'], fallbackToNow: true),
+      updatedAt: _parseDateTime(map['updatedAt'], fallbackToNow: false),
       resolvedAt: map['resolvedAt'] != null
-          ? _parseOptionalTimestamp(map['resolvedAt'])
+          ? _parseOptionalDateTime(map['resolvedAt'])
           : null,
       assignedTo: map['assignedTo'] is String ? map['assignedTo'] : null,
       assignedToName:
@@ -118,10 +121,10 @@ class Inquiry {
   }
 
   // Helper method to parse timestamps safely
-  static DateTime _parseTimestamp(dynamic timestamp,
+  static DateTime _parseDateTime(dynamic value,
       {bool fallbackToNow = true}) {
-    if (timestamp is Timestamp) {
-      return timestamp.toDate();
+    if (value is String) {
+      return DateTime.parse(value);
     }
     if (fallbackToNow) {
       return DateTime.now();
@@ -130,16 +133,18 @@ class Inquiry {
   }
 
   // Helper method to parse optional timestamps
-  static DateTime? _parseOptionalTimestamp(dynamic timestamp) {
-    if (timestamp is Timestamp) {
-      return timestamp.toDate();
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value is String) {
+      return DateTime.tryParse(value);
     }
     return null;
   }
 
-  factory Inquiry.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return Inquiry.fromMap(data);
+  factory Inquiry.fromFirestore(Map<String, dynamic> data, {required String docId}) {
+    return Inquiry.fromMap({
+      ...data,
+      'uid': docId,
+    });
   }
 
   Map<String, dynamic> toMap() {
@@ -153,9 +158,9 @@ class Inquiry {
       'category': category,
       'priority': priority,
       'status': status,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
-      'resolvedAt': resolvedAt != null ? Timestamp.fromDate(resolvedAt!) : null,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'resolvedAt': resolvedAt?.toIso8601String(),
       'assignedTo': assignedTo,
       'assignedToName': assignedToName,
       'response': response,
@@ -320,7 +325,7 @@ class Inquiry {
     String priority = 'medium',
   }) {
     return Inquiry(
-      uid: '',
+      uid: const Uuid().v4(), // Generate a unique ID for new inquiries
       userId: userId,
       userName: userName,
       userEmail: userEmail,
@@ -346,7 +351,7 @@ class Inquiry {
     String priority = 'high',
   }) {
     return Inquiry(
-      uid: '',
+      uid: const Uuid().v4(), // Generate a unique ID for new inquiries
       userId: userId,
       userName: userName,
       userEmail: userEmail,
@@ -371,7 +376,7 @@ class Inquiry {
     String priority = 'medium',
   }) {
     return Inquiry(
-      uid: '',
+      uid: const Uuid().v4(), // Generate a unique ID for new inquiries
       userId: userId,
       userName: userName,
       userEmail: userEmail,

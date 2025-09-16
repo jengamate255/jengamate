@@ -1,55 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 class ProductModel {
-
-  factory ProductModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    
-    // Handle backward compatibility for fields that might be in different locations
-    final specifications = Map<String, dynamic>.from(data['specifications'] ?? {});
-    
-    // Migrate top-level fields to specifications if needed
-    if (data['gauge'] != null) {
-      specifications['gauge'] = data['gauge'];
-    }
-    if (data['profile'] != null) {
-      specifications['profile'] = data['profile'];
-    }
-    
-    return ProductModel(
-      id: doc.id,
-      name: data['name'] ?? '',
-      description: data['description'] ?? '',
-      price: (data['price'] as num?)?.toDouble() ?? 0.0,
-      imageUrl: data['imageUrl'] ?? '',
-      imageUrls: List<String>.from(data['imageUrls'] ?? []),
-      categoryId: data['categoryId'] ?? data['category'] ?? '', // Backward compatibility
-      subCategoryId: data['subCategoryId'] ?? data['subcategory'], // Backward compatibility
-      supplierId: data['supplierId'] ?? '',
-      isHot: data['isHot'] ?? false,
-      numberOfReviews: (data['numberOfReviews'] as num?)?.toInt() ?? 0,
-      averageRating: (data['averageRating'] as num?)?.toDouble() ?? 0.0,
-      type: data['type'] ?? '',
-      thickness: data['thickness'] ?? '',
-      color: data['color'] ?? '',
-      dimensions: data['dimensions'] ?? '',
-      stock: (data['stock'] as num?)?.toInt() ?? 0,
-      serviceProvider: data['serviceProvider'] ?? '',
-      drawingUrl: data['drawingUrl'],
-      videoUrl: data['videoUrl'],
-      variants: (data['variants'] as List<dynamic>?)
-              ?.map((v) => ProductVariant.fromMap(v as Map<String, dynamic>))
-              .toList() ??
-          const [],
-      unitId: data['unitId'],
-      brandId: data['brandId'] ?? data['brand'], // Backward compatibility
-      status: data['status'] ?? 'active',
-      isActive: data['isActive'] ?? true,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      specifications: specifications.isNotEmpty ? specifications : null,
-    );
-  }
   final String id;
   final String name;
   final String description;
@@ -73,7 +24,14 @@ class ProductModel {
   final List<ProductVariant> variants;
   final String? unitId;
   final String? brandId;
-  
+  final String? sku; // New field
+  final String? supplier; // New field
+  final double? weight; // New field
+  final double? length; // New field
+  final double? width; // New field
+  final double? height; // New field
+  final bool? isAvailable; // New field
+
   // Backward compatibility getters
   String? get brand => brandId; // For backward compatibility
   String? get category => categoryId; // For backward compatibility
@@ -110,6 +68,13 @@ class ProductModel {
     this.variants = const [],
     this.unitId,
     this.brandId,
+    this.sku, // Initialize new field
+    this.supplier, // Initialize new field
+    this.weight, // Initialize new field
+    this.length, // Initialize new field
+    this.width, // Initialize new field
+    this.height, // Initialize new field
+    this.isAvailable = true, // Initialize new field
     this.status = 'active',
     this.isActive = true,
     required this.createdAt,
@@ -118,6 +83,17 @@ class ProductModel {
   });
 
   factory ProductModel.fromMap(Map<String, dynamic> map, String id) {
+    // Handle backward compatibility for fields that might be in different locations
+    final specifications = Map<String, dynamic>.from(map['specifications'] ?? {});
+
+    // Migrate top-level fields to specifications if needed
+    if (map['gauge'] != null) {
+      specifications['gauge'] = map['gauge'];
+    }
+    if (map['profile'] != null) {
+      specifications['profile'] = map['profile'];
+    }
+
     return ProductModel(
       id: id,
       name: map['name'] ?? '',
@@ -125,8 +101,8 @@ class ProductModel {
       price: (map['price'] as num?)?.toDouble() ?? 0.0,
       imageUrl: map['imageUrl'] ?? '',
       imageUrls: List<String>.from(map['imageUrls'] ?? []), // Parse new field
-      categoryId: map['categoryId'] ?? '',
-      subCategoryId: map['subCategoryId'],
+      categoryId: map['categoryId'] ?? map['category'] ?? '', // Backward compatibility
+      subCategoryId: map['subCategoryId'] ?? map['subcategory'], // Backward compatibility
       supplierId: map['supplierId'] ?? '',
       isHot: map['isHot'] ?? false,
       numberOfReviews: (map['numberOfReviews'] as num?)?.toInt() ?? 0,
@@ -144,13 +120,42 @@ class ProductModel {
               .toList() ??
           const [],
       unitId: map['unitId'],
-      brandId: map['brandId'],
+      brandId: map['brandId'] ?? map['brand'], // Backward compatibility
       status: map['status'] ?? 'active',
       isActive: map['isActive'] ?? true,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      specifications: map['specifications'],
+      createdAt: _parseDateTime(map['createdAt']),
+      updatedAt: _parseDateTime(map['updatedAt']),
+      specifications: specifications.isNotEmpty ? specifications : null,
     );
+  }
+
+  factory ProductModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
+    return ProductModel.fromMap(data, docId);
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    
+    if (value is DateTime) {
+      return value;
+    }
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    
+    return DateTime.now();
   }
 
   Map<String, dynamic> toMap() {
@@ -180,10 +185,17 @@ class ProductModel {
       'unitId': unitId,
       'brandId': brandId,
       'brand': brandId, // Backward compatibility
+      'sku': sku, // Add new field
+      'supplier': supplier, // Add new field
+      'weight': weight, // Add new field
+      'length': length, // Add new field
+      'width': width, // Add new field
+      'height': height, // Add new field
+      'isAvailable': isAvailable, // Add new field
       'status': status,
       'isActive': isActive,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'specifications': {
         ...?specifications,
         if (gauge != null) 'gauge': gauge, // Ensure gauge is in specifications
@@ -216,6 +228,13 @@ class ProductModel {
     List<ProductVariant>? variants,
     String? unitId,
     String? brandId,
+    String? sku, // Add new field
+    String? supplier, // Add new field
+    double? weight, // Add new field
+    double? length, // Add new field
+    double? width, // Add new field
+    double? height, // Add new field
+    bool? isAvailable, // Add new field
     String? status,
     bool? isActive,
     DateTime? createdAt,
@@ -247,6 +266,13 @@ class ProductModel {
       variants: variants ?? this.variants,
       unitId: unitId ?? this.unitId,
       brandId: brandId ?? this.brandId,
+      sku: sku ?? this.sku, // Copy new field
+      supplier: supplier ?? this.supplier, // Copy new field
+      weight: weight ?? this.weight, // Copy new field
+      length: length ?? this.length, // Copy new field
+      width: width ?? this.width, // Copy new field
+      height: height ?? this.height, // Copy new field
+      isAvailable: isAvailable ?? this.isAvailable, // Copy new field
       status: status ?? this.status,
       isActive: isDeleted != null ? !isDeleted : (isActive ?? this.isActive),
       createdAt: createdAt ?? this.createdAt,

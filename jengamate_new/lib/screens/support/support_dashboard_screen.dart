@@ -6,6 +6,7 @@ import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/utils/logger.dart';
 import 'package:intl/intl.dart';
+import 'package:jengamate/screens/support/guide_details_screen.dart'; // Import the new screen
 
 class SupportDashboardScreen extends StatefulWidget {
   final bool isAdminView;
@@ -213,6 +214,7 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen>
             ),
       floatingActionButton: !widget.isAdminView
           ? FloatingActionButton(
+              heroTag: "createSupportTicket",
               onPressed: _showCreateTicketDialog,
               child: const Icon(Icons.add),
             )
@@ -582,9 +584,14 @@ class _SupportDashboardScreenState extends State<SupportDashboardScreen>
                   subtitle: Text(guide['description']!),
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
-                    // TODO: Navigate to guide details
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Opening ${guide['title']}')),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => GuideDetailsScreen(
+                          title: guide['title']!,
+                          description: guide['description']!,
+                        ),
+                      ),
                     );
                   },
                 ),

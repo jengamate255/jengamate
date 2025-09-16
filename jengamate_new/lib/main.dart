@@ -1,23 +1,26 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/services/supabase_service.dart';
-import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/services/theme_service.dart';
 import 'package:jengamate/services/notification_service.dart';
 import 'package:jengamate/services/invoice_service.dart';
 import 'package:jengamate/services/order_service.dart';
+import 'package:jengamate/services/payment_approval_service.dart';
+import 'package:jengamate/services/bulk_operations_service.dart';
+import 'package:jengamate/services/audit_service.dart'; // Added
+import 'package:jengamate/services/document_verification_service.dart'; // Added
+import 'package:jengamate/services/role_service.dart'; // Added
+import 'package:jengamate/services/app_config_service.dart'; // Add this import
+import 'package:jengamate/services/user_state_provider.dart'; // Add this import
+import 'package:jengamate/utils/logger.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'config/app_router.dart';
 import 'config/app_theme.dart';
-import 'firebase_options.dart';
 
 Future<void> main() async {
   // Wrap the entire application in a guarded zone to catch all errors.
@@ -26,41 +29,44 @@ Future<void> main() async {
       // Ensure Flutter bindings are initialized first.
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Sentry removed.
-
-      // Initialize Firebase and Supabase.
+      // Initialize Supabase.
       try {
-        debugPrint('🚀 Initializing Firebase...');
+        debugPrint('🚀 Initializing Supabase...');
+        await SupabaseService.instance.initialize();
+
+        // Initialize Firebase
+        debugPrint('🔥 Initializing Firebase...');
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
-        await SupabaseService.instance.initialize();
-        debugPrint('✅ Firebase and Supabase initialized successfully');
+        debugPrint('✅ Firebase initialized successfully');
 
-        // Set up crash reporting and global error handlers.
-        if (kIsWeb) {
-          FlutterError.onError = (FlutterErrorDetails details) {
-            // Sentry removed; keep default behavior if needed.
-          };
-        } else {
-          // For mobile, use more comprehensive error handling.
-          await FirebaseCrashlytics.instance
-              .setCrashlyticsCollectionEnabled(kReleaseMode);
+        // Initialize payment approval service for automated workflow
+        PaymentApprovalService();
 
-          FlutterError.onError = (FlutterErrorDetails details) {
-            FlutterError.presentError(details);
-            FirebaseCrashlytics.instance.recordFlutterFatalError(details);
-          };
+        // Initialize bulk operations service
+        BulkOperationsService();
 
-          PlatformDispatcher.instance.onError =
-              (Object error, StackTrace stack) {
-            if (kReleaseMode) {
-              FirebaseCrashlytics.instance
-                  .recordError(error, stack, fatal: true);
-            }
-            return true; // Error handled.
-          };
-        }
+        // Load dynamic app configurations
+        final appConfigService = AppConfigService();
+        final dynamicConfigs = await appConfigService.getAllConfigs();
+        Logger.log('Dynamic App Configurations: $dynamicConfigs');
+
+        // TODO: Integrate dynamicConfigs into a Provider or equivalent for app-wide access.
+
+        debugPrint('✅ Supabase, Payment Approval, and Bulk Operations Services initialized successfully');
+
+        // Set up global error handlers.
+        FlutterError.onError = (FlutterErrorDetails details) {
+          FlutterError.presentError(details);
+          // Consider logging to a Supabase-based error tracking if needed
+        };
+
+        PlatformDispatcher.instance.onError =
+            (Object error, StackTrace stack) {
+          // Consider logging to a Supabase-based error tracking if needed
+          return true; // Error handled.
+        };
 
         // Run the app.
         runApp(const MyApp());
@@ -79,10 +85,10 @@ Future<void> main() async {
       }
     },
     (error, stack) {
-      // Errors caught by the zone are reported to Crashlytics (Sentry removed).
-      if (!kIsWeb && kReleaseMode) {
-        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      }
+      // Errors caught by the zone are reported.
+      debugPrint('Unhandled error in runZonedGuarded: $error');
+      debugPrint('Stack trace: $stack');
+      // Consider logging to a Supabase-based error tracking if needed
     },
   );
 }
@@ -113,26 +119,14 @@ class MyApp extends StatelessWidget {
         Provider<InvoiceService>(
           create: (_) => InvoiceService(),
         ),
-        StreamProvider<User?>(
-          create: (context) => context.read<AuthService>().authStateChanges,
-          initialData: null,
-        ),
-        StreamProvider<UserModel?>(
-          create: (context) {
-            final userStream = context.read<AuthService>().authStateChanges;
-            return userStream.asyncMap((user) async {
-              if (user == null) {
-                return null;
-              }
-              final enhancedUser = await DatabaseService().getUser(user.uid);
-              return enhancedUser;
-            });
-          },
-          initialData: null,
-        ),
+        // Removed Firebase-related StreamProviders for user authentication
         Provider<OrderService>(
           create: (_) => OrderService(),
         ),
+        Provider<AuditService>(create: (_) => AuditService()),
+        Provider<DocumentVerificationService>(create: (_) => DocumentVerificationService()), // Added
+        Provider<RoleService>(create: (_) => RoleService()), // Added
+        ChangeNotifierProvider<UserStateProvider>(create: (_) => UserStateProvider()), // Added
       ],
       child: Consumer<ThemeService>(
         builder: (context, theme, child) {

@@ -106,6 +106,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
             ),
           ),
           floatingActionButton: FloatingActionButton(
+            heroTag: "submitQuote",
             onPressed: () {
               showModalBottomSheet(
                 context: context,

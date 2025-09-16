@@ -4,6 +4,7 @@ import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/utils/logger.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ContentModerationDashboard extends StatefulWidget {
   const ContentModerationDashboard({super.key});
@@ -17,6 +18,7 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
     with TickerProviderStateMixin {
   final DatabaseService _databaseService = DatabaseService();
   late TabController _tabController;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   List<ContentModerationModel> _pendingContent = [];
   List<ContentModerationModel> _reviewedContent = [];
@@ -53,11 +55,11 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
     setState(() => _isLoading = true);
     try {
       // Load real moderation data from database
-      final dbService = DatabaseService();
+      // final dbService = DatabaseService();
 
       // Get pending content reports
       final pendingReports =
-          await dbService.getContentReports(status: 'pending');
+          await _databaseService.getContentReports(status: 'pending');
       _pendingContent = pendingReports
           .map((report) => ContentModerationModel(
                 id: report.uid,
@@ -76,7 +78,7 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
 
       // Get reviewed content reports
       final reviewedReports =
-          await dbService.getContentReports(status: 'reviewed');
+          await _databaseService.getContentReports(status: 'reviewed');
       _reviewedContent = reviewedReports
           .map((report) => ContentModerationModel(
                 id: report.uid,
@@ -688,7 +690,10 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement actual approval logic
+              _databaseService.updateContentReportStatus(item.id, 'approved', 
+                  reviewerId: _auth.currentUser!.uid,
+                  reviewerName: _auth.currentUser!.displayName ?? 'Admin');
+              _loadModerationData();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Content approved successfully')),
               );
@@ -731,7 +736,11 @@ class _ContentModerationDashboardState extends State<ContentModerationDashboard>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement actual rejection logic
+              _databaseService.updateContentReportStatus(item.id, 'rejected', 
+                  reviewerId: _auth.currentUser!.uid,
+                  reviewerName: _auth.currentUser!.displayName ?? 'Admin',
+                  reviewNotes: notesController.text.trim());
+              _loadModerationData();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Content rejected successfully')),
               );

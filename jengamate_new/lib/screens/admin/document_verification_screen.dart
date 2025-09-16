@@ -5,6 +5,9 @@ import 'package:jengamate/models/admin_user_activity.dart';
 import 'package:jengamate/services/admin_analytics_service.dart';
 import 'package:jengamate/widgets/advanced_filter_panel.dart';
 import 'package:jengamate/widgets/user_activity_timeline.dart';
+import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
+import 'package:jengamate/services/document_verification_service.dart';
 
 class DocumentVerificationScreen extends StatefulWidget {
   const DocumentVerificationScreen({Key? key}) : super(key: key);
@@ -16,12 +19,19 @@ class DocumentVerificationScreen extends StatefulWidget {
 
 class _DocumentVerificationScreenState
     extends State<DocumentVerificationScreen> {
-  final AdminAnalyticsService _analyticsService = AdminAnalyticsService();
+  late final DocumentVerificationService _documentVerificationService;
   final TextEditingController _searchController = TextEditingController();
 
   Map<String, dynamic> _currentFilters = {};
   String _searchQuery = '';
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _documentVerificationService = Provider.of<DocumentVerificationService>(context, listen: false);
+    _searchController.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -107,7 +117,7 @@ class _DocumentVerificationScreenState
 
   Widget _buildStatsCards() {
     return StreamBuilder<Map<String, dynamic>>(
-      stream: _analyticsService.getDocumentAnalytics(),
+      stream: _documentVerificationService.getDocumentAnalytics(), // Use the service
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -190,7 +200,7 @@ class _DocumentVerificationScreenState
         }
 
         final documents = snapshot.data!.docs
-            .map((doc) => DocumentVerification.fromFirestore(doc))
+            .map((doc) => DocumentVerification.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id))
             .where((doc) => _matchesSearch(doc))
             .toList();
 
@@ -256,31 +266,26 @@ class _DocumentVerificationScreenState
   }
 
   Stream<QuerySnapshot> _getFilteredDocuments() {
-    Query query =
-        FirebaseFirestore.instance.collection('document_verifications');
+    Stream<List<DocumentVerification>> stream = _documentVerificationService.streamAllDocuments();
 
     // Apply filters
     if (_currentFilters['documentType'] != null) {
-      query = query.where('documentType',
-          isEqualTo: _currentFilters['documentType']);
+      stream = stream.map((documents) => documents.where((doc) => doc.documentType == _currentFilters['documentType']).toList());
     }
 
     if (_currentFilters['documentStatus'] != null) {
-      query =
-          query.where('status', isEqualTo: _currentFilters['documentStatus']);
+      stream = stream.map((documents) => documents.where((doc) => doc.status == _currentFilters['documentStatus']).toList());
     }
 
     if (_currentFilters['startDate'] != null) {
-      query = query.where('submittedAt',
-          isGreaterThanOrEqualTo: _currentFilters['startDate']);
+      stream = stream.map((documents) => documents.where((doc) => doc.submittedAt.isAfter(_currentFilters['startDate'])).toList());
     }
 
     if (_currentFilters['endDate'] != null) {
-      query = query.where('submittedAt',
-          isLessThanOrEqualTo: _currentFilters['endDate']);
+      stream = stream.map((documents) => documents.where((doc) => doc.submittedAt.isBefore(_currentFilters['endDate'])).toList());
     }
 
-    return query.orderBy('submittedAt', descending: true).snapshots();
+    return stream.map((documents) => QuerySnapshot(documents));
   }
 
   bool _matchesSearch(DocumentVerification document) {
@@ -397,7 +402,7 @@ class _DocumentVerificationScreenState
                 height: 200,
                 width: 400,
                 child: StreamBuilder<List<AdminUserActivity>>(
-                  stream: _analyticsService.getUserActivities(
+                  stream: _documentVerificationService.streamUserActivities( // Use the service
                     userId: document.userId,
                     limit: 10,
                   ),
@@ -482,25 +487,12 @@ class _DocumentVerificationScreenState
     try {
       setState(() => _isLoading = true);
 
-      await FirebaseFirestore.instance
-          .collection('document_verifications')
-          .doc(document.id)
-          .update({
-        'status': 'verified',
-        'reviewedAt': DateTime.now(),
-        'reviewedBy': 'admin',
-      });
-
-      // Log the action
-      await _analyticsService.logUserActivity(
-        userId: document.userId,
-        action: 'document_verified',
-        metadata: {
-          'ipAddress': 'admin_panel',
-          'userAgent': 'admin_dashboard',
-          'documentType': document.documentType,
-          'documentId': document.id,
-        },
+      await _documentVerificationService.updateDocumentStatus(
+        documentId: document.id,
+        status: 'verified',
+        reviewedBy: 'admin',
+        actorId: 'admin_user_id',
+        actorName: 'Admin User',
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -555,27 +547,13 @@ class _DocumentVerificationScreenState
     try {
       setState(() => _isLoading = true);
 
-      await FirebaseFirestore.instance
-          .collection('document_verifications')
-          .doc(document.id)
-          .update({
-        'status': 'rejected',
-        'reviewedAt': DateTime.now(),
-        'reviewedBy': 'admin',
-        'rejectionReason': reasonController.text,
-      });
-
-      // Log the action
-      await _analyticsService.logUserActivity(
-        userId: document.userId,
-        action: 'document_rejected',
-        metadata: {
-          'ipAddress': 'admin_panel',
-          'userAgent': 'admin_dashboard',
-          'documentType': document.documentType,
-          'documentId': document.id,
-          'rejectionReason': reasonController.text,
-        },
+      await _documentVerificationService.updateDocumentStatus(
+        documentId: document.id,
+        status: 'rejected',
+        reviewedBy: 'admin',
+        rejectionReason: reasonController.text,
+        actorId: 'admin_user_id',
+        actorName: 'Admin User',
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -594,7 +572,7 @@ class _DocumentVerificationScreenState
     try {
       setState(() => _isLoading = true);
 
-      final csvData = await _analyticsService.exportDocumentsToCSV();
+      final csvData = await _documentVerificationService.exportDocumentsToCSV(); // Use the service
 
       if (csvData.isNotEmpty) {
         // In a real app, you would save this to a file

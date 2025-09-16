@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 class ReviewModel {
   final String id;
@@ -30,14 +30,13 @@ class ReviewModel {
       userName: data['userName'] ?? '',
       rating: (data['rating'] ?? 0).toDouble(),
       comment: data['comment'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] is String) ? DateTime.parse(data['createdAt']) : _parseOptionalDateTime(data['createdAt']) ?? DateTime.now(),
+      timestamp: (data['timestamp'] is String) ? DateTime.parse(data['timestamp']) : _parseOptionalDateTime(data['timestamp']) ?? DateTime.now(),
     );
   }
 
-  factory ReviewModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return ReviewModel.fromMap(data, doc.id);
+  factory ReviewModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
+    return ReviewModel.fromMap(data, docId);
   }
 
   Map<String, dynamic> toMap() {
@@ -47,8 +46,8 @@ class ReviewModel {
       'userName': userName,
       'rating': rating,
       'comment': comment,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'timestamp': Timestamp.fromDate(timestamp),
+      'createdAt': createdAt.toIso8601String(),
+      'timestamp': timestamp.toIso8601String(),
     };
   }
   ReviewModel copyWith({
@@ -71,5 +70,47 @@ class ReviewModel {
       createdAt: createdAt ?? this.createdAt,
       timestamp: timestamp ?? this.timestamp,
     );
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate(); // This is the key fix!
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    return null;
   }
 }

@@ -1,3 +1,4 @@
+import 'package:jengamate/config/app_route_builders.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:jengamate/models/order_model.dart';
@@ -7,14 +8,17 @@ import 'package:jengamate/services/order_service.dart';
 import 'package:jengamate/services/console_error_handler.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/models/enums/payment_enums.dart';
+import 'package:jengamate/services/payment_service.dart'; // Added import
 import 'payment_screen.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
-import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/services/invoice_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:jengamate/utils/logger.dart'; // Added import
+import 'package:jengamate/utils/string_utils.dart' as string_utils;
 
 class OrderDetailsScreen extends StatefulWidget {
   final String orderId;
@@ -37,6 +41,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     _loadOrder();
     _paymentsStream = _orderService.streamOrderPayments(widget.orderId);
   }
+
+  final _currencyFormat = NumberFormat.currency(symbol: 'TSH ', decimalDigits: 2);
 
   void _loadOrder() {
     setState(() {
@@ -105,7 +111,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Order #${order.id != null && order.id!.length >= 8 ? order.id!.substring(0, 8) : order.id ?? ''}',
+                  'Order #${string_utils.safePrefix(order.id, 8)}',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -120,7 +126,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               style: const TextStyle(color: Colors.grey),
             ),
             if (order.expectedDeliveryDate != null) ...[
-              const SizedBox(height: JMSpacing.xs),
+              const SizedBox(height: JMSpacing.xxs),
               Text(
                 'Expected Delivery: ${DateFormat('MMM dd, yyyy').format(order.expectedDeliveryDate!)}',
                 style: const TextStyle(color: Colors.grey),
@@ -200,26 +206,26 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             ),
             const SizedBox(height: JMSpacing.md),
             if (order.items.isEmpty)
-              Center(
+              const Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(JMSpacing.lg),
+                  padding: EdgeInsets.all(JMSpacing.lg),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.inventory, size: 48, color: Colors.grey),
-                      const SizedBox(height: JMSpacing.md),
+                      SizedBox(height: JMSpacing.md),
                       Text(
                         'No items found in this order',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.grey,
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: JMSpacing.sm),
+                      SizedBox(height: JMSpacing.sm),
                       Text(
                         'Attempting to populate items from associated quotation...',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.blue,
                           fontSize: 14,
                         ),
@@ -236,7 +242,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 itemCount: order.items.length,
                 itemBuilder: (context, index) {
                   final item = order.items[index];
-                  final lineTotal = item.quantity * item.price;
 
                   return Container(
                     margin: EdgeInsets.only(
@@ -342,8 +347,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
                 const SizedBox(height: JMSpacing.md),
                 _buildPaymentRow('Total Amount', order.totalAmount),
-                _buildPaymentRow('Paid Amount', totalPaid),
-                _buildPaymentRow('Remaining Amount', remaining),
+                _buildPaymentRow('Paid Amount', totalPaid, textColor: remaining <= 0 ? Colors.green : null),
+                _buildPaymentRow('Remaining Amount', remaining, textColor: remaining > 0 ? Colors.red : Colors.green),
                 const SizedBox(height: JMSpacing.sm),
                 LinearProgressIndicator(
                   value: totalPaid / order.totalAmount,
@@ -360,7 +365,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
   }
 
-  Widget _buildPaymentRow(String label, double amount) {
+  Widget _buildPaymentRow(String label, double amount, {Color? textColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: JMSpacing.sm),
       child: Row(
@@ -368,8 +373,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         children: [
           Text(label),
           Text(
-            'TSH ${amount.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            _currencyFormat.format(amount),
+            style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
           ),
         ],
       ),
@@ -582,68 +587,50 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final invoiceService = Provider.of<InvoiceService>(context, listen: false);
     try {
       final orderId = order.id;
-      if (orderId == null) {
-        print('❌ ERROR: Order ID is null');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Order ID is missing.')),
-        );
-        return;
-      }
-
       print('🔍 Checking for existing invoice for order: $orderId');
 
       // First, try to get existing invoice
-      InvoiceModel? invoice = await invoiceService.getInvoiceByOrderId(orderId);
+      InvoiceModel? invoice = await invoiceService.getInvoiceByOrderId(orderId!);
 
       // If no invoice exists, create one automatically
       if (invoice == null) {
-        print('📄 No invoice found, creating new invoice...');
-        final createdInvoice = await _createInvoiceForOrder(order);
-        if (createdInvoice == null) {
-          print('❌ ERROR: _createInvoiceForOrder returned null');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Failed to create invoice for this order.')),
-          );
+        print('➕ No existing invoice found. Creating a new one...');
+        invoice = await _createInvoiceForOrder(order); // Call the helper method
+        if (invoice == null) {
+          print('❌ Failed to create invoice. Cannot navigate.');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to create invoice. Please try again or contact support.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
           return;
         }
-
-        // Ensure we have the ID from the created invoice
-        final invoiceId = createdInvoice.id;
-        print('📋 Created invoice ID: $invoiceId');
-        if (invoiceId == null || invoiceId.isEmpty) {
-          print('❌ ERROR: Invoice created but ID is null or empty');
-          print('   Invoice object: ${createdInvoice.toString()}');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text(
-                    'Invoice created but ID is missing. Please refresh and try again.')),
-          );
-          return;
-        }
-
-        print('✅ Navigating to invoice: $invoiceId');
-        if (mounted) {
-          context.push(AppRouteBuilders.invoiceDetailsPath(invoiceId));
-        }
-      } else {
-        // Invoice already exists, ensure it has a valid ID
-        final invoiceId = invoice.id;
-        print('📋 Found existing invoice ID: $invoiceId');
-        if (invoiceId == null || invoiceId.isEmpty) {
-          print('❌ ERROR: Existing invoice found but ID is null or empty');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invoice found but ID is invalid.')),
-          );
-          return;
-        }
-
-        print('✅ Navigating to existing invoice: $invoiceId');
-        if (mounted) {
-          context.push(AppRouteBuilders.invoiceDetailsPath(invoiceId));
-        }
+        print('✅ Newly created invoice ID: ${invoice.id}');
       }
-    } catch (e) {
+
+      final invoiceId = invoice.id;
+      if (invoiceId.isEmpty) { // This check remains valid, it's not redundant as the ID could be an empty string.
+        print('❌ Invoice ID is empty after creation/retrieval. Cannot navigate.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invoice ID is missing or empty. Please contact support.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+      print('📋 Found existing invoice ID: $invoiceId');
+
+      print('✅ Navigating to existing invoice: $invoiceId');
+      if (mounted) {
+        context.push(AppRouteBuilders.invoiceDetailsPath(invoiceId));
+      }
+        } catch (e) {
       print('❌ ERROR in _navigateToInvoice: $e');
       print('   Stack trace: ${StackTrace.current}');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -656,16 +643,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final invoiceService = Provider.of<InvoiceService>(context, listen: false);
 
     try {
-      // Create invoice item using total amount from payment summary
       ConsoleErrorHandler.logInfo(
           'Creating invoice using total amount from payment summary: ${order.totalAmount}');
 
-      // Ensure we have a valid total amount
       final totalAmount = order.totalAmount > 0
           ? order.totalAmount
           : 1000.0; // Fallback to 1000.0 if 0
 
-      // Create invoice items from order items or use total as fallback
       final invoiceItems = order.items.isNotEmpty
           // Use actual order items if available
           ? order.items
@@ -726,10 +710,39 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   }
 
   void _navigateToPayment(OrderModel order) {
+    Logger.log('OrderDetailsScreen Debug - Navigating to Payment. Order ID: ${order.id}, External ID: ${order.externalId}');
+    
+    // Determine which ID to use - prefer Supabase UUID if available, otherwise use external ID
+    String? orderIdToUse = order.id?.isNotEmpty == true ? order.id : order.externalId;
+    
+    if (orderIdToUse == null || orderIdToUse.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Order ID is missing. Please contact support.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 8),
+        ),
+      );
+      return;
+    }
+
+    // For Firebase orders (externalId), we need to generate a UUID for payment processing
+    String finalOrderId;
+    if (order.id?.isNotEmpty == true && PaymentService.isValidUUID(order.id!)) {
+      // Use existing Supabase UUID
+      finalOrderId = order.id!;
+      Logger.log('Using Supabase UUID for payment: $finalOrderId');
+    } else {
+      // Generate a UUID for Firebase orders to ensure payment compatibility
+      finalOrderId = PaymentService.generateTestUUID();
+      Logger.log('Generated UUID for Firebase order payment: $finalOrderId (original: $orderIdToUse)');
+    }
+    Logger.log('OrderDetailsScreen Debug - Final Order ID for PaymentScreen: $finalOrderId');
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PaymentScreen(orderId: order.id ?? ''),
+        builder: (context) => PaymentScreen(orderId: finalOrderId),
       ),
     ).then((_) {
       _loadOrder(); // Refresh order data

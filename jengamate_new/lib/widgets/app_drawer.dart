@@ -21,65 +21,67 @@ class AppDrawer extends StatelessWidget {
         children: [
           // Drawer header with user info
           DrawerHeader(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppTheme.primaryColor,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: Responsive.getResponsiveAvatarSize(context) / 2,
-                  backgroundColor: Colors.white,
-                  child: Text(
-                    user?.displayName.substring(0, 1).toUpperCase() ?? 'U',
-                    style: TextStyle(
-                      fontSize: Responsive.getResponsiveFontSize(context,
-                          mobile: 20, tablet: 24, desktop: 28),
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: Responsive.getResponsiveAvatarSize(context) / 2,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      user?.displayName.substring(0, 1).toUpperCase() ?? 'U',
+                      style: TextStyle(
+                        fontSize: Responsive.getResponsiveFontSize(context,
+                            mobile: 20, tablet: 24, desktop: 28),
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(height: Responsive.getResponsiveSpacing(context) / 2),
-                Text(
-                  user?.displayName ?? 'User',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: Responsive.getResponsiveFontSize(context,
-                        mobile: 16, tablet: 18, desktop: 20),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  user?.email ?? '',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: Responsive.getResponsiveFontSize(context,
-                        mobile: 12, tablet: 14, desktop: 16),
-                  ),
-                ),
-                SizedBox(height: Responsive.getResponsiveSpacing(context) / 4),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: Responsive.getResponsiveSpacing(context) / 2,
-                    vertical: Responsive.getResponsiveSpacing(context) / 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(
-                        Responsive.getResponsiveBorderRadius(context)),
-                  ),
-                  child: Text(
-                    _getRoleDisplayName(user?.role),
+                  SizedBox(height: Responsive.getResponsiveSpacing(context) / 2),
+                  Text(
+                    user?.displayName ?? 'User',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: Responsive.getResponsiveFontSize(context,
-                          mobile: 10, tablet: 12, desktop: 14),
-                      fontWeight: FontWeight.w500,
+                          mobile: 16, tablet: 18, desktop: 20),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-              ],
+                  Text(
+                    user?.email ?? '',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: Responsive.getResponsiveFontSize(context,
+                          mobile: 12, tablet: 14, desktop: 16),
+                    ),
+                  ),
+                  SizedBox(height: Responsive.getResponsiveSpacing(context) / 4),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: Responsive.getResponsiveSpacing(context) / 2,
+                      vertical: Responsive.getResponsiveSpacing(context) / 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(
+                          Responsive.getResponsiveBorderRadius(context)),
+                    ),
+                    child: Text(
+                      _getRoleDisplayName(user?.role),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: Responsive.getResponsiveFontSize(context,
+                            mobile: 10, tablet: 12, desktop: 14),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -216,6 +218,28 @@ class AppDrawer extends StatelessWidget {
               context.go(AppRoutes.help);
             },
           ),
+
+          const Divider(),
+
+          // Debug section
+          if (user?.role == UserRole.admin) ...[
+            _buildDrawerItem(
+              context,
+              icon: Icons.bug_report,
+              title: 'Auth Test',
+              onTap: () {
+                context.go(AppRoutes.authTest);
+              },
+            ),
+            _buildDrawerItem(
+              context,
+              icon: Icons.cloud_done,
+              title: 'Supabase Test',
+              onTap: () {
+                context.go(AppRoutes.testSupabase);
+              },
+            ),
+          ],
 
           const Divider(),
 

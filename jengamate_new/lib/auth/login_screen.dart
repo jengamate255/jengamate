@@ -5,6 +5,7 @@ import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/ui/design_system/components/jm_form_field.dart';
 import 'package:jengamate/ui/design_system/components/jm_button.dart';
@@ -247,7 +248,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     hint: 'Navigate to phone registration',
                     child: JMButton(
                       onPressed: () => context.go(AppRoutes.phoneRegistration),
-                      filled: false,
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

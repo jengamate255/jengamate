@@ -3,6 +3,13 @@ import 'package:jengamate/models/payment_model.dart';
 import 'package:intl/intl.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/services/auth_service.dart';
+import 'package:jengamate/screens/payment/payment_details_screen.dart'; // Import the new screen
+import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
+import 'package:jengamate/services/console_error_handler.dart'; // Import ConsoleErrorHandler
+import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart'; // Import Provider
+import 'package:jengamate/models/user_model.dart'; // Import UserModel
+import 'package:jengamate/services/payment_service.dart'; // Keep this for later if needed, otherwise remove
 
 class PaymentHistoryScreen extends StatefulWidget {
   const PaymentHistoryScreen({super.key});
@@ -15,9 +22,22 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
   final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
 
+  Future<void> _downloadPaymentProof(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      ConsoleErrorHandler.report('Could not launch $url', StackTrace.current);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open payment proof.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userId = _authService.currentUser?.uid;
+    final currentUser = context.watch<UserModel?>(); // Access the current user
+    final isAdmin = currentUser?.role == UserRole.admin;
 
     if (userId == null) {
       return Scaffold(
@@ -70,13 +90,25 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                       Text('Method: ${payment.paymentMethod}'),
                       if (payment.transactionId != null)
                         Text('Reference: ${payment.transactionId}'),
-                      if (payment.paymentProofUrl != null)
+                      if (payment.paymentProofUrl != null) ...[
+                        if (isAdmin)
+                          TextButton(
+                            onPressed: () => _downloadPaymentProof(payment.paymentProofUrl!),
+                            child: const Text('Download Proof of Payment'),
+                          ),
                         TextButton(
                           onPressed: () {
-                            // TODO: Implement view proof of payment
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PaymentDetailsScreen(
+                                    paymentId: payment.id), // Navigate to details screen
+                              ),
+                            );
                           },
-                          child: const Text('View Proof of Payment'),
+                          child: const Text('View Details'),
                         ),
+                      ],
                     ],
                   ),
                 ),

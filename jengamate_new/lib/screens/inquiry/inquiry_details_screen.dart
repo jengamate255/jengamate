@@ -5,6 +5,7 @@ import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
 

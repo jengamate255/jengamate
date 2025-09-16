@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import '../../models/message_model.dart';
 import '../../services/chat_service.dart';
 import '../../widgets/loading_indicator.dart';

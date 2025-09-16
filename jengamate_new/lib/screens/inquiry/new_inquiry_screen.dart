@@ -5,6 +5,7 @@ import 'package:jengamate/models/inquiry.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/widgets/custom_text_field.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
@@ -59,7 +60,7 @@ class _NewInquiryScreenState extends State<NewInquiryScreen> {
 
         final inquiry = Inquiry(
           uid: FirebaseFirestore.instance.collection('inquiries').doc().id,
-          userId: currentUser.uid,
+          userId: currentUser?.uid ?? '',
           userName: currentUser.displayName,
           userEmail: currentUser.email ?? '',
           subject: _projectNameController.text,

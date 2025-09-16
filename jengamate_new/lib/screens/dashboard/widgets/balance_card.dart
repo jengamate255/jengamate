@@ -5,6 +5,7 @@ import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/screens/withdrawals/withdrawals_screen.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 class BalanceCard extends StatelessWidget {
   final CommissionModel? commission;
@@ -44,7 +45,8 @@ class BalanceCard extends StatelessWidget {
                   icon: Icons.account_balance_wallet_outlined,
                   label: 'Withdrawals',
                   onPressed: () {
-                    final user = Provider.of<UserModel?>(context, listen: false);
+                    final userState = Provider.of<UserStateProvider>(context);
+    final user = userState.currentUser;
                     if (user != null) {
                       Navigator.push(
                         context,

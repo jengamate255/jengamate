@@ -127,7 +127,7 @@ class MicroInteractions {
     double scaleDown = 0.95,
   }) {
     return GestureDetector(
-      onTapDown: (_) => HapticFeedback.lightImpact(),
+      onTapDown: (_) { HapticFeedback.lightImpact(); },
       child: AnimatedScale(
         scale: 1.0,
         duration: duration,
@@ -151,11 +151,11 @@ class MicroInteractions {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: hoverColor?.withValues(alpha: 0.1),
+          color: hoverColor?.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: elevation,
               offset: const Offset(0, 2),
             ),
@@ -209,8 +209,8 @@ class MicroInteractions {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => PopScope(
-        canPop: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
         child: AlertDialog(
           content: Row(
             children: [
@@ -284,7 +284,7 @@ class _AnimatedJMButtonState extends State<AnimatedJMButton>
       onTapDown: (_) {
         if (!widget.isLoading) {
           _controller.forward();
-          HapticFeedback.lightImpact();
+          await HapticFeedback.lightImpact();
         }
       },
       onTapUp: (_) {

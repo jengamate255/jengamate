@@ -32,7 +32,7 @@ class AnalyticsService {
 
       for (var doc in ordersSnapshot.docs) {
         try {
-          final order = OrderModel.fromFirestore(doc);
+          final order = OrderModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id);
           if (order.status == OrderStatus.completed) {
             totalRevenue += order.totalAmount;
             platformCommission += order.totalAmount * 0.1; // 10 platform fee
@@ -182,7 +182,7 @@ class AnalyticsService {
 
       for (var doc in ordersSnapshot.docs) {
         try {
-          final order = OrderModel.fromFirestore(doc);
+          final order = OrderModel.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id);
           totalOrders++;
 
           // Status distribution

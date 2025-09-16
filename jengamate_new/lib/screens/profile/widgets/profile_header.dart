@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 import '../../../models/user_model.dart';
 import '../../../models/enums/user_role.dart';

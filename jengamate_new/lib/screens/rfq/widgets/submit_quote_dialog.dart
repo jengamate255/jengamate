@@ -4,6 +4,7 @@ import 'package:jengamate/models/quote_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SubmitQuoteDialog extends StatefulWidget {
@@ -29,7 +30,8 @@ class _SubmitQuoteDialogState extends State<SubmitQuoteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
     final dbService = DatabaseService();
 
     return AlertDialog(
@@ -89,7 +91,7 @@ class _SubmitQuoteDialogState extends State<SubmitQuoteDialog> {
               final newQuote = QuoteModel(
                 id: FirebaseFirestore.instance.collection('quotes').doc().id,
                 rfqId: widget.rfq.id,
-                supplierId: currentUser.uid,
+                supplierId: currentUser?.uid,
                 price: double.parse(_amountController.text),
                 notes: _detailsController.text,
                 createdAt: DateTime.now(),

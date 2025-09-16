@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 class RequestWithdrawalScreen extends StatefulWidget {
   const RequestWithdrawalScreen({super.key});
@@ -61,7 +62,7 @@ class _RequestWithdrawalScreenState extends State<RequestWithdrawalScreen> {
                     final amount = double.parse(_amountController.text);
                     final dbService = DatabaseService();
                     dbService.requestWithdrawal({
-                      'userId': currentUser.uid,
+                      'userId': currentUser?.uid,
                       'amount': amount,
                       'status': 'Pending',
                       'createdAt': Timestamp.now(),

@@ -1,29 +1,53 @@
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart'
-    as fb_auth; // Alias Firebase User
-import 'package:jengamate/utils/logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:jengamate/utils/logger.dart';
+import 'package:jengamate/services/audit_service.dart';
+import 'package:jengamate/models/audit_log_model.dart';
+import 'package:jengamate/services/role_service.dart';
+import 'package:jengamate/models/enums/user_role.dart';
 
 class AuthService {
-  final fb_auth.FirebaseAuth _auth;
+  final SupabaseClient _supabase = Supabase.instance.client;
+  final fb_auth.FirebaseAuth _auth = fb_auth.FirebaseAuth.instance;
+  final AuditService _auditService;
+  final RoleService _roleService;
 
-  AuthService({fb_auth.FirebaseAuth? firebaseAuth})
-      : _auth = firebaseAuth ?? fb_auth.FirebaseAuth.instance;
+  AuthService({AuditService? auditService, RoleService? roleService})
+      : _auditService = auditService ?? AuditService(),
+        _roleService = roleService ?? RoleService();
 
-  // Get current user
+  // Get current user (using Firebase auth since Supabase is configured with accessToken)
   fb_auth.User? get currentUser => _auth.currentUser;
 
-  // Auth state stream
+  // Auth state stream (using Firebase auth since Supabase is configured with accessToken)
   Stream<fb_auth.User?> get authStateChanges => _auth.authStateChanges();
 
   // Email & Password Sign In
   Future<fb_auth.UserCredential> signInWithEmailAndPassword(
       String email, String password) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      Logger.log('Firebase sign-in successful');
+      if (userCredential.user != null) {
+        final user = userCredential.user!;
+        // Ensure the user has a default role if not already assigned
+        final userDoc = await _roleService.firestore.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || (userDoc.data()?['roles'] as List? ?? []).isEmpty) {
+          await _roleService.setUserRoles(user.uid, [UserRole.user.name]);
+        }
+        await _roleService.updateUserClaims(user.uid); // Update claims after sign-in
+
+        _auditService.logEvent(AuditLogModel.login(
+          userId: user.uid,
+          userName: user.displayName ?? user.email ?? 'N/A',
+          email: user.email ?? 'N/A',
+        ));
+      }
+      return userCredential;
     } catch (e, s) {
       Logger.logError('Error signing in', e, s);
       rethrow;
@@ -34,10 +58,23 @@ class AuthService {
   Future<fb_auth.UserCredential> registerWithEmailAndPassword(
       String email, String password) async {
     try {
-      return await _auth.createUserWithEmailAndPassword(
+      final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+      Logger.log('Firebase registration successful');
+      if (userCredential.user != null) {
+        final user = userCredential.user!;
+        await _roleService.setUserRoles(user.uid, [UserRole.user.name]); // Assign default role
+        await _roleService.updateUserClaims(user.uid); // Update claims after registration
+
+        _auditService.logEvent(AuditLogModel.register(
+          userId: user.uid,
+          userName: user.displayName ?? user.email ?? 'N/A',
+          email: user.email ?? 'N/A',
+        ));
+      }
+      return userCredential;
     } catch (e, s) {
       Logger.logError('Error registering', e, s);
       rethrow;
@@ -51,6 +88,21 @@ class AuthService {
         phoneNumber: phoneNumber,
         verificationCompleted: (fb_auth.PhoneAuthCredential credential) async {
           await _auth.signInWithCredential(credential);
+          if (_auth.currentUser != null) {
+            final user = _auth.currentUser!;
+            final userDoc = await _roleService.firestore.collection('users').doc(user.uid).get();
+            if (!userDoc.exists || (userDoc.data()?['roles'] as List? ?? []).isEmpty) {
+              await _roleService.setUserRoles(user.uid, [UserRole.user.name]);
+            }
+            await _roleService.updateUserClaims(user.uid); // Update claims after phone auth
+
+            _auditService.logEvent(AuditLogModel.login(
+              userId: user.uid,
+              userName: user.displayName ?? user.phoneNumber ?? 'N/A',
+              email: '',
+              additionalMetadata: {'method': 'phone'},
+            ));
+          }
         },
         verificationFailed: (fb_auth.FirebaseAuthException e) {
           Logger.logError('Phone verification failed', e, StackTrace.current);
@@ -75,7 +127,23 @@ class AuthService {
         verificationId: verificationId,
         smsCode: smsCode,
       );
-      return await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
+      if (userCredential.user != null) {
+        final user = userCredential.user!;
+        final userDoc = await _roleService.firestore.collection('users').doc(user.uid).get();
+        if (!userDoc.exists || (userDoc.data()?['roles'] as List? ?? []).isEmpty) {
+          await _roleService.setUserRoles(user.uid, [UserRole.user.name]);
+        }
+        await _roleService.updateUserClaims(user.uid); // Update claims after phone auth
+
+        _auditService.logEvent(AuditLogModel.login(
+          userId: user.uid,
+          userName: user.displayName ?? user.phoneNumber ?? 'N/A',
+          email: '',
+          additionalMetadata: {'method': 'phone'},
+        ));
+      }
+      return userCredential;
     } catch (e, s) {
       Logger.logError('Error verifying OTP', e, s);
       return null;
@@ -85,11 +153,19 @@ class AuthService {
   // Sign Out
   Future<void> signOut() async {
     try {
+      final user = _auth.currentUser;
       await _auth.signOut();
-      await Supabase.instance.client.auth
-          .signOut(); // Also sign out from Supabase
+      Logger.log('Firebase sign-out successful');
+      if (user != null) {
+        await _roleService.updateUserClaims(user.uid); // Clear claims on sign out
+        _auditService.logEvent(AuditLogModel.logout(
+          userId: user.uid,
+          userName: user.displayName ?? user.email ?? user.phoneNumber ?? 'N/A',
+        ));
+      }
     } catch (e, s) {
-      Logger.logError('Error signing out', e, s);
+      Logger.logError('Error during Firebase sign-out', e, s);
+      rethrow;
     }
   }
 
@@ -97,162 +173,68 @@ class AuthService {
   Future<void> resetPassword(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
+      _auditService.logEvent(AuditLogModel(
+        uid: '', // Will be generated by AuditService
+        actorId: '',
+        actorName: 'System',
+        action: 'PASSWORD_RESET_REQUEST',
+        targetType: 'USER',
+        targetId: '',
+        targetName: email,
+        timestamp: DateTime.now(),
+        details: 'Password reset requested for $email',
+        metadata: {'email': email},
+      ));
     } catch (e, s) {
       Logger.logError('Error sending password reset email', e, s);
     }
   }
 
-  // Update email
-  Future<void> updateEmail(String newEmail) async {
-    try {
-      await currentUser?.verifyBeforeUpdateEmail(newEmail);
-    } catch (e, s) {
-      Logger.logError('Error updating email', e, s);
-    }
-  }
-
-  // Update password
-  Future<void> updatePassword(String newPassword) async {
-    try {
-      await currentUser?.updatePassword(newPassword);
-    } catch (e, s) {
-      Logger.logError('Error updating password', e, s);
-    }
-  }
-
-  // Delete account
-  Future<void> deleteAccount() async {
-    try {
-      await currentUser?.delete();
-    } catch (e, s) {
-      Logger.logError('Error deleting account', e, s);
-    }
-  }
-
-  // Reauthenticate user
-  Future<bool> reauthenticateWithEmail(String email, String password) async {
-    try {
-      fb_auth.AuthCredential credential = fb_auth.EmailAuthProvider.credential(
-        email: email,
-        password: password,
-      );
-      await currentUser?.reauthenticateWithCredential(credential);
-      return true;
-    } catch (e, s) {
-      Logger.logError('Error reauthenticating', e, s);
-      return false;
-    }
-  }
-
-  // Get user custom claims
+  // Get user custom claims (now deprecated in favor of RoleService.getUserPermissions)
+  @Deprecated('Use RoleService.getUserPermissions instead.')
   Future<Map<String, dynamic>?> getCustomClaims() async {
     try {
       final user = currentUser;
       if (user == null) return null;
 
-      final tokenResult = await user.getIdTokenResult();
-      return tokenResult.claims;
+      // Get Firebase custom claims
+      final idTokenResult = await user.getIdTokenResult();
+      return idTokenResult.claims;
     } catch (e, s) {
       Logger.logError('Error getting custom claims', e, s);
-      return null;
+      rethrow;
     }
   }
 
-  // Get user role from custom claims
+  // Get user role from custom claims (now deprecated in favor of RoleService.streamUserRoles)
+  @Deprecated('Use RoleService.streamUserRoles or RoleService.hasRole instead.')
   Future<String?> getUserRole() async {
     try {
       final claims = await getCustomClaims();
       return claims?['role'] as String?;
     } catch (e, s) {
       Logger.logError('Error getting user role', e, s);
-      return null;
+      rethrow;
     }
   }
 
-  // Check if user has admin role
+  // Check if user has admin role (now deprecated in favor of RoleService.hasPermission)
+  @Deprecated('Use RoleService.hasPermission("system:admin") instead.')
   Future<bool> isAdmin() async {
-    try {
-      final role = await getUserRole();
-      return role == 'admin';
-    } catch (e, s) {
-      Logger.logError('Error checking admin role', e, s);
-      return false;
-    }
-  }
-
-  // Check if user has supplier role
-  Future<bool> isSupplier() async {
-    try {
-      final role = await getUserRole();
-      return role == 'supplier';
-    } catch (e, s) {
-      Logger.logError('Error checking supplier role', e, s);
-      return false;
-    }
-  }
-
-  // Check if user has approved role
-  Future<bool> isApproved() async {
-    try {
-      final role = await getUserRole();
-      return role == 'approved';
-    } catch (e, s) {
-      Logger.logError('Error checking approved role', e, s);
-      return false;
-    }
-  }
-
-  // Check if user has any of the required roles for storage access
-  Future<bool> hasStorageAccess() async {
-    try {
-      final role = await getUserRole();
-      return role == 'admin' || role == 'supplier';
-    } catch (e, s) {
-      Logger.logError('Error checking storage access', e, s);
-      return false;
-    }
-  }
-
-  // Force refresh token to get updated custom claims
-  Future<bool> refreshToken() async {
     try {
       final user = currentUser;
       if (user == null) return false;
-
-      await user.getIdToken(true); // Force refresh
-      return true;
+      return _roleService.hasPermission('system:admin', userId: user.uid); // Check using RoleService
     } catch (e, s) {
-      Logger.logError('Error refreshing token', e, s);
-      return false;
+      Logger.logError('Error checking admin role', e, s);
+      rethrow;
     }
   }
 
-  // Stream for custom claims changes
-  Stream<Map<String, dynamic>?> get customClaimsStream {
-    return authStateChanges.asyncMap((user) async {
-      if (user == null) return null;
-      return await getCustomClaims();
-    });
-  }
-
-  // Stream for role changes
-  Stream<String?> get roleStream {
-    return customClaimsStream.map((claims) => claims?['role'] as String?);
-  }
-
-  // Supabase Integration: Sign in to Supabase with Firebase ID token
-  Future<void> signInSupabaseWithFirebaseToken(String firebaseIdToken) async {
-    try {
-      await Supabase.instance.client.auth.signInWithIdToken(
-        provider: OAuthProvider
-            .google, // Assuming Google as the provider, adjust if needed
-        idToken: firebaseIdToken,
-      );
-      Logger.log('Supabase signed in with Firebase ID token successfully');
-    } catch (e, s) {
-      Logger.logError('Error signing in Supabase with Firebase ID token', e, s);
-      // Don't rethrow - Supabase is optional for now
-      Logger.log('Continuing without Supabase authentication');
-    }
+  // Check if current user has a specific permission
+  Future<bool> hasPermission(String permission) async {
+    final user = currentUser;
+    if (user == null) return false;
+    return _roleService.hasPermission(permission, userId: user.uid);
   }
 }

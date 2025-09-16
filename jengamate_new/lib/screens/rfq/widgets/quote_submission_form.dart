@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/quote_model.dart';
 import 'package:jengamate/services/database_service.dart';
 // Import FirebaseAuth
-import 'package:provider/provider.dart'; // Import Provider
+import 'package:provider/provider.dart';
+ // Import Provider
 import 'package:jengamate/services/auth_service.dart'; // Import AuthService
 import 'package:jengamate/utils/logger.dart'; // Import Logger
 
@@ -32,7 +33,7 @@ class _QuoteSubmissionFormState extends State<QuoteSubmissionForm> {
       // Enhanced error checking and logging
       Logger.log('Starting quote submission process...');
       Logger.log('Current user: $currentUser');
-      Logger.log('Current user UID: ${currentUser?.uid}');
+      Logger.log('Current user ID: ${currentUser?.uid}');
       
       if (currentUser == null) {
         Logger.logError('Quote submission failed: User not authenticated', 'No current user', StackTrace.current);

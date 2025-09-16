@@ -1,9 +1,11 @@
+import 'package:jengamate/config/app_route_builders.dart';
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/product_model.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:jengamate/services/database_service.dart'; // Import DatabaseService
 import 'package:jengamate/models/user_model.dart'; // Import UserModel
-import 'package:provider/provider.dart'; // Import Provider
+import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart'; // Import Provider
 import 'package:jengamate/models/enums/user_role.dart'; // Import UserRole
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/config/app_routes.dart';
@@ -12,6 +14,8 @@ import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:jengamate/services/product_interaction_service.dart';
 import 'package:video_player/video_player.dart';
+import 'package:jengamate/services/supabase_chat_service.dart'; // Add this import
+import 'package:jengamate/utils/logger.dart'; // Add this import
 
 class ProductDetailsScreen extends StatefulWidget {
   final ProductModel product;
@@ -29,6 +33,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   List<(String, String)> _mediaItems = [];
   final ProductInteractionService _interactionService =
       ProductInteractionService();
+  final DatabaseService _databaseService = DatabaseService(); // Add this to fetch supplier details
+  final SupabaseChatService _supabaseChatService = SupabaseChatService(); // Add this
 
   @override
   void initState() {
@@ -42,7 +48,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   /// Track product view when screen loads
   void _trackProductView() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final user = Provider.of<UserModel?>(context, listen: false);
+      final userState = Provider.of<UserStateProvider>(context);
+    final user = userState.currentUser;
       if (user != null) {
         _interactionService.trackProductInteraction(
           product: widget.product,
@@ -82,11 +89,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     // Remove duplicates
     final uniqueImages = allImages.toSet().toList();
 
-    _mediaItems = [];
+    _mediaItems = <(String, String)>[];
 
     // Add video first if available (as requested)
-    if (widget.product.videoUrl != null &&
-        widget.product.videoUrl!.isNotEmpty) {
+    if (widget.product.videoUrl != null && widget.product.videoUrl!.isNotEmpty) {
       _mediaItems.add(('video', widget.product.videoUrl!));
     }
 
@@ -99,21 +105,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   void _initializeVideo() {
     if (widget.product.videoUrl != null &&
         widget.product.videoUrl!.isNotEmpty) {
-      _videoController =
-          VideoPlayerController.networkUrl(Uri.parse(widget.product.videoUrl!))
-            ..initialize().then((_) {
-              if (mounted) {
-                setState(() {});
-                // Auto-play if video is the first item and currently visible
-                if (_currentPage == 0 &&
-                    _mediaItems.isNotEmpty &&
-                    _mediaItems[0].$1 == 'video') {
-                  _videoController?.play();
-                }
-              }
-            })
-            ..setLooping(true) // Loop video as requested
-            ..setVolume(0.0); // Mute by default as requested
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.product.videoUrl!));
+      _videoController!.initialize().then((_) {
+        if (mounted) {
+          setState(() {});
+          // Auto-play if video is the first item and currently visible
+          if (_currentPage == 0 && _mediaItems.isNotEmpty) {
+            final (type, _) = _mediaItems[0];
+            if (type == 'video') {
+              _videoController?.play();
+            }
+          }
+        }
+      });
+      _videoController!
+        ..setLooping(true)
+        ..setVolume(0.0);
     }
   }
 
@@ -156,13 +163,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
     final dbService = DatabaseService();
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.product.name),
         actions: [
+          // Chat button for engineers
+          if (currentUser?.role == UserRole.engineer &&
+              widget.product.supplierId != currentUser?.uid)
+            IconButton(
+              icon: const Icon(Icons.chat),
+              tooltip: 'Chat with Supplier',
+              onPressed: () => _startChatWithSupplier(currentUser!),
+            ),
           if (currentUser?.role == UserRole.admin ||
               currentUser?.role == UserRole.supplier)
             IconButton(
@@ -307,8 +323,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
               ),
               if (widget.product.isHot)
-                Padding(
-                  padding: const EdgeInsets.only(top: JMSpacing.sm),
+                const Padding(
+                  padding: EdgeInsets.only(top: JMSpacing.sm),
                   child: Text('🔥 Hot Deal!',
                       style: TextStyle(
                           color: Colors.red, fontWeight: FontWeight.bold)),
@@ -425,8 +441,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         onPressed: () {
                           _trackRFQClick();
                           final path = AppRouteBuilders.rfqSubmissionPath(
-                            productId: widget.product.id,
-                            productName: widget.product.name,
+                            widget.product.id,
+                            widget.product.name,
                           );
                           context.go(path);
                         },
@@ -440,6 +456,61 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         ),
       ),
     );
+  }
+
+  /// Start a chat with the product's supplier
+  Future<void> _startChatWithSupplier(UserModel currentUser) async {
+    // The nullability of widget.product.supplierId is already checked by the IconButton condition.
+    final supplier = await _databaseService.getUser(widget.product.supplierId);
+    if (supplier == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Supplier not found.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final chatRoom = await _supabaseChatService.findOrCreateChatRoom(
+        userId: currentUser?.uid ?? '',
+        otherUserId: supplier.uid,
+        productId: widget.product.id,
+      );
+
+      if (chatRoom != null && context.mounted) {
+        Logger.log('Chat room found or created: ${chatRoom.uid}');
+        context.push(
+          AppRoutes.chatConversation,
+          extra: {
+            'chatRoomId': chatRoom.uid,
+            'chatPartnerId': supplier.uid,
+            'product': widget.product, // Pass the product details
+          },
+        );
+      } else if (context.mounted) {
+        Logger.logError('Failed to find or create chat room.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to start chat.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e, st) {
+      Logger.logError('Error starting chat with supplier', e, st);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error starting chat: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildSingleMediaPanel() {
@@ -706,7 +777,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: JMSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: JMSpacing.xxs),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -727,7 +798,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   /// Track inquiry button click
   void _trackInquiryClick() {
-    final user = Provider.of<UserModel?>(context, listen: false);
+    final userState = Provider.of<UserStateProvider>(context);
+    final user = userState.currentUser;
     if (user != null) {
       _interactionService.trackProductInteraction(
         product: widget.product,
@@ -744,7 +816,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   /// Track RFQ button click
   void _trackRFQClick() {
-    final user = Provider.of<UserModel?>(context, listen: false);
+    final userState = Provider.of<UserStateProvider>(context);
+    final user = userState.currentUser;
     if (user != null) {
       _interactionService.trackProductInteraction(
         product: widget.product,

@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 /// Model for tracking product interactions and clicks
 class ProductInteractionModel {
@@ -34,10 +34,9 @@ class ProductInteractionModel {
     this.location,
   });
 
-  factory ProductInteractionModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory ProductInteractionModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
     return ProductInteractionModel(
-      id: doc.id,
+      id: docId,
       productId: data['productId'] ?? '',
       productName: data['productName'] ?? '',
       userId: data['userId'] ?? '',
@@ -45,7 +44,7 @@ class ProductInteractionModel {
       userEmail: data['userEmail'] ?? '',
       userRole: data['userRole'] ?? '',
       interactionType: data['interactionType'] ?? '',
-      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      timestamp: (data['timestamp'] is String) ? DateTime.parse(data['timestamp']) : _parseOptionalDateTime(data['timestamp']) ?? DateTime.now(),
       productDetails: Map<String, dynamic>.from(data['productDetails'] ?? {}),
       userContext: Map<String, dynamic>.from(data['userContext'] ?? {}),
       sessionId: data['sessionId'],
@@ -54,9 +53,9 @@ class ProductInteractionModel {
     );
   }
 
-  factory ProductInteractionModel.fromMap(Map<String, dynamic> data, String id) {
+  factory ProductInteractionModel.fromMap(Map<String, dynamic> data, String docId) {
     return ProductInteractionModel(
-      id: id,
+      id: docId,
       productId: data['productId'] ?? '',
       productName: data['productName'] ?? '',
       userId: data['userId'] ?? '',
@@ -64,7 +63,7 @@ class ProductInteractionModel {
       userEmail: data['userEmail'] ?? '',
       userRole: data['userRole'] ?? '',
       interactionType: data['interactionType'] ?? '',
-      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      timestamp: (data['timestamp'] is String) ? DateTime.parse(data['timestamp']) : _parseOptionalDateTime(data['timestamp']) ?? DateTime.now(),
       productDetails: Map<String, dynamic>.from(data['productDetails'] ?? {}),
       userContext: Map<String, dynamic>.from(data['userContext'] ?? {}),
       sessionId: data['sessionId'],
@@ -82,7 +81,7 @@ class ProductInteractionModel {
       'userEmail': userEmail,
       'userRole': userRole,
       'interactionType': interactionType,
-      'timestamp': timestamp,
+      'timestamp': timestamp.toIso8601String(),
       'productDetails': productDetails,
       'userContext': userContext,
       'sessionId': sessionId,
@@ -108,6 +107,48 @@ class ProductInteractionModel {
       'deviceInfo': deviceInfo,
       'location': location,
     };
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate(); // This is the key fix!
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    return null;
   }
 }
 
@@ -155,10 +196,9 @@ class RFQTrackingModel {
     this.budgetRange,
   });
 
-  factory RFQTrackingModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory RFQTrackingModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
     return RFQTrackingModel(
-      id: doc.id,
+      id: docId,
       rfqId: data['rfqId'] ?? '',
       productId: data['productId'] ?? '',
       productName: data['productName'] ?? '',
@@ -168,8 +208,8 @@ class RFQTrackingModel {
       supplierId: data['supplierId'],
       supplierName: data['supplierName'],
       status: data['status'] ?? 'initiated',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      lastUpdated: (data['lastUpdated'] as Timestamp?)?.toDate(),
+      createdAt: (data['createdAt'] is String) ? DateTime.parse(data['createdAt']) : _parseOptionalDateTime(data['createdAt']) ?? DateTime.now(),
+      lastUpdated: (data['lastUpdated'] is String) ? DateTime.parse(data['lastUpdated']) : null,
       productSpecs: Map<String, dynamic>.from(data['productSpecs'] ?? {}),
       rfqDetails: Map<String, dynamic>.from(data['rfqDetails'] ?? {}),
       supplierViews: List<String>.from(data['supplierViews'] ?? []),
@@ -191,8 +231,8 @@ class RFQTrackingModel {
       'supplierId': supplierId,
       'supplierName': supplierName,
       'status': status,
-      'createdAt': createdAt,
-      'lastUpdated': lastUpdated ?? DateTime.now(),
+      'createdAt': createdAt.toIso8601String(),
+      'lastUpdated': lastUpdated?.toIso8601String(),
       'productSpecs': productSpecs,
       'rfqDetails': rfqDetails,
       'supplierViews': supplierViews,
@@ -201,6 +241,48 @@ class RFQTrackingModel {
       'preferredDeliveryDate': preferredDeliveryDate,
       'budgetRange': budgetRange,
     };
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate(); // This is the key fix!
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    return null;
   }
 }
 
@@ -262,5 +344,47 @@ class RFQAnalyticsModel {
       'statusBreakdown': statusBreakdown,
       'lastUpdated': lastUpdated.toIso8601String(),
     };
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate(); // This is the key fix!
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    return null;
   }
 }

@@ -189,7 +189,7 @@ class _ContentModerationScreenState extends State<ContentModerationScreen> {
         }
 
         final content = snapshot.data!.docs
-            .map((doc) => ContentModeration.fromFirestore(doc))
+            .map((doc) => ContentModeration.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id))
             .where((item) => _matchesSearch(item))
             .toList();
 

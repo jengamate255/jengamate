@@ -5,6 +5,7 @@ import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/services/notification_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationsScreen extends StatefulWidget {
@@ -22,7 +23,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    final user = Provider.of<UserModel?>(context, listen: false);
+    final userState = Provider.of<UserStateProvider>(context);
+    final user = userState.currentUser;
     if (user != null) {
       _notificationsStream = _databaseService.streamUserNotifications(user.uid);
     } else {

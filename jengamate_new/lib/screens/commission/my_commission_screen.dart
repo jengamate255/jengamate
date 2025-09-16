@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/commission_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:intl/intl.dart';
 
@@ -10,7 +11,8 @@ class MyCommissionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
     final dbService = DatabaseService();
 
     return Scaffold(

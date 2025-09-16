@@ -1,0 +1,71 @@
+{
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default"
+    },
+    {
+      "source": "jengamate",
+      "codebase": "jengamate",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "jengamate_new/build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "database": {
+    "rules": "database.rules"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9092
+    },
+    "firestore": {
+      "port": 8082
+    },
+    "database": {
+      "port": 9002
+    },
+    "storage": {
+      "port": 9201
+    },
+    "functions": {
+      "port": 5004
+    },
+    "hosting": {
+      "port": 5005
+    },
+    "pubsub": {
+      "port": 8087
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4002
+    },
+    "singleProjectMode": true
+  }
+}

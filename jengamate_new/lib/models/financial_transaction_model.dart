@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 enum TransactionType {
   commission,
@@ -76,18 +76,68 @@ class FinancialTransactionModel {
       referenceId: map['referenceId'],
       orderId: map['orderId'],
       paymentMethod: map['paymentMethod'],
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
-      processedAt: map['processedAt'] != null
-          ? (map['processedAt'] as Timestamp).toDate()
-          : null,
+      timestamp: _parseDateTime(map['timestamp']),
+      processedAt: _parseOptionalDateTime(map['processedAt']),
       metadata: map['metadata'] as Map<String, dynamic>?,
       notes: map['notes'],
     );
   }
 
-  factory FinancialTransactionModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return FinancialTransactionModel.fromMap(data);
+  factory FinancialTransactionModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
+    return FinancialTransactionModel.fromMap({
+      ...data,
+      'uid': docId,
+    });
+  }
+
+  // Helper method to parse timestamps safely from Firestore
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    
+    if (value is String) {
+      return DateTime.parse(value);
+    }
+    
+    if (value is DateTime) {
+      return value;
+    }
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return DateTime.now();
+      }
+    }
+    
+    return DateTime.now();
+  }
+
+  // Helper method to parse optional timestamps safely from Firestore
+  static DateTime? _parseOptionalDateTime(dynamic value) {
+    if (value == null) return null;
+    
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    
+    if (value is DateTime) {
+      return value;
+    }
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return value.toDate();
+      } catch (e) {
+        print('Error converting Timestamp to DateTime: $e');
+        return null;
+      }
+    }
+    
+    return null;
   }
 
   Map<String, dynamic> toMap() {
@@ -103,9 +153,8 @@ class FinancialTransactionModel {
       'referenceId': referenceId,
       'orderId': orderId,
       'paymentMethod': paymentMethod,
-      'timestamp': Timestamp.fromDate(timestamp),
-      'processedAt':
-          processedAt != null ? Timestamp.fromDate(processedAt!) : null,
+      'timestamp': timestamp.toIso8601String(),
+      'processedAt': processedAt?.toIso8601String(),
       'metadata': metadata,
       'notes': notes,
     };

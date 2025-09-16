@@ -3,6 +3,7 @@ import 'package:jengamate/models/category_model.dart';
 import 'package:jengamate/screens/categories/widgets/category_card.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/screens/categories/category_form_screen.dart'; // Import the new form screen
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/utils/responsive.dart';
@@ -39,7 +40,7 @@ class CategoriesScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       JMSkeleton(height: 18, width: 160),
-                      SizedBox(height: JMSpacing.xs),
+                      SizedBox(height: JMSpacing.xxs), // Changed from JMSpacing.xs
                       JMSkeleton(height: 14, width: 240),
                     ],
                   ),

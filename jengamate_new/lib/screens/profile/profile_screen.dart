@@ -8,7 +8,7 @@ import 'package:jengamate/utils/theme.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:provider/provider.dart';
-
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/screens/profile/edit_profile_screen.dart';
 import 'package:jengamate/widgets/navigation_helper.dart';
@@ -18,13 +18,14 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Profile'),
         centerTitle: true,
         actions: [
-          // Settings button
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -32,7 +33,6 @@ class ProfileScreen extends StatelessWidget {
             },
             tooltip: 'Settings',
           ),
-          // Help button
           IconButton(
             icon: const Icon(Icons.help_outline),
             onPressed: () {
@@ -51,103 +51,7 @@ class ProfileScreen extends StatelessWidget {
                   const ProfileHeader(),
                   const SizedBox(height: 24),
 
-                  // Quick Action Buttons
-                  if (currentUser.role == UserRole.admin ||
-                      currentUser.role == UserRole.supplier)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Quick Actions',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    context.go(AppRoutes.products);
-                                  },
-                                  icon: const Icon(Icons.shopping_bag),
-                                  label: const Text('View Products'),
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              if (currentUser.role == UserRole.admin)
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      context.go(AppRoutes.categories);
-                                    },
-                                    icon: const Icon(Icons.category),
-                                    label: const Text('Categories'),
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  if (currentUser.role == UserRole.engineer)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Quick Actions',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    context.go(AppRoutes.inquiries);
-                                  },
-                                  icon: const Icon(Icons.receipt_long),
-                                  label: const Text('My Inquiries'),
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    context.go(AppRoutes.newInquiry);
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('New Inquiry'),
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
+                  // My Account section
                   MenuGroup(
                     title: 'My Account',
                     children: [
@@ -171,19 +75,14 @@ class ProfileScreen extends StatelessWidget {
                           context.go(AppRoutes.changePassword);
                         },
                       ),
-                      ProfileMenuItem(
-                        icon: Icons.security,
-                        title: 'Security Settings',
-                        onTap: () {
-                          context.go(AppRoutes.security);
-                        },
-                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
+
+                  // Services section based on role
                   if (currentUser.role == UserRole.admin)
                     MenuGroup(
-                      title: 'Admin',
+                      title: 'Admin Services',
                       children: [
                         ProfileMenuItem(
                           icon: Icons.admin_panel_settings_outlined,
@@ -197,12 +96,18 @@ class ProfileScreen extends StatelessWidget {
                             context.go(AppRoutes.analytics);
                           },
                         ),
+                        ProfileMenuItem(
+                          icon: Icons.category,
+                          title: 'Categories',
+                          onTap: () {
+                            context.go(AppRoutes.categories);
+                          },
+                        ),
                       ],
-                    ),
-                  const SizedBox(height: 16),
-                  if (currentUser.role == UserRole.engineer)
+                    )
+                  else if (currentUser.role == UserRole.engineer)
                     MenuGroup(
-                      title: 'Commission & Earnings',
+                      title: 'Engineer Services',
                       children: [
                         ProfileMenuItem(
                           icon: Icons.monetization_on_outlined,
@@ -214,15 +119,6 @@ class ProfileScreen extends StatelessWidget {
                           },
                         ),
                         ProfileMenuItem(
-                          icon: Icons.stars_outlined,
-                          title: 'Commission Tiers',
-                          subtitle: 'View tier requirements and benefits',
-                          iconColor: Colors.amber.shade600,
-                          onTap: () {
-                            context.go(AppRoutes.commissionTiers);
-                          },
-                        ),
-                        ProfileMenuItem(
                           icon: Icons.account_balance_wallet_outlined,
                           title: 'Withdrawals',
                           subtitle: 'Manage your withdrawals',
@@ -231,119 +127,78 @@ class ProfileScreen extends StatelessWidget {
                             context.go(AppRoutes.withdrawals);
                           },
                         ),
+                        ProfileMenuItem(
+                          icon: Icons.receipt_long,
+                          title: 'My Inquiries',
+                          onTap: () {
+                            context.go(AppRoutes.inquiries);
+                          },
+                        ),
+                      ],
+                    )
+                  else if (currentUser.role == UserRole.supplier)
+                    MenuGroup(
+                      title: 'Supplier Services',
+                      children: [
+                        ProfileMenuItem(
+                          icon: Icons.inventory_outlined,
+                          title: 'My Products',
+                          subtitle: 'Manage your product listings',
+                          onTap: () {
+                            context.go(AppRoutes.products);
+                          },
+                        ),
+                        ProfileMenuItem(
+                          icon: Icons.receipt_long_outlined,
+                          title: 'RFQs',
+                          subtitle: 'Respond to requests for quotes',
+                          onTap: () {
+                            context.go(AppRoutes.rfqList);
+                          },
+                        ),
                       ],
                     ),
-                  if (currentUser.role == UserRole.engineer)
-                    const SizedBox(height: 16),
-                  MenuGroup(
-                    title: 'Priority Services',
-                    children: [
-                      ProfileMenuItem(
-                        icon: Icons.star_border_rounded,
-                        title: 'Priority Services',
-                        iconColor: Colors.orange.shade600,
-                        onTap: () {
-                          context.go(AppRoutes.prioritySupport);
-                        },
-                      ),
-                    ],
-                  ),
+
                   const SizedBox(height: 16),
+
+                  // Support section
                   MenuGroup(
-                    title: 'Personal Information',
-                    children: [
-                      ProfileMenuItem(
-                          icon: Icons.person_outline,
-                          title: 'My Profile',
-                          onTap: () {}),
-                      if (currentUser.address != null &&
-                          currentUser.address!.isNotEmpty)
-                        ProfileMenuItem(
-                          icon: Icons.home_outlined,
-                          title: 'Address',
-                          subtitle: currentUser.address,
-                          onTap: () {},
-                        ),
-                      if (currentUser.phoneNumber != null &&
-                          currentUser.phoneNumber!.isNotEmpty)
-                        ProfileMenuItem(
-                          icon: Icons.phone_outlined,
-                          title: 'Phone Number',
-                          subtitle: currentUser.phoneNumber,
-                          onTap: () {},
-                        ),
-                      const Divider(height: 1, indent: 56),
-                      ProfileMenuItem(
-                          icon: Icons.work_outline_rounded,
-                          title: 'Professional Details',
-                          onTap: () {}),
-                      /* if (currentUser.companyName != null &&
-                          currentUser.companyName!.isNotEmpty)
-                        ProfileMenuItem(
-                          icon: Icons.business_outlined,
-                          title: 'Company Name',
-                          subtitle: currentUser.companyName,
-                          onTap: () {},
-                        ), */
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  MenuGroup(
-                    title: 'Account Settings',
+                    title: 'Support & Settings',
                     children: [
                       ProfileMenuItem(
                         icon: Icons.notifications_outlined,
-                        title: 'Notification Preferences',
+                        title: 'Notifications',
                         onTap: () {
                           context.go(AppRoutes.notifications);
                         },
                       ),
                       ProfileMenuItem(
                         icon: Icons.chat_outlined,
-                        title: 'Chat',
+                        title: 'Chat Support',
                         onTap: () {
                           context.go(AppRoutes.chatList);
                         },
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  MenuGroup(
-                    title: 'Support',
-                    children: [
                       ProfileMenuItem(
                         icon: Icons.help_outline_rounded,
-                        title: 'Help Center',
+                        title: 'Help & Support',
                         onTap: () {
                           context.go(AppRoutes.help);
                         },
                       ),
-                      const Divider(height: 1, indent: 56),
                       ProfileMenuItem(
                         icon: Icons.headset_mic_outlined,
                         title: 'Contact Support',
-                        onTap: () {
-                          context.go(AppRoutes.help);
-                        },
-                      ),
-                      const Divider(height: 1, indent: 56),
-                      ProfileMenuItem(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        title: 'Chat on WhatsApp',
                         onTap: () async {
-                          // Open WhatsApp chat
-                          final Uri whatsappUri = Uri.parse(
-                            'https://wa.me/254700000000?text=Hello, I need help with JengaMate'
-                          );
-                          try {
-                            if (!await launchUrl(whatsappUri, mode: LaunchMode.externalApplication)) {
-                              throw Exception('Could not launch WhatsApp');
-                            }
-                          } catch (e) {
+                          const phoneNumber = '+1234567890';
+                          final whatsappUri = Uri.parse('https://wa.me/$phoneNumber');
+                          if (await canLaunchUrl(whatsappUri)) {
+                            await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+                          } else {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Could not open WhatsApp. Please make sure WhatsApp is installed.'),
+                                  content: Text('Could not launch WhatsApp'),
                                 ),
                               );
                             }
@@ -352,22 +207,35 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24.0),
-                    child: Text('Version 1.0.0',
-                        style: TextStyle(color: AppTheme.subTextColor)),
+
+                  const SizedBox(height: 16),
+
+                  // Footer
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    child: const Column(
+                      children: [
+                        Text(
+                          'Version 1.0.0',
+                          style: TextStyle(
+                            color: Color(0xFF666666),
+                            fontSize: 12,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          '© 2025 JengaMate. All rights reserved.',
+                          style: TextStyle(
+                            color: Color(0xFF666666),
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: "profileFAB",
-        onPressed: () {
-          NavigationHelper.showQuickActionsMenu(context, currentUser);
-        },
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }

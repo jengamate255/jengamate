@@ -3,6 +3,7 @@ import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/models/inquiry.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';

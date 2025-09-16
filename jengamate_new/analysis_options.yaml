@@ -11,9 +11,10 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
+    - lib/services/database_service_extensions.dart
     - lib/services/database_service_complete.dart
-    - lib/services/print_service.dart
-    - test/**
+    # Optionally exclude legacy print service until model mismatches are resolved
+    # - lib/services/print_service.dart
 
 linter:
   # The lint rules applied to this project can be customized in the
@@ -29,8 +30,6 @@ linter:
   rules:
     # avoid_print: false  # Uncomment to disable the `avoid_print` rule
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
-    # Suppress file_picker plugin warnings
-    invalid_use_of_visible_for_testing_member: ignore
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

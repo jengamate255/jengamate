@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/utils/theme.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 class ApprovalPendingScreen extends StatelessWidget {
   const ApprovalPendingScreen({super.key});

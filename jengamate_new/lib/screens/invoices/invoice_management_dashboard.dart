@@ -8,6 +8,8 @@ import '../../widgets/bulk_operations_dialog.dart';
 import '../../services/status_automation_service.dart';
 import '../../ui/design_system/components/jm_card.dart';
 import '../../ui/design_system/tokens/spacing.dart';
+import '../order/invoice_details_screen.dart';
+import '../invoices/edit_invoice_screen.dart';
 
 class InvoiceManagementDashboard extends StatefulWidget {
   const InvoiceManagementDashboard({super.key});
@@ -47,7 +49,7 @@ class _InvoiceManagementDashboardState extends State<InvoiceManagementDashboard>
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     // Initialize services
-    final invoiceService = Provider.of<InvoiceService>(context, listen: false);
+    // final invoiceService = Provider.of<InvoiceService>(context, listen: false);
     _automationService = StatusAutomationService();
     _loadInvoices();
     _startAutomationProcessing();
@@ -233,9 +235,10 @@ class _InvoiceManagementDashboardState extends State<InvoiceManagementDashboard>
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: "invoiceBulkActions",
         onPressed: _showBulkActions,
-        child: const Icon(Icons.more_vert),
         tooltip: 'Bulk Actions',
+        child: const Icon(Icons.more_vert),
       ),
     );
   }
@@ -760,8 +763,14 @@ class _InvoiceManagementDashboardState extends State<InvoiceManagementDashboard>
   // Placeholder methods for quick actions
   void _navigateToInvoiceDetail(InvoiceModel invoice) {
     // TODO: Navigate to invoice detail screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Navigate to ${invoice.invoiceNumber}')),
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(content: Text('Navigate to ${invoice.invoiceNumber}')),
+    // );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => InvoiceDetailsScreen(orderId: invoice.orderId!),
+      ),
     );
   }
 
@@ -805,8 +814,14 @@ class _InvoiceManagementDashboardState extends State<InvoiceManagementDashboard>
 
   void _editInvoice(InvoiceModel invoice) {
     // TODO: Navigate to edit invoice screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Edit ${invoice.invoiceNumber}')),
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(content: Text('Edit ${invoice.invoiceNumber}')),
+    // );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditInvoiceScreen(invoice: invoice),
+      ),
     );
   }
 

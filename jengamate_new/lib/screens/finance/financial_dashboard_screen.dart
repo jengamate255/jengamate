@@ -5,6 +5,10 @@ import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/utils/responsive.dart';
 import 'package:jengamate/utils/logger.dart';
 import 'package:intl/intl.dart';
+import 'package:jengamate/ui/design_system/components/jm_button.dart';
+import 'package:jengamate/ui/design_system/components/jm_card.dart';
+import 'package:jengamate/ui/shared_components/jm_notification.dart';
+import 'package:jengamate/ui/design_system/tokens/colors.dart';
 
 class FinancialDashboardScreen extends StatefulWidget {
   const FinancialDashboardScreen({super.key});
@@ -636,25 +640,371 @@ class _FinancialDashboardScreenState extends State<FinancialDashboardScreen> {
   }
 
   void _showFilterDialog() {
+    // Create copies of current filter values
+    String selectedFilter = _selectedFilter;
+    TransactionStatus? statusFilter = _statusFilter;
+    TransactionType? typeFilter = _typeFilter;
+    DateTimeRange? dateRange = _dateRange;
+    double? minAmount;
+    double? maxAmount;
+    String? searchUser;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Transactions'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Date range picker would go here
-            const Text('Advanced filters coming soon...'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.filter_list, color: JMColors.lightScheme.primary),
+              const SizedBox(width: 12),
+              const Text('Advanced Filters'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Quick Filters
+                const Text(
+                  'Quick Filters',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilterChip(
+                      label: const Text('All'),
+                      selected: selectedFilter == 'all',
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() => selectedFilter = 'all');
+                        }
+                      },
+                    ),
+                    FilterChip(
+                      label: const Text('Today'),
+                      selected: selectedFilter == 'today',
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() => selectedFilter = 'today');
+                        }
+                      },
+                    ),
+                    FilterChip(
+                      label: const Text('This Week'),
+                      selected: selectedFilter == 'week',
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() => selectedFilter = 'week');
+                        }
+                      },
+                    ),
+                    FilterChip(
+                      label: const Text('This Month'),
+                      selected: selectedFilter == 'month',
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() => selectedFilter = 'month');
+                        }
+                      },
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Transaction Type
+                const Text(
+                  'Transaction Type',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: TransactionType.values.map((type) {
+                    return FilterChip(
+                      label: Text(type.name.toUpperCase()),
+                      selected: typeFilter == type,
+                      onSelected: (selected) {
+                        setState(() => typeFilter = selected ? type : null);
+                      },
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Transaction Status
+                const Text(
+                  'Transaction Status',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: TransactionStatus.values.map((status) {
+                    return FilterChip(
+                      label: Text(status.name.toUpperCase()),
+                      selected: statusFilter == status,
+                      onSelected: (selected) {
+                        setState(() => statusFilter = selected ? status : null);
+                      },
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Date Range
+                const Text(
+                  'Date Range',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          final picked = await showDateRangePicker(
+                            context: context,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                            initialDateRange: dateRange,
+                          );
+                          if (picked != null) {
+                            setState(() => dateRange = picked);
+                          }
+                        },
+                        icon: const Icon(Icons.date_range),
+                        label: Text(
+                          dateRange != null
+                              ? '${DateFormat('MMM dd').format(dateRange!.start)} - ${DateFormat('MMM dd').format(dateRange!.end)}'
+                              : 'Select Date Range',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                    if (dateRange != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => setState(() => dateRange = null),
+                        tooltip: 'Clear date range',
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Amount Range
+                const Text(
+                  'Amount Range (TSH)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Min Amount',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          minAmount = double.tryParse(value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Max Amount',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          maxAmount = double.tryParse(value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // User Search
+                const Text(
+                  'User Search',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Search by user name or ID',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onChanged: (value) {
+                    searchUser = value.isEmpty ? null : value;
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // Active Filters Summary
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: JMColors.info.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: JMColors.info.withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Active Filters:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: JMColors.info,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _getActiveFiltersSummary(selectedFilter, statusFilter, typeFilter, dateRange, minAmount, maxAmount, searchUser),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: JMColors.info,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Clear all filters
+                setState(() {
+                  selectedFilter = 'all';
+                  statusFilter = null;
+                  typeFilter = null;
+                  dateRange = null;
+                  minAmount = null;
+                  maxAmount = null;
+                  searchUser = null;
+                });
+              },
+              child: const Text('Clear All'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            JMButton(
+              variant: JMButtonVariant.primary,
+              label: 'Apply Filters',
+              icon: Icons.check,
+              child: const SizedBox(),
+              onPressed: () {
+                Navigator.pop(context);
+                _applyFilters(
+                  selectedFilter,
+                  statusFilter,
+                  typeFilter,
+                  dateRange,
+                  minAmount,
+                  maxAmount,
+                  searchUser,
+                );
+              },
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
+  }
+
+  String _getActiveFiltersSummary(
+    String filter,
+    TransactionStatus? status,
+    TransactionType? type,
+    DateTimeRange? dateRange,
+    double? minAmount,
+    double? maxAmount,
+    String? searchUser,
+  ) {
+    List<String> activeFilters = [];
+
+    if (filter != 'all') activeFilters.add('Quick: ${filter.toUpperCase()}');
+    if (status != null) activeFilters.add('Status: ${status.name}');
+    if (type != null) activeFilters.add('Type: ${type.name}');
+    if (dateRange != null) activeFilters.add('Date range selected');
+    if (minAmount != null || maxAmount != null) {
+      activeFilters.add('Amount: ${minAmount ?? 0} - ${maxAmount ?? '∞'}');
+    }
+    if (searchUser != null && searchUser.isNotEmpty) {
+      activeFilters.add('User search: "$searchUser"');
+    }
+
+    return activeFilters.isEmpty ? 'No active filters' : activeFilters.join(', ');
+  }
+
+  void _applyFilters(
+    String selectedFilter,
+    TransactionStatus? statusFilter,
+    TransactionType? typeFilter,
+    DateTimeRange? dateRange,
+    double? minAmount,
+    double? maxAmount,
+    String? searchUser,
+  ) {
+    setState(() {
+      _selectedFilter = selectedFilter;
+      _statusFilter = statusFilter;
+      _typeFilter = typeFilter;
+      _dateRange = dateRange;
+    });
+
+    // Apply filters to transaction list
+    _loadTransactions();
+
+    // Show success message
+    final activeCount = [
+      selectedFilter != 'all',
+      statusFilter != null,
+      typeFilter != null,
+      dateRange != null,
+      minAmount != null || maxAmount != null,
+      searchUser != null && searchUser.isNotEmpty,
+    ].where((filter) => filter).length;
+
+    if (activeCount > 0) {
+      context.showSuccess(
+        '$activeCount filter(s) applied successfully',
+        title: 'Filters Applied',
+      );
+    } else {
+      context.showInfo(
+        'All filters cleared',
+        title: 'Filters Reset',
+      );
+    }
   }
 
   void _showTransactionDetails(FinancialTransactionModel transaction) {

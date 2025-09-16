@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/payment_model.dart';
 import 'package:jengamate/services/auth_service.dart';
 import '../../models/order_model.dart';
@@ -66,7 +67,7 @@ class _OrderPaymentScreenState extends State<OrderPaymentScreen> {
       // For this simulation, we'll immediately process the payment.
       final paymentId = Uri.parse(paymentUrl).queryParameters['paymentId'];
       if (paymentId != null) {
-        await _paymentService.processPayment(paymentId);
+        await _paymentService.updatePaymentStatus(paymentId, PaymentStatus.completed);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Payment successful!')),
         );

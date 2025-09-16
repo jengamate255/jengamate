@@ -6,6 +6,9 @@ class RoleService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Public getter for firestore instance
+  FirebaseFirestore get firestore => _firestore;
+
   // Predefined roles and their permissions
   static const Map<String, Map<String, dynamic>> rolePermissions = {
     'super_admin': {
@@ -91,7 +94,7 @@ class RoleService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    await _updateUserClaims(uid);
+    await updateUserClaims(uid);
   }
 
   // Remove role from user
@@ -102,7 +105,7 @@ class RoleService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    await _updateUserClaims(uid);
+    await updateUserClaims(uid);
   }
 
   // Get user permissions based on roles
@@ -121,8 +124,8 @@ class RoleService {
     return permissions;
   }
 
-  // Update user custom claims
-  Future<void> _updateUserClaims(String uid) async {
+  // Update user custom claims (Firestore document only)
+  Future<void> updateUserClaims(String uid) async {
     final userDoc = await _firestore.collection('users').doc(uid).get();
     if (!userDoc.exists) return;
 
@@ -130,7 +133,8 @@ class RoleService {
     final roles = List<String>.from(data['roles'] ?? []);
     final permissions = getUserPermissions(roles);
 
-    await _firestore.collection('userClaims').doc(uid).set({
+    // Update the user's Firestore document directly with roles and permissions
+    await _firestore.collection('users').doc(uid).update({
       'roles': roles,
       'permissions': permissions,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -151,8 +155,16 @@ class RoleService {
   }
 
   // Check if user has specific permission
-  Future<bool> hasPermission(String permission) async {
-    final roles = await getCurrentUserRoles();
+  Future<bool> hasPermission(String permission, {String? userId}) async {
+    // If no userId is provided, check permissions for the currently authenticated user
+    final targetUid = userId ?? _auth.currentUser?.uid;
+    if (targetUid == null) return false; // No user to check permissions for
+
+    final userDoc = await _firestore.collection('users').doc(targetUid).get();
+    if (!userDoc.exists) return false;
+
+    final data = userDoc.data() as Map<String, dynamic>;
+    final roles = List<String>.from(data['roles'] ?? []);
     final permissions = getUserPermissions(roles);
     return permissions[permission] ?? false;
   }
@@ -202,6 +214,7 @@ class RoleService {
       if (!rolePermissions.containsKey(role)) {
         throw Exception('Invalid role: $role');
       }
+    }
 
     final userRef = _firestore.collection('users').doc(uid);
     await userRef.update({
@@ -209,7 +222,6 @@ class RoleService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    await _updateUserClaims(uid);
+    await updateUserClaims(uid);
   }
-}
 }

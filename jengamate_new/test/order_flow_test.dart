@@ -11,6 +11,7 @@ import 'package:jengamate/services/order_service.dart';
 import 'package:jengamate/services/payment_service.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'mocks.mocks.dart';

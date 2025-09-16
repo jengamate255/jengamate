@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:csv/csv.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:universal_html/html.dart' as html;
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({Key? key}) : super(key: key);
@@ -12,7 +15,6 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   
   String _selectedReportType = 'sales';
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
@@ -98,6 +100,104 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() {
       _totalAmount = total;
     });
+  }
+
+  Future<void> _exportReport() async {
+    if (_reportData.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No data to export.')),
+      );
+      return;
+    }
+
+    try {
+      List<List<dynamic>> rows = [];
+      List<dynamic> headers = [];
+
+      switch (_selectedReportType) {
+        case 'sales':
+          headers = ['Order ID', 'Customer', 'Amount', 'Status', 'Date'];
+          for (var item in _reportData) {
+            rows.add([
+              item['id'] ?? 'N/A',
+              item['customerName'] ?? 'N/A',
+              item['totalAmount']?.toStringAsFixed(2) ?? '0.00',
+              item['status'] ?? 'N/A',
+              DateFormat('yyyy-MM-dd').format(item['createdAt'].toDate()),
+            ]);
+          }
+          break;
+        case 'users':
+          headers = ['User ID', 'Name', 'Email', 'Role', 'Date'];
+          for (var item in _reportData) {
+            rows.add([
+              item['uid'] ?? 'N/A',
+              item['name'] ?? 'N/A',
+              item['email'] ?? 'N/A',
+              item['role'] ?? 'user',
+              DateFormat('yyyy-MM-dd').format(item['createdAt'].toDate()),
+            ]);
+          }
+          break;
+        case 'withdrawals':
+          headers = ['Withdrawal ID', 'User', 'Amount', 'Status', 'Date'];
+          for (var item in _reportData) {
+            rows.add([
+              item['id'] ?? 'N/A',
+              item['userName'] ?? 'N/A',
+              item['amount']?.toStringAsFixed(2) ?? '0.00',
+              item['status'] ?? 'N/A',
+              DateFormat('yyyy-MM-dd').format(item['createdAt'].toDate()),
+            ]);
+          }
+          break;
+        case 'commissions':
+          headers = ['Commission ID', 'User', 'Amount', 'Type', 'Date'];
+          for (var item in _reportData) {
+            rows.add([
+              item['id'] ?? 'N/A',
+              item['userName'] ?? 'N/A',
+              item['amount']?.toStringAsFixed(2) ?? '0.00',
+              item['type'] ?? 'N/A',
+              DateFormat('yyyy-MM-dd').format(item['createdAt'].toDate()),
+            ]);
+          }
+          break;
+      }
+
+      rows.insert(0, headers);
+
+      String csv = const ListToCsvConverter().convert(rows);
+
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/${_selectedReportType}_report_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+      final file = File(path);
+      await file.writeAsString(csv);
+
+      // For web compatibility, create a download link
+      if (html.document != null) {
+        final bytes = await file.readAsBytes();
+        final blob = html.Blob([bytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..target = '_blank'
+          ..download = 'report_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+        anchor.click();
+        html.Url.revokeObjectUrl(url);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Report exported to $path')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error exporting report: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _selectDateRange() async {
@@ -281,12 +381,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         ),
                       ),
                       ElevatedButton.icon(
-                        onPressed: () {
-                          // TODO: Implement export functionality
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Export functionality coming soon')),
-                          );
-                        },
+                        onPressed: _isLoading ? null : _exportReport,
                         icon: const Icon(Icons.download),
                         label: const Text('Export'),
                       ),

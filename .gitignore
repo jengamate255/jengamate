@@ -58,3 +58,7 @@ android_backup/
 
 # Firebase Web Credentials
 firebase.web.json
+
+# Local Netlify folder
+.netlify
+jengamate-firebase-adminsdk-fbsvc-93da77a1af.json

@@ -1,11 +1,13 @@
+import 'package:jengamate/config/app_route_builders.dart';
 import 'package:jengamate/models/chat_room_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/services/supabase_chat_service.dart'; // Add this import
 import 'package:jengamate/widgets/avatar_widget.dart';
-import 'package:jengamate/config/app_routes.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
@@ -21,10 +23,12 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   final DatabaseService _dbService = DatabaseService();
+  final SupabaseChatService _supabaseChatService = SupabaseChatService(); // Add this line
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
 
     if (currentUser == null) {
       return Scaffold(
@@ -38,7 +42,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         title: const Text('Conversations'),
       ),
       body: StreamBuilder<List<ChatRoom>>(
-        stream: _dbService.streamChatRoomsForUser(currentUser.uid),
+        stream: currentUser != null ? _supabaseChatService.streamChatRoomsForUser(currentUser.uid) : Stream.empty(), // Modified line
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return AdaptivePadding(
@@ -56,7 +60,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             JMSkeleton(height: 16, width: 160),
-                            SizedBox(height: JMSpacing.xs),
+                            SizedBox(height: JMSpacing.xxs),
                             JMSkeleton(height: 14, width: 220),
                           ],
                         ),
@@ -111,7 +115,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   JMSkeleton(height: 16, width: 160),
-                                  SizedBox(height: JMSpacing.xs),
+                                  SizedBox(height: JMSpacing.xxs),
                                   JMSkeleton(height: 14, width: 220),
                                 ],
                               ),

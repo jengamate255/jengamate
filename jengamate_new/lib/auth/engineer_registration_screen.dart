@@ -104,7 +104,6 @@ class _EngineerRegistrationScreenState
                         if (_currentStep > 0)
                           JMButton(
                             onPressed: details.onStepCancel,
-                            filled: false,
                             child: const Text('Back'),
                           ),
                         const Spacer(),

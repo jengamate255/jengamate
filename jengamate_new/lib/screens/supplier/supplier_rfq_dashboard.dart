@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/product_interaction_model.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/services/product_interaction_service.dart';
-import 'package:jengamate/services/auth_service.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
+import 'package:jengamate/screens/supplier/widgets/send_quote_dialog.dart'; // Import the new SendQuoteDialog
 
 class SupplierRFQDashboard extends StatefulWidget {
   const SupplierRFQDashboard({super.key});
@@ -15,7 +16,6 @@ class SupplierRFQDashboard extends StatefulWidget {
 
 class _SupplierRFQDashboardState extends State<SupplierRFQDashboard> {
   final ProductInteractionService _interactionService = ProductInteractionService();
-  final AuthService _authService = AuthService();
   
   String _selectedStatus = 'All';
   String _searchQuery = '';
@@ -31,7 +31,8 @@ class _SupplierRFQDashboardState extends State<SupplierRFQDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
     
     if (currentUser == null) {
       return const Scaffold(
@@ -42,7 +43,26 @@ class _SupplierRFQDashboardState extends State<SupplierRFQDashboard> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('RFQ Dashboard'),
+        title: Row(
+          children: [
+            const Text('RFQ Dashboard'),
+            if (currentUser.tier != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: Chip(
+                  label: Text(
+                    currentUser.tier!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  backgroundColor: Colors.blueAccent,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+              ),
+          ],
+        ),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
@@ -59,7 +79,7 @@ class _SupplierRFQDashboardState extends State<SupplierRFQDashboard> {
           _buildFilterSection(),
           Expanded(
             child: StreamBuilder<List<RFQTrackingModel>>(
-              stream: _interactionService.getSupplierRFQs(currentUser.uid),
+              stream: currentUser != null ? _interactionService.getSupplierRFQs(currentUser.uid) : Stream.empty(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -210,14 +230,14 @@ class _SupplierRFQDashboardState extends State<SupplierRFQDashboard> {
                 topRight: Radius.circular(12),
               ),
             ),
-            child: Row(
+            child: const Row(
               children: [
-                const Expanded(flex: 2, child: Text('Product', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Engineer', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 1, child: Text('Quantity', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Created', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 2, child: Text('Status', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
-                const Expanded(flex: 1, child: Text('Action', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                Expanded(flex: 2, child: Text('Product', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                Expanded(flex: 2, child: Text('Engineer', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                Expanded(flex: 1, child: Text('Quantity', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                Expanded(flex: 2, child: Text('Created', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                Expanded(flex: 2, child: Text('Status', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
+                Expanded(flex: 1, child: Text('Action', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87))),
               ],
             ),
           ),
@@ -392,7 +412,7 @@ class _SupplierRFQDashboardState extends State<SupplierRFQDashboard> {
   }
 
   void _handleRFQAction(RFQTrackingModel rfq, String action) {
-    final currentUser = Provider.of<UserModel?>(context, listen: false);
+    final currentUser = Provider.of<UserStateProvider>(context).currentUser;
     if (currentUser == null) return;
 
     switch (action) {
@@ -475,20 +495,28 @@ class _SupplierRFQDashboardState extends State<SupplierRFQDashboard> {
   }
 
   void _showQuoteDialog(RFQTrackingModel rfq) {
-    // TODO: Implement quote dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Quote functionality will be implemented'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+    showDialog<bool>(
+      context: context,
+      builder: (context) => SendQuoteDialog(rfq: rfq),
+    ).then((result) {
+      if (result == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Quote sent successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Refresh the list to reflect the status change
+        setState(() {});
+      }
+    });
   }
 
   void _markAsViewed(RFQTrackingModel rfq, UserModel currentUser) async {
     try {
       await _interactionService.trackSupplierRFQView(
         rfqId: rfq.rfqId,
-        supplierId: currentUser.uid,
+        supplierId: currentUser.uid ?? '',
         supplierName: currentUser.name,
       );
       

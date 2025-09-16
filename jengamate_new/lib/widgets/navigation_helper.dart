@@ -5,6 +5,7 @@ import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 class NavigationHelper {
   // Centralized logout functionality

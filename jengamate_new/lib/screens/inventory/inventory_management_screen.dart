@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/product_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
@@ -7,6 +8,12 @@ import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:intl/intl.dart';
+import 'package:jengamate/screens/inventory/add_product_screen.dart'; // Import the new screen
+import 'package:jengamate/screens/inventory/edit_product_screen.dart'; // Import the new screen
+import 'package:jengamate/screens/inventory/product_details_screen.dart'; // Import the new screen
+import 'package:csv/csv.dart'; // Import csv
+import 'dart:html' as html; // Import dart:html for web downloads
+import 'dart:convert'; // Import dart:convert for utf8
 
 class InventoryManagementScreen extends StatefulWidget {
   const InventoryManagementScreen({super.key});
@@ -25,7 +32,8 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
 
     return Scaffold(
       appBar: AppBar(
@@ -153,7 +161,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: JMSpacing.sm, vertical: JMSpacing.xs),
+            horizontal: JMSpacing.sm, vertical: JMSpacing.sm),
         decoration: BoxDecoration(
           color: isSelected
               ? Theme.of(context).primaryColor
@@ -401,7 +409,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
                 borderRadius: BorderRadius.circular(8),
                 color: Colors.grey.shade200,
               ),
-              child: product.imageUrl != null
+              child: product.imageUrl.isNotEmpty
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
@@ -435,7 +443,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: JMSpacing.xs),
+                  const SizedBox(height: JMSpacing.sm),
                   Text(
                     product.description,
                     style: TextStyle(
@@ -445,7 +453,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: JMSpacing.xs),
+                  const SizedBox(height: JMSpacing.sm),
                   Row(
                     children: [
                       Text(
@@ -541,20 +549,91 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
   }
 
   void _addNewProduct() {
-    // TODO: Navigate to add product screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Add product feature coming soon!'),
-        duration: Duration(seconds: 2),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddProductScreen(),
       ),
     );
   }
 
-  void _exportInventory() {
-    // TODO: Export inventory to Excel/CSV
+  void _exportInventory() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Exporting inventory...'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    // Fetch products
+    final List<ProductModel> products = await _dbService.streamProducts().first;
+
+    if (products.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No products to export.')),
+      );
+      return;
+    }
+
+    // Prepare data for CSV
+    List<List<dynamic>> csvData = [
+      [
+        'ID',
+        'Name',
+        'Description',
+        'Price',
+        'Stock',
+        'Category',
+        'SKU',
+        'Supplier',
+        'Weight',
+        'Length',
+        'Width',
+        'Height',
+        'Is Available',
+        'Image URL',
+        'Created At',
+        'Updated At',
+      ],
+    ];
+
+    for (var product in products) {
+      csvData.add([
+        product.id,
+        product.name,
+        product.description,
+        product.price,
+        product.stock,
+        product.categoryId,
+        product.sku,
+        product.supplier,
+        product.weight,
+        product.length,
+        product.width,
+        product.height,
+        product.isAvailable,
+        product.imageUrl,
+        product.createdAt.toIso8601String(),
+        product.updatedAt.toIso8601String(),
+      ]);
+    }
+
+    // Convert to CSV string
+    String csvString = const ListToCsvConverter().convert(csvData);
+
+    // Create a Blob and initiate download
+    final bytes = utf8.encode(csvString);
+    final blob = html.Blob([bytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    html.AnchorElement(href: url)
+      ..setAttribute('download', 'inventory_export_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv')
+      ..click();
+    html.Url.revokeObjectUrl(url);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Inventory exported successfully!'),
         backgroundColor: Colors.green,
         duration: Duration(seconds: 2),
       ),
@@ -579,42 +658,95 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
   }
 
   void _editProduct(ProductModel product) {
-    // TODO: Navigate to edit product screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Editing product: ${product.name}'),
-        duration: const Duration(seconds: 2),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditProductScreen(product: product),
       ),
     );
   }
 
   void _updateStock(ProductModel product) {
-    // TODO: Show stock update dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Updating stock for: ${product.name}'),
-        duration: const Duration(seconds: 2),
+    final TextEditingController stockController =
+        TextEditingController(text: product.stock.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Update Stock for ${product.name}'),
+        content: TextField(
+          controller: stockController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'New Stock Quantity',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final int? newStock = int.tryParse(stockController.text);
+              if (newStock != null && newStock >= 0) {
+                await _dbService.updateProduct(product.id, {'stock': newStock});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Stock updated for ${product.name}')),
+                );
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invalid stock quantity')),
+                );
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
       ),
     );
   }
 
   void _viewProductDetails(ProductModel product) {
-    // TODO: Navigate to product details screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Viewing details for: ${product.name}'),
-        duration: const Duration(seconds: 2),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProductDetailsScreen(product: product),
       ),
     );
   }
 
   void _deleteProduct(ProductModel product) {
-    // TODO: Show delete confirmation dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Deleting product: ${product.name}'),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 2),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: Text('Are you sure you want to delete ${product.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await _dbService.deleteProduct(product.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Product ${product.name} deleted successfully!')),
+                );
+                Navigator.pop(context, true);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to delete product: $e')),
+                );
+                Navigator.pop(context, false);
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

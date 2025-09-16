@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:jengamate/services/auth_service.dart';
 import 'package:jengamate/utils/theme.dart';
+import 'dart:typed_data';
 
 class IdentityVerificationScreen extends StatefulWidget {
   const IdentityVerificationScreen({super.key});
@@ -99,8 +99,31 @@ class _IdentityVerificationScreenState
       Navigator.pop(context);
     } catch (e) {
       setState(() => _isLoading = false);
+
+      String errorMessage = 'Failed to submit identity verification';
+
+      // Provide specific error messages for common issues
+      if (e.toString().contains('unauthorized')) {
+        errorMessage = 'Upload failed: Please ensure you are logged in and try again.';
+      } else if (e.toString().contains('storage')) {
+        errorMessage = 'File upload failed. Please check your internet connection and try again.';
+      } else if (e.toString().contains('quota')) {
+        errorMessage = 'Storage quota exceeded. Please contact support.';
+      } else {
+        errorMessage = 'Upload failed: ${e.toString()}';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: _submitIdentityVerification,
+          ),
+        ),
       );
     }
   }
@@ -172,23 +195,34 @@ class _IdentityVerificationScreenState
                   child: _identityDocument != null
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            File(_identityDocument!.path),
-                            fit: BoxFit.cover,
-                            width: double.infinity,
+                          child: FutureBuilder<List<int>>(
+                            future: _identityDocument!.readAsBytes(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                                return Image.memory(
+                                  snapshot.data! as Uint8List,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                );
+                              } else if (snapshot.hasError) {
+                                return Center(child: Text('Error loading image: ${snapshot.error}'));
+                              } else {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+                            },
                           ),
                         )
-                      : Center(
+                      : const Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.camera_alt,
                                 size: 48,
                                 color: Colors.grey,
                               ),
-                              const SizedBox(height: 10),
-                              const Text(
+                              SizedBox(height: 10),
+                              Text(
                                 'Upload Identity Document',
                                 style: TextStyle(color: Colors.grey),
                               ),
@@ -263,9 +297,9 @@ class _IdentityVerificationScreenState
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Column(
+                  child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'Requirements:',
                         style: TextStyle(

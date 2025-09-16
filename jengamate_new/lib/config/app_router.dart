@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/auth/login_screen.dart';
-import 'package:jengamate/screens/dashboard_screen.dart';
+import 'package:jengamate/screens/dashboard/dashboard_screen.dart';
 import 'package:jengamate/screens/admin/financial_oversight_screen.dart';
 import 'package:jengamate/auth/engineer_registration_screen.dart';
 import 'package:jengamate/config/app_routes.dart';
@@ -33,6 +33,7 @@ import 'package:jengamate/screens/chat/chat_conversation_screen.dart';
 import 'package:jengamate/screens/commission/commission_screen.dart';
 import 'package:jengamate/screens/withdrawals/withdrawals_screen.dart';
 import 'package:jengamate/screens/test/image_upload_test_screen.dart';
+import 'package:jengamate/screens/test_supabase_screen.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:jengamate/screens/admin/add_edit_product_screen.dart';
 import 'package:jengamate/models/product_model.dart';
@@ -46,8 +47,7 @@ import 'package:provider/provider.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/screens/admin/product_management_screen.dart';
 import 'package:jengamate/screens/admin/category_management_screen.dart';
-import 'package:jengamate/screens/admin/analytics_screen.dart'
-    as admin_analytics;
+import 'package:jengamate/screens/admin/analytics_screen.dart' as admin_analytics;
 import 'package:jengamate/screens/admin/commission_list_screen.dart';
 import 'package:jengamate/screens/finance/financial_dashboard_screen.dart';
 import 'package:jengamate/screens/referral/referral_dashboard_screen.dart';
@@ -57,6 +57,7 @@ import 'package:jengamate/screens/admin/enhanced_audit_log_screen.dart';
 import 'package:jengamate/screens/admin/commission_tier_management_screen.dart';
 import 'package:jengamate/screens/admin/content_moderation_dashboard.dart';
 import 'package:jengamate/screens/support/support_dashboard_screen.dart';
+import 'package:jengamate/screens/admin/payment_approval_screen.dart';
 import 'package:jengamate/screens/admin/send_commission_screen.dart';
 import 'package:jengamate/screens/admin/commission_tiers_screen.dart';
 import 'package:jengamate/screens/admin/rfq_management_dashboard.dart';
@@ -68,6 +69,8 @@ import 'package:jengamate/screens/invoices/invoice_details_screen.dart';
 import 'package:jengamate/screens/invoices/create_invoice_screen.dart';
 import 'package:jengamate/screens/order/orders_management_screen.dart';
 import 'package:jengamate/screens/order/order_details_screen.dart';
+import 'package:jengamate/screens/auth/auth_test_screen.dart'; // Added import
+import 'package:jengamate/services/user_state_provider.dart'; // Added import
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -102,8 +105,8 @@ class AppRouter {
           );
         },
         redirect: (context, state) {
-          final currentUser = Provider.of<UserModel?>(context, listen: false);
-          if (currentUser == null) {
+          final userState = Provider.of<UserStateProvider>(context, listen: false);
+          if (!userState.isAuthenticated) {
             // Redirect to login with return URL
             return '${AppRoutes.login}?returnTo=${Uri.encodeComponent(state.uri.toString())}';
           }
@@ -113,7 +116,6 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.inquirySubmission,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
           return const InquirySubmissionScreen();
         },
       ),
@@ -122,8 +124,8 @@ class AppRouter {
         name: 'adminTools',
         builder: (context, state) => const AdminToolsScreen(),
         redirect: (context, state) {
-          final currentUser = Provider.of<UserModel?>(context, listen: false);
-          if (currentUser == null || currentUser.role != UserRole.admin) {
+          final userState = Provider.of<UserStateProvider>(context, listen: false);
+          if (!userState.isAuthenticated || userState.currentUser?.role != UserRole.admin) {
             return AppRoutes.dashboard;
           }
           return null;
@@ -161,9 +163,7 @@ class AppRouter {
             path: AppRoutes.auditLog,
             name: 'adminAuditLog',
             builder: (context, state) {
-              final args = state.extra as Map<String, String>;
-              return AuditLogScreen(
-                  userId: args['userId']!, userName: args['userName']!);
+              return const AuditLogScreen();
             },
           ),
           GoRoute(
@@ -181,6 +181,11 @@ class AppRouter {
             name: 'adminAnalyticsReporting',
             builder: (context, state) =>
                 const admin_analytics.AnalyticsScreen(),
+          ),
+          GoRoute(
+            path: 'payment-approval',
+            name: 'adminPaymentApproval',
+            builder: (context, state) => const PaymentApprovalScreen(),
           ),
           GoRoute(
             path: 'commission-tools',
@@ -357,6 +362,10 @@ class AppRouter {
         builder: (context, state) => const ImageUploadTestScreen(),
       ),
       GoRoute(
+        path: AppRoutes.testSupabase,
+        builder: (context, state) => const TestSupabaseScreen(),
+      ),
+      GoRoute(
         path: '/financial-dashboard',
         builder: (context, state) => const FinancialDashboardScreen(),
       ),
@@ -436,6 +445,11 @@ class AppRouter {
           final orderId = state.pathParameters['orderId']!;
           return OrderDetailsScreen(orderId: orderId);
         },
+      ),
+      // Auth Test Route
+      GoRoute(
+        path: AppRoutes.authTest,
+        builder: (context, state) => const AuthTestScreen(),
       ),
     ],
   );

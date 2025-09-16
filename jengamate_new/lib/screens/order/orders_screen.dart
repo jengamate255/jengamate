@@ -1,13 +1,14 @@
+import 'package:jengamate/config/app_route_builders.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/models/order_model.dart';
 import 'package:jengamate/models/enums/order_enums.dart';
-import 'package:jengamate/services/database_service.dart';
-import 'package:jengamate/config/app_routes.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:jengamate/screens/order/create_order_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -18,15 +19,43 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen> {
   OrderStatus? _selectedStatus;
-  final DatabaseService _databaseService = DatabaseService();
+  // final DatabaseService _databaseService = DatabaseService(); // Removed unused field
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
 
+    // Show loading state if user data is still loading
+    if (userState.isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading orders...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Show error state if no user data
     if (currentUser == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red),
+              SizedBox(height: 16),
+              Text('Unable to load user data'),
+              Text('Please try logging in again'),
+            ],
+          ),
+        ),
       );
     }
 
@@ -62,23 +91,98 @@ class _OrdersScreenState extends State<OrdersScreen> {
         stream: _getOrdersStream(currentUser),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading orders...'),
+                ],
+              ),
+            );
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            final errorMessage = snapshot.error.toString();
+            // Check if it's an index error
+            if (errorMessage.contains('index') || errorMessage.contains('requires an index')) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.warning, size: 48, color: Colors.orange),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Database Index Required',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Orders data is temporarily unavailable.\nPlease contact support to resolve this issue.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Refresh the stream
+                          setState(() {});
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error, size: 48, color: Colors.red),
+                    const SizedBox(height: 16),
+                    const Text('Error loading orders'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Error: ${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No orders found'));
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inbox, size: 48, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('No orders found'),
+                  Text('Orders will appear here when available'),
+                ],
+              ),
+            );
           }
 
           final orders = snapshot.data!.docs
               .map((doc) {
                 try {
-                  return OrderModel.fromFirestore(doc);
+                  final order = OrderModel.fromFirestore(doc.data()! as Map<String, dynamic>, docId: doc.id);
+                  // Ensure the order has a valid ID
+                  if (order.id == null || order.id!.isEmpty) {
+                    print('Warning: Order ${doc.id} has no valid ID, using document ID as fallback');
+                  }
+                  return order;
                 } catch (e) {
-                  print('Error parsing order: $e');
+                  print('Error parsing order ${doc.id}: $e');
                   return null;
                 }
               })
@@ -113,13 +217,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                   trailing: _buildStatusChip(order.status),
                   onTap: () {
-                    final id = order.id ?? '';
+                    final id = order.id ?? order.externalId ?? '';
                     if (id.isNotEmpty) {
                       context.go(AppRouteBuilders.orderDetailsPath(id));
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text('Order details not available')),
+                            content: Text('Order details not available - missing order ID')),
                       );
                     }
                   },
@@ -131,11 +235,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
       floatingActionButton: currentUser.role == UserRole.admin
           ? FloatingActionButton(
+              heroTag: "createOrderAdmin",
               onPressed: () {
-                // TODO: Implement create order functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Create order functionality coming soon')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CreateOrderScreen(),
+                  ),
                 );
               },
               child: const Icon(Icons.add),

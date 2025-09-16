@@ -1,7 +1,9 @@
+import 'package:jengamate/config/app_route_builders.dart';
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/rfq_model.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jengamate/config/app_routes.dart';
@@ -11,7 +13,8 @@ class RFQListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final user = userState.currentUser;
     final dbService = DatabaseService();
 
     return Scaffold(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/product_interaction_model.dart';
 import 'package:jengamate/services/product_interaction_service.dart';
 import 'package:intl/intl.dart';
+import 'package:jengamate/screens/admin/detailed_rfq_analytics_screen.dart';
 
 class RFQAnalyticsDashboard extends StatefulWidget {
   const RFQAnalyticsDashboard({super.key});
@@ -189,6 +190,12 @@ class _RFQAnalyticsDashboardState extends State<RFQAnalyticsDashboard> {
               TextButton(
                 onPressed: () {
                   // TODO: Navigate to detailed analytics
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DetailedRFQAnalyticsScreen(),
+                    ),
+                  );
                 },
                 child: const Text('View All'),
               ),

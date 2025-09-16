@@ -6,6 +6,12 @@ import 'package:jengamate/ui/design_system/components/jm_button.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
+import 'package:csv/csv.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:universal_html/html.dart' as html;
+import 'package:intl/intl.dart';
 
 class CommissionManagementScreen extends StatefulWidget {
   const CommissionManagementScreen({super.key});
@@ -65,7 +71,8 @@ class _CommissionManagementScreenState
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
 
     if (currentUser?.role != 'admin') {
       return Scaffold(
@@ -276,10 +283,78 @@ class _CommissionManagementScreenState
   }
 
   Future<void> _exportCommissionReport() async {
-    // TODO: Implement Excel export functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Export functionality coming soon')),
-    );
+    try {
+      final commissions = await _dbService.getAllCommissions().first;
+
+      if (commissions.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No commission data to export.')),
+          );
+        }
+        return;
+      }
+
+      List<List<dynamic>> rows = [];
+      rows.add([
+        'ID',
+        'User ID',
+        'User Name',
+        'Type',
+        'Amount',
+        'Total',
+        'Active',
+        'Referral',
+        'Created At',
+        'Reference ID',
+      ]);
+
+      for (var commission in commissions) {
+        rows.add([
+          commission.uid,
+          commission.userId,
+          commission.userName,
+          commission.type,
+          commission.amount,
+          commission.total,
+          commission.active,
+          commission.referral,
+          commission.createdAt.toIso8601String(),
+          commission.referenceId,
+        ]);
+      }
+
+      String csv = const ListToCsvConverter().convert(rows);
+
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/commission_report_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+      final file = File(path);
+      await file.writeAsString(csv);
+
+      // For web compatibility, create a download link
+      if (html.document != null) {
+        final bytes = await file.readAsBytes();
+        final blob = html.Blob([bytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..target = '_blank'
+          ..download = 'commission_report_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+        anchor.click();
+        html.Url.revokeObjectUrl(url);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Commission report exported to $path')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error exporting report: $e')),
+        );
+      }
+    }
   }
 
   @override

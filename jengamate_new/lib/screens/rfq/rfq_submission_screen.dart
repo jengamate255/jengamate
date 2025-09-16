@@ -7,6 +7,8 @@ import 'package:jengamate/services/notification_service.dart';
 import 'package:jengamate/services/supplier_matching_service.dart';
 import 'package:jengamate/services/product_interaction_service.dart';
 import 'package:jengamate/models/user_model.dart';
+import 'package:jengamate/screens/rfq/rfq_list_screen.dart'; // Import the RFQListScreen
+import 'package:jengamate/screens/help_screen.dart'; // Import the HelpScreen
 
 class RFQSubmissionScreen extends StatefulWidget {
   final String productId;
@@ -49,7 +51,7 @@ class _RFQSubmissionScreenState extends State<RFQSubmissionScreen> {
       final user = await _databaseService.getCurrentUser();
       if (user != null) {
         setState(() => _currentUser = user);
-        _customerNameController.text = '${user.firstName} ${user.lastName}' ?? '';
+        _customerNameController.text = '${user.firstName} ${user.lastName}';
         _customerEmailController.text = user.email ?? '';
         _customerPhoneController.text = user.phoneNumber ?? '';
       }
@@ -262,7 +264,12 @@ class _RFQSubmissionScreenState extends State<RFQSubmissionScreen> {
               child: const Text('View My RFQs'),
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Navigate to user's RFQ list
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RFQListScreen(),
+                  ),
+                );
               },
             ),
             ElevatedButton(
@@ -382,7 +389,12 @@ class _RFQSubmissionScreenState extends State<RFQSubmissionScreen> {
               child: const Text('Contact Support'),
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Navigate to support/help screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HelpScreen(),
+                  ),
+                );
               },
             ),
             ElevatedButton(

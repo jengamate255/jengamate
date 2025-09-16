@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/rfq_model.dart';
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/models/user_model.dart'; // Import UserModel
+import 'package:jengamate/screens/rfq/widgets/product_selection_screen.dart'; // Import ProductSelectionScreen
+import 'package:jengamate/utils/logger.dart';
+import 'package:jengamate/screens/rfq/rfq_list_screen.dart'; // Import RFQListScreen
+import 'package:jengamate/screens/help_screen.dart'; // Import HelpScreen
 
 class AdvancedRfqSubmissionScreen extends StatefulWidget {
   const AdvancedRfqSubmissionScreen({super.key});
@@ -14,6 +19,11 @@ class _AdvancedRfqSubmissionScreenState
     extends State<AdvancedRfqSubmissionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _dbService = DatabaseService();
+  UserModel? _currentUser;
+  bool _isLoading = false; // Re-adding isLoading
+
+  String? _selectedProductId; // New field for selected product ID
+  String? _selectedProductName; // New field for selected product name
 
   String _productName = '';
   String _customerName = '';
@@ -26,16 +36,56 @@ class _AdvancedRfqSubmissionScreenState
   @override
   void initState() {
     super.initState();
+    _loadUserData(); // Load user data on init
+  }
+
+  Future<void> _loadUserData() async {
+    setState(() => _isLoading = true);
+    try {
+      final user = await _dbService.getCurrentUser(); // Assuming DatabaseService has getCurrentUser
+      if (user == null) {
+        // If no user is logged in, redirect to login screen
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/login');
+        }
+        return;
+      }
+      if (mounted) {
+        setState(() => _currentUser = user);
+      }
+    } catch (e) {
+      Logger.logError('Error loading user data', e, StackTrace.current);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading user data: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _submitRfq() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+
+      if (_currentUser == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please log in to submit an RFQ.')),
+          );
+          Navigator.of(context).pushReplacementNamed('/login');
+        }
+        return;
+      }
+
       final newRfq = RFQModel(
         id: '', // Firestore will generate this
-        userId: '', // TODO: Replace with actual user ID
-        productId: '', // TODO: This needs to be provided, perhaps from a product selection screen
-        productName: _productName,
+        userId: _currentUser!.uid, // Replaced with actual user ID
+        productId: _selectedProductId!, // Use selected product ID
+        productName: _selectedProductName!, // Use selected product name
         customerName: _customerName,
         customerEmail: _customerEmail,
         customerPhone: _customerPhone,
@@ -147,7 +197,12 @@ class _AdvancedRfqSubmissionScreenState
               child: const Text('View My RFQs'),
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Navigate to user's RFQ list
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RFQListScreen(),
+                  ),
+                );
               },
             ),
             ElevatedButton(
@@ -261,7 +316,12 @@ class _AdvancedRfqSubmissionScreenState
               child: const Text('Contact Support'),
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Navigate to support/help screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HelpScreen(),
+                  ),
+                );
               },
             ),
             ElevatedButton(
@@ -309,20 +369,31 @@ class _AdvancedRfqSubmissionScreenState
       appBar: AppBar(
         title: const Text('Submit RFQ'),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(labelText: 'Product Name'),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a product name';
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(16.0),
+                children: [
+            // Product selection field
+            ListTile(
+              title: Text(_selectedProductName ?? 'Select Product'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProductSelectionScreen(),
+                  ),
+                );
+                if (result != null && result is Map<String, String>) {
+                  setState(() {
+                    _selectedProductId = result['productId'];
+                    _selectedProductName = result['productName'];
+                  });
                 }
-                return null;
               },
-              onSaved: (value) => _productName = value!,
             ),
             const SizedBox(height: 16),
             TextFormField(

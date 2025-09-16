@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed Firebase dependency
 
 class NotificationModel {
   final String uid;
@@ -27,10 +27,9 @@ class NotificationModel {
     this.metadata,
   });
 
-  factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory NotificationModel.fromFirestore(Map<String, dynamic> data, {required String docId}) {
     return NotificationModel(
-      uid: doc.id,
+      uid: docId,
       title: data['title'] ?? '',
       message: data['message'] ?? '',
       type: data['type'] ?? '',
@@ -38,10 +37,8 @@ class NotificationModel {
       orderId: data['orderId'],
       relatedId: data['relatedId'],
       isRead: data['isRead'] ?? false,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      readAt: data['readAt'] != null
-          ? (data['readAt'] as Timestamp).toDate()
-          : null,
+      createdAt: (data['createdAt'] is String) ? DateTime.parse(data['createdAt']) : DateTime.now(),
+      readAt: (data['readAt'] is String) ? DateTime.parse(data['readAt']) : null,
       metadata: data['metadata'],
     );
   }
@@ -55,8 +52,8 @@ class NotificationModel {
       'orderId': orderId,
       'relatedId': relatedId,
       'isRead': isRead,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'readAt': readAt != null ? Timestamp.fromDate(readAt!) : null,
+      'createdAt': createdAt.toIso8601String(),
+      'readAt': readAt?.toIso8601String(),
       'metadata': metadata,
     };
   }

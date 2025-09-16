@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/notification_model.dart';
+import 'package:jengamate/models/email_template.dart'; // Import EmailTemplate
+import 'package:jengamate/models/email_template_type.dart'; // Import EmailTemplateType
 import 'package:jengamate/services/database_service.dart';
+import 'package:jengamate/services/email_service.dart'; // Import EmailService
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
 import 'package:jengamate/ui/design_system/tokens/spacing.dart';
 import 'package:jengamate/ui/design_system/components/jm_card.dart';
 import 'package:intl/intl.dart';
+import 'package:jengamate/screens/notifications/create_email_template_screen.dart'; // Import the new screen
+import 'package:jengamate/screens/notifications/edit_email_template_screen.dart'; // Import the new screen
+import 'package:jengamate/screens/notifications/preview_email_template_screen.dart'; // Import the new screen
+import 'package:jengamate/screens/notifications/all_notifications_screen.dart'; // Import the new screen
 
 class EmailNotificationsScreen extends StatefulWidget {
   const EmailNotificationsScreen({super.key});
@@ -16,6 +23,7 @@ class EmailNotificationsScreen extends StatefulWidget {
 
 class _EmailNotificationsScreenState extends State<EmailNotificationsScreen> {
   final DatabaseService _dbService = DatabaseService();
+  final EmailService _emailService = EmailService(); // Instantiate EmailService
   bool _orderConfirmations = true;
   bool _shippingUpdates = true;
   bool _paymentConfirmations = true;
@@ -180,35 +188,25 @@ class _EmailNotificationsScreenState extends State<EmailNotificationsScreen> {
               ],
             ),
             const SizedBox(height: JMSpacing.md),
-            _buildTemplateItem(
-              'Order Confirmation',
-              'Sent when orders are confirmed',
-              Icons.check_circle,
-              Colors.green,
-            ),
-            _buildTemplateItem(
-              'Shipping Notification',
-              'Sent when orders are shipped',
-              Icons.local_shipping,
-              Colors.blue,
-            ),
-            _buildTemplateItem(
-              'Payment Receipt',
-              'Sent when payments are received',
-              Icons.receipt,
-              Colors.orange,
-            ),
-            _buildTemplateItem(
-              'Delivery Confirmation',
-              'Sent when orders are delivered',
-              Icons.delivery_dining,
-              Colors.purple,
-            ),
-            _buildTemplateItem(
-              'Welcome Email',
-              'Sent to new customers',
-              Icons.waving_hand,
-              Colors.teal,
+            StreamBuilder<List<EmailTemplate>>(
+              stream: _emailService.streamEmailTemplates(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No email templates found.'));
+                }
+                final templates = snapshot.data!;
+                return Column(
+                  children: templates
+                      .map((template) => _buildTemplateItem(template))
+                      .toList(),
+                );
+              },
             ),
           ],
         ),
@@ -217,10 +215,7 @@ class _EmailNotificationsScreenState extends State<EmailNotificationsScreen> {
   }
 
   Widget _buildTemplateItem(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
+    EmailTemplate template,
   ) {
     return Container(
       margin: const EdgeInsets.only(bottom: JMSpacing.sm),
@@ -235,10 +230,10 @@ class _EmailNotificationsScreenState extends State<EmailNotificationsScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(Icons.email, color: Theme.of(context).primaryColor, size: 20),
           ),
           const SizedBox(width: JMSpacing.sm),
           Expanded(
@@ -246,11 +241,11 @@ class _EmailNotificationsScreenState extends State<EmailNotificationsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  template.name,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  subtitle,
+                  template.subject,
                   style: TextStyle(
                     color: Colors.grey.shade600,
                     fontSize: 12,
@@ -260,7 +255,7 @@ class _EmailNotificationsScreenState extends State<EmailNotificationsScreen> {
             ),
           ),
           PopupMenuButton<String>(
-            onSelected: (value) => _handleTemplateAction(value, title),
+            onSelected: (value) => _handleTemplateAction(value, template),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'edit',
@@ -550,78 +545,90 @@ class _EmailNotificationsScreenState extends State<EmailNotificationsScreen> {
   }
 
   void _createNewTemplate() {
-    // TODO: Navigate to template creation screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Template creation feature coming soon!'),
-        duration: Duration(seconds: 2),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CreateEmailTemplateScreen(),
       ),
     );
   }
 
-  void _handleTemplateAction(String action, String templateName) {
+  void _handleTemplateAction(String action, EmailTemplate template) {
     switch (action) {
       case 'edit':
-        _editTemplate(templateName);
+        _editTemplate(template);
         break;
       case 'preview':
-        _previewTemplate(templateName);
+        _previewTemplate(template);
         break;
       case 'duplicate':
-        _duplicateTemplate(templateName);
+        _duplicateTemplate(template);
         break;
     }
   }
 
-  void _editTemplate(String templateName) {
-    // TODO: Navigate to template editor
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Editing template: $templateName'),
-        duration: const Duration(seconds: 2),
+  void _editTemplate(EmailTemplate template) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditEmailTemplateScreen(template: template),
       ),
     );
   }
 
-  void _previewTemplate(String templateName) {
-    // TODO: Show template preview
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Previewing template: $templateName'),
-        duration: const Duration(seconds: 2),
+  void _previewTemplate(EmailTemplate template) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PreviewEmailTemplateScreen(template: template),
       ),
     );
   }
 
-  void _duplicateTemplate(String templateName) {
-    // TODO: Duplicate template
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Duplicating template: $templateName'),
-        duration: const Duration(seconds: 2),
-      ),
+  void _duplicateTemplate(EmailTemplate template) async {
+    final newTemplate = template.copyWith(
+      id: '', // Firestore will generate a new ID
+      name: '${template.name} (Copy)',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
+
+    try {
+      await _emailService.createEmailTemplate(newTemplate);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Template \'${template.name}\' duplicated successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error duplicating template: $e')),
+      );
+    }
   }
 
   void _viewAllNotifications() {
-    // TODO: Navigate to all notifications screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('All notifications screen coming soon!'),
-        duration: Duration(seconds: 2),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AllNotificationsScreen(),
       ),
     );
   }
 
-  void _sendTestEmail(String emailType) {
-    // TODO: Send test email
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Sending test $emailType email...'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  void _sendTestEmail(String emailType) async {
+    try {
+      final EmailTemplateType type = EmailTemplateType.values.firstWhere(
+        (e) => e.toString().split('.').last == emailType,
+        orElse: () => EmailTemplateType.other, // Default or handle error
+      );
+      await _emailService.sendTestEmail(type, "test@example.com"); // Replace with actual recipient
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Test $emailType email sent successfully!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending test $emailType email: $e')),
+      );
+    }
   }
 }
 

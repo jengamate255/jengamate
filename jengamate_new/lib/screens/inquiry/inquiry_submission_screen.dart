@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jengamate/models/inquiry.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 import 'package:jengamate/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:jengamate/ui/design_system/layout/adaptive_padding.dart';
@@ -49,7 +50,7 @@ class _InquirySubmissionScreenState extends State<InquirySubmissionScreen> {
 
   void _submitInquiry() async {
     if (_formKey.currentState!.validate()) {
-      final currentUser = Provider.of<UserModel?>(context, listen: false);
+      final currentUser = Provider.of<UserStateProvider>(context).currentUser;
       final now = Timestamp.now();
       final inquiry = Inquiry(
         uid: FirebaseFirestore.instance.collection('inquiries').doc().id,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jengamate/models/invoice_model.dart';
 import 'package:jengamate/services/pdf_service.dart';
-import 'package:open_file/open_file.dart';
+import 'package:universal_html/html.dart' as html;
 
 class PdfTestScreen extends StatelessWidget {
   const PdfTestScreen({super.key});
@@ -18,13 +18,13 @@ class PdfTestScreen extends StatelessWidget {
       customerPhone: '+254700000000',
       customerAddress: '123 Test Street, Nairobi',
       items: [
-        InvoiceItem(
+        const InvoiceItem(
           id: 'item1',
           description: 'Test Product 1',
           quantity: 2,
           unitPrice: 1000.0,
         ),
-        InvoiceItem(
+        const InvoiceItem(
           id: 'item2',
           description: 'Test Product 2',
           quantity: 1,
@@ -45,7 +45,17 @@ class PdfTestScreen extends StatelessWidget {
       final file = await PdfService.generateInvoice(invoice);
       
       // Open the generated PDF
-      await OpenFile.open(file.path);
+      // For web compatibility, create a download link
+      if (html.document != null) {
+        final bytes = await file.readAsBytes();
+        final blob = html.Blob([bytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..target = '_blank'
+          ..download = 'test_invoice.pdf';
+        anchor.click();
+        html.Url.revokeObjectUrl(url);
+      }
       
       print('PDF generated at: ${file.path}');
     } catch (e) {

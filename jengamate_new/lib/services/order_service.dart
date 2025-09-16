@@ -16,7 +16,7 @@ class OrderService {
         .where('buyerId', isEqualTo: buyerId)
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList());
+            snapshot.docs.map((doc) => OrderModel.fromFirestore(doc.data()!, docId: doc.id)).toList());
   }
 
   // Get orders for a specific supplier
@@ -26,7 +26,7 @@ class OrderService {
         .where('supplierId', isEqualTo: supplierId)
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList());
+            snapshot.docs.map((doc) => OrderModel.fromFirestore(doc.data()!, docId: doc.id)).toList());
   }
 
   // Get a specific order by ID
@@ -35,14 +35,14 @@ class OrderService {
         .collection('orders')
         .doc(orderId)
         .snapshots()
-        .map((doc) => OrderModel.fromFirestore(doc));
+        .map((doc) => OrderModel.fromFirestore(doc.data()!, docId: doc.id));
   }
 
   Future<OrderModel?> getOrderById(String orderId) async {
     try {
       final doc = await _firestore.collection('orders').doc(orderId).get();
       if (doc.exists) {
-        return OrderModel.fromFirestore(doc);
+        return OrderModel.fromFirestore(doc.data()!, docId: doc.id);
       }
       return null;
     } catch (e) {
@@ -58,7 +58,7 @@ class OrderService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList());
+            snapshot.docs.map((doc) => OrderModel.fromFirestore(doc.data()!, docId: doc.id)).toList());
   }
 
   // Get orders by status (for admin)
@@ -69,7 +69,7 @@ class OrderService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList());
+            snapshot.docs.map((doc) => OrderModel.fromFirestore(doc.data()!, docId: doc.id)).toList());
   }
 
   // Create a new order
@@ -119,7 +119,7 @@ class OrderService {
             'INV-${order.id!.substring(0, 8).toUpperCase()}', // Generate a simple invoice number
         customerId: order.customerId,
         customerName: order.customerName,
-        customerEmail: order.customerEmail ?? '',
+        customerEmail: order.customerEmail,
         customerPhone: order.customerPhone,
         customerAddress: order.deliveryAddress,
         issueDate: DateTime.now(),
@@ -163,8 +163,28 @@ class OrderService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => PaymentModel.fromFirestore(doc))
+            .map((doc) => PaymentModel.fromMap(doc.data()))
             .toList());
+  }
+
+  // Get total paid amount for a specific order
+  Future<double> getTotalPaidAmount(String orderId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('payments')
+          .where('orderId', isEqualTo: orderId)
+          .get();
+
+      double totalPaid = 0.0;
+      for (var doc in querySnapshot.docs) {
+        final payment = PaymentModel.fromMap(doc.data());
+        totalPaid += payment.amount;
+      }
+      return totalPaid;
+    } catch (e) {
+      Logger.logError('Error getting total paid amount for order $orderId', e);
+      rethrow;
+    }
   }
 
   // Populate missing order items from quotation if available

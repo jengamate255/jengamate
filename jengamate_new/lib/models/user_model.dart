@@ -29,10 +29,11 @@ class UserModel {
   final String? cityTown; // New field
   final String? referralCode; // New field
   final DateTime? lastLogin; // New field
-  final String? fcmToken;
+  final List<String>? fcmTokens; // Changed from String? fcmToken
   final List<String> inquiryIds;
   final List<String> rfqIds;
   final List<String> subscribedCategoryIds;
+  final String? tier; // New field
 
   String get displayName => '$firstName $lastName'; // Updated getter
   String get name => displayName; // Alias for compatibility
@@ -86,7 +87,8 @@ class UserModel {
     this.cityTown,
     this.referralCode,
     this.lastLogin,
-    this.fcmToken,
+    this.fcmTokens, // Changed from this.fcmToken
+    this.tier,
   }) : _location = null;
 
   // Factory constructor to create a UserModel from a map (e.g., from Firestore)
@@ -120,11 +122,12 @@ class UserModel {
       cityTown: data['cityTown'],
       referralCode: data['referralCode'],
       lastLogin: (data['lastLogin'] as Timestamp?)?.toDate(),
-      fcmToken: data['fcmToken'],
+      fcmTokens: (data['fcmTokens'] as List<dynamic>?)?.map((e) => e.toString()).toList(), // Changed from fcmToken
       inquiryIds: List<String>.from(data['inquiryIds'] ?? []),
       rfqIds: List<String>.from(data['rfqIds'] ?? []),
       subscribedCategoryIds:
           List<String>.from(data['subscribedCategoryIds'] ?? []),
+      tier: data['tier'],
     );
   }
 
@@ -192,10 +195,11 @@ class UserModel {
       'cityTown': cityTown,
       'referralCode': referralCode,
       'lastLogin': lastLogin != null ? Timestamp.fromDate(lastLogin!) : null,
-      'fcmToken': fcmToken,
+      'fcmTokens': fcmTokens, // Changed from fcmToken
       'inquiryIds': inquiryIds,
       'rfqIds': rfqIds,
       'subscribedCategoryIds': subscribedCategoryIds,
+      'tier': tier,
     };
   }
 
@@ -226,10 +230,11 @@ class UserModel {
     String? cityTown,
     String? referralCode,
     DateTime? lastLogin,
-    String? fcmToken,
+    List<String>? fcmTokens, // Changed from String? fcmToken
     List<String>? inquiryIds,
     List<String>? rfqIds,
     List<String>? subscribedCategoryIds,
+    String? tier,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -260,11 +265,12 @@ class UserModel {
       cityTown: cityTown ?? this.cityTown,
       referralCode: referralCode ?? this.referralCode,
       lastLogin: lastLogin ?? this.lastLogin,
-      fcmToken: fcmToken ?? this.fcmToken,
+      fcmTokens: fcmTokens ?? this.fcmTokens, // Changed from fcmToken
       inquiryIds: inquiryIds ?? this.inquiryIds,
       rfqIds: rfqIds ?? this.rfqIds,
       subscribedCategoryIds:
           subscribedCategoryIds ?? this.subscribedCategoryIds,
+      tier: tier ?? this.tier,
     );
   }
 

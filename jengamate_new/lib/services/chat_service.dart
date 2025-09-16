@@ -22,7 +22,7 @@ class ChatService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((doc) => Message.fromFirestore(doc)).toList());
+            snapshot.docs.map((doc) => Message.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id)).toList());
   }
 
   // Send a message to an order
@@ -43,6 +43,6 @@ class ChatService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((doc) => Message.fromFirestore(doc)).toList());
+            snapshot.docs.map((doc) => Message.fromFirestore((doc.data() as Map<String, dynamic>), docId: doc.id)).toList());
   }
 }

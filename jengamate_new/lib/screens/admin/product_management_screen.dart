@@ -4,6 +4,7 @@ import 'package:jengamate/screens/admin/add_edit_product_screen.dart';
 import 'package:jengamate/screens/admin/widgets/product_card.dart';
 import 'package:jengamate/services/database_service.dart';
 import 'package:provider/provider.dart';
+import 'package:jengamate/services/user_state_provider.dart';
 
 import '../../models/user_model.dart';
 import 'package:jengamate/models/enums/user_role.dart';
@@ -24,7 +25,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<UserModel?>(context);
+    final userState = Provider.of<UserStateProvider>(context);
+    final currentUser = userState.currentUser;
 
     if (currentUser == null ||
         (currentUser.role != UserRole.admin &&
