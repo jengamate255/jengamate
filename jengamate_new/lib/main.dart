@@ -29,17 +29,20 @@ Future<void> main() async {
       // Ensure Flutter bindings are initialized first.
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Initialize Supabase.
+      // Initialize services in correct order.
       try {
-        debugPrint('🚀 Initializing Supabase...');
-        await SupabaseService.instance.initialize();
-
-        // Initialize Firebase
+        // Initialize Firebase first so Supabase can exchange the Firebase ID token
+        // for a Supabase session during requests.
         debugPrint('🔥 Initializing Firebase...');
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
         debugPrint('✅ Firebase initialized successfully');
+
+        // Initialize Supabase after Firebase so the accessToken callback can
+        // retrieve a valid Firebase ID token and exchange it for a Supabase token.
+        debugPrint('🚀 Initializing Supabase...');
+        await SupabaseService.instance.initialize();
 
         // Initialize payment approval service for automated workflow
         PaymentApprovalService();

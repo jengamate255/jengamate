@@ -2,12 +2,16 @@ import 'package:jengamate/config/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jengamate/utils/logger.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class SupabaseService {
   SupabaseService._(); // Private constructor
 
   static final SupabaseService instance = SupabaseService._();
   SupabaseClient? _client;
+  String? _cachedSupabaseAccessToken;
+  DateTime? _cachedSupabaseAccessTokenExpiry;
 
   SupabaseClient get client {
     if (_client == null) {
@@ -27,25 +31,18 @@ class SupabaseService {
       Logger.log('SupabaseService.initialize: Initializing with URL: ${SupabaseConfig.supabaseUrl}');
       Logger.log('SupabaseService.initialize: Initializing with Anon Key: ${SupabaseConfig.supabaseAnonKey}');
 
-      // Initialize Supabase with Firebase Auth integration
-      // This uses the official third-party auth approach
+      // Initialize Supabase. We will provide an accessToken callback that exchanges
+      // the Firebase ID token for a Supabase access token via an Edge Function.
       await Supabase.initialize(
         url: SupabaseConfig.supabaseUrl,
         anonKey: SupabaseConfig.supabaseAnonKey,
         accessToken: () async {
           try {
-            // Return Firebase ID token for Supabase to use
-            // Only access Firebase if it has been initialized
-            final fb_auth.User? user = fb_auth.FirebaseAuth.instance.currentUser;
-            if (user != null) {
-              final idToken = await user.getIdToken();
-              return idToken;
-            }
+            return await _getSupabaseAccessTokenFromFirebase();
           } catch (e) {
-            // Firebase not initialized yet, return null
-            Logger.log('Firebase not initialized yet, skipping token retrieval');
+            Logger.logError('Failed to get Supabase access token from Firebase', e, StackTrace.current);
+            return null;
           }
-          return null;
         },
       );
 
@@ -62,9 +59,9 @@ class SupabaseService {
               return;
             }
 
-            await user.getIdToken();
-            Logger.log('Firebase user detected — Supabase will use Firebase ID token for requests');
-            // Supabase SDK will call the accessToken callback per request; no extra action required here.
+            // Proactively warm the Supabase access token cache after login
+            await _getSupabaseAccessTokenFromFirebase(forceRefresh: true);
+            Logger.log('Firebase user detected — Supabase access token cached for requests');
           } catch (e) {
             Logger.logError('Error handling Firebase auth state change for Supabase: $e', e, StackTrace.current);
           }
@@ -79,5 +76,62 @@ class SupabaseService {
       // Don't rethrow - allow the app to continue without Supabase
       Logger.log('Continuing without Supabase integration');
     }
+  }
+
+  // Exchanges Firebase ID token for a Supabase access token using the Edge Function
+  // and caches it briefly to avoid excessive function calls.
+  Future<String?> _getSupabaseAccessTokenFromFirebase({bool forceRefresh = false}) async {
+    try {
+      final fb_auth.User? user = fb_auth.FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      // Return cached token if valid
+      if (!forceRefresh && _cachedSupabaseAccessToken != null && _cachedSupabaseAccessTokenExpiry != null) {
+        if (DateTime.now().isBefore(_cachedSupabaseAccessTokenExpiry!)) {
+          return _cachedSupabaseAccessToken;
+        }
+      }
+
+      final idToken = await user.getIdToken();
+      final uri = Uri.parse('${SupabaseConfig.supabaseUrl}/functions/v1/exchange-firebase-token');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'firebaseIdToken': idToken}),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        final String? accessToken = data['supabaseAccessToken'] as String?;
+        final String? refreshToken = data['supabaseRefreshToken'] as String?;
+
+        if (accessToken != null && accessToken.isNotEmpty) {
+          // Optionally set session on client if refresh token present
+          try {
+            if (refreshToken != null && refreshToken.isNotEmpty) {
+              await _client?.auth.setSession(
+                refreshToken: refreshToken,
+                accessToken: accessToken,
+              );
+            }
+          } catch (e) {
+            // setSession API differences across versions; ignore failures here since accessToken header still works
+            Logger.log('Supabase setSession not available or failed; continuing with header token');
+          }
+
+          // Cache access token for 4 minutes
+          _cachedSupabaseAccessToken = accessToken;
+          _cachedSupabaseAccessTokenExpiry = DateTime.now().add(const Duration(minutes: 4));
+          return accessToken;
+        }
+      } else {
+        Logger.logError('Exchange function error: ${response.statusCode} ${response.body}', Exception('Token exchange failed'), StackTrace.current);
+      }
+    } catch (e) {
+      Logger.logError('Error exchanging Firebase token for Supabase token', e, StackTrace.current);
+    }
+    return null;
   }
 }
