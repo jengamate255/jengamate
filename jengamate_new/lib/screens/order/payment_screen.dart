@@ -205,7 +205,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         _processingProgress = 0.3;
       });
 
-      // Use the robust payment service
+      // Use the robust payment service with improved error handling
       final paymentResult = await _paymentService.createPaymentWithProof(
         orderId: widget.orderId,
         userId: userId,
@@ -214,7 +214,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         transactionId: transactionId,
         notes: _notesController.text.trim().isNotEmpty ? _notesController.text : null,
         proofBytes: kIsWeb ? _proofBytes : null,
-        proofFile: !kIsWeb ? File(_selectedProofFile!.path) : null,
+        proofFile: !kIsWeb && _selectedProofFile != null ? File(_selectedProofFile!.path) : null,
         proofFileName: _selectedProofFile?.name,
         maxRetries: 3,
       );
