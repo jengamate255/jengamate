@@ -408,6 +408,13 @@ class PaymentService {
   }) async {
     final startTime = DateTime.now();
     String? generatedFileName;
+    final String? supabaseUserId = _supabase.auth.currentUser?.id;
+    if (supabaseUserId == null) {
+      return PaymentProofUploadResult.failure(
+        error: 'User not authenticated with Supabase',
+        metadata: {'reason': 'no_supabase_session'},
+      );
+    }
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -415,8 +422,8 @@ class PaymentService {
         generatedFileName ??= proofFileName ??
             'payment_proof_${DateTime.now().millisecondsSinceEpoch}_${userId.hashCode}.jpg';
 
-        // Create folder structure: userId/orderId/
-        final folderPath = '$userId/$orderId';
+        // Create folder structure: supabaseUserId/orderId/
+        final folderPath = '$supabaseUserId/$orderId';
         final filePath = '$folderPath/$generatedFileName';
 
         Logger.log('Attempting payment proof upload (attempt $attempt/$maxRetries): $filePath');
@@ -494,10 +501,17 @@ class PaymentService {
     String? notes,
   }) async {
     try {
+      final String? supabaseUserId = _supabase.auth.currentUser?.id;
+      if (supabaseUserId == null) {
+        return PaymentCreationResult.failure(
+          error: 'User not authenticated with Supabase',
+          metadata: {'reason': 'no_supabase_session'},
+        );
+      }
       Logger.log('PaymentService Debug - Creating payment record for order ID: $orderId, user ID: $userId'); // Added log
       final paymentData = {
         'order_id': orderId,
-        'user_id': PaymentService.isValidUUID(userId) ? userId : PaymentService.generateTestUUID(), // Ensure user_id is a UUID
+        'user_id': supabaseUserId, // Must match Supabase auth user for RLS
         'amount': amount,
         'status': PaymentStatus.pending.name,
         'transaction_id': transactionId,
