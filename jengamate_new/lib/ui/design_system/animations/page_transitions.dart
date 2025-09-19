@@ -1,86 +1,137 @@
 import 'package:flutter/material.dart';
-import 'package:page_transition/page_transition.dart';
 import 'package:flutter/services.dart';
 
 class PageTransitions {
   // Smooth fade transition
   static Route<T> fade<T>(Widget page) {
-    return PageTransition(
-      child: page,
-      type: PageTransitionType.fade,
-      duration: const Duration(milliseconds: 300),
-      reverseDuration: const Duration(milliseconds: 200),
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 300),
+      reverseTransitionDuration: const Duration(milliseconds: 200),
     );
   }
 
   // Slide from right (standard navigation)
   static Route<T> slideRight<T>(Widget page) {
-    return PageTransition(
-      child: page,
-      type: PageTransitionType.rightToLeft,
-      duration: const Duration(milliseconds: 400),
-      reverseDuration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0);
+        const end = Offset.zero;
+        const curve = Curves.easeInOut;
+        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var offsetAnimation = animation.drive(tween);
+        return SlideTransition(
+          position: offsetAnimation,
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 400),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
     );
   }
 
   // Slide from bottom (modal-like)
   static Route<T> slideUp<T>(Widget page) {
-    return PageTransition(
-      child: page,
-      type: PageTransitionType.bottomToTop,
-      duration: const Duration(milliseconds: 450),
-      reverseDuration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutBack,
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(0.0, 1.0);
+        const end = Offset.zero;
+        const curve = Curves.easeOutBack;
+        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var offsetAnimation = animation.drive(tween);
+        return SlideTransition(
+          position: offsetAnimation,
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 450),
+      reverseTransitionDuration: const Duration(milliseconds: 350),
     );
   }
 
   // Scale transition (for dialogs/modals)
   static Route<T> scale<T>(Widget page) {
-    return PageTransition(
-      child: page,
-      type: PageTransitionType.scale,
-      alignment: Alignment.center,
-      duration: const Duration(milliseconds: 350),
-      reverseDuration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          scale: animation,
+          alignment: Alignment.center,
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 350),
+      reverseTransitionDuration: const Duration(milliseconds: 250),
     );
   }
 
   // Rotate transition (for special effects)
   static Route<T> rotate<T>(Widget page) {
-    return PageTransition(
-      child: page,
-      type: PageTransitionType.rotate,
-      alignment: Alignment.center,
-      duration: const Duration(milliseconds: 500),
-      reverseDuration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOutBack,
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return RotationTransition(
+          turns: animation,
+          alignment: Alignment.center,
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 500),
+      reverseTransitionDuration: const Duration(milliseconds: 400),
     );
   }
 
   // Size transition (for expanding elements)
   static Route<T> size<T>(Widget page) {
-    return PageTransition(
-      child: page,
-      type: PageTransitionType.size,
-      alignment: Alignment.bottomCenter,
-      duration: const Duration(milliseconds: 400),
-      reverseDuration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return SizeTransition(
+          sizeFactor: animation,
+          axis: Axis.vertical,
+          axisAlignment: -1.0,
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 400),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
     );
   }
 
   // Custom themed transition based on context
   static Route<T> themed<T>(BuildContext context, Widget page, {String? routeName}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return PageTransition(
-      child: page,
-      type: isDark ? PageTransitionType.fade : PageTransitionType.rightToLeft,
-      duration: const Duration(milliseconds: 350),
-      reverseDuration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
+
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        if (isDark) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        } else {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+          return SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          );
+        }
+      },
+      transitionDuration: const Duration(milliseconds: 350),
+      reverseTransitionDuration: const Duration(milliseconds: 250),
       settings: RouteSettings(name: routeName),
     );
   }
@@ -92,16 +143,24 @@ class AnimatedGoRouter {
     BuildContext context,
     String path, {
     Object? extra,
-    PageTransitionType type = PageTransitionType.rightToLeft,
     Duration duration = const Duration(milliseconds: 400),
   }) {
-    final route = PageTransition(
-      child: _getPageForRoute(context, path, extra),
-      type: type,
-      duration: duration,
-      curve: Curves.easeInOut,
+    final route = PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => _getPageForRoute(context, path, extra),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0);
+        const end = Offset.zero;
+        const curve = Curves.easeInOut;
+        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var offsetAnimation = animation.drive(tween);
+        return SlideTransition(
+          position: offsetAnimation,
+          child: child,
+        );
+      },
+      transitionDuration: duration,
     );
-    
+
     Navigator.of(context).push(route);
   }
 
@@ -127,7 +186,7 @@ class MicroInteractions {
     double scaleDown = 0.95,
   }) {
     return GestureDetector(
-      onTapDown: (_) { HapticFeedback.lightImpact(); },
+      onTapDown: (_) => HapticFeedback.lightImpact(),
       child: AnimatedScale(
         scale: 1.0,
         duration: duration,
@@ -151,11 +210,11 @@ class MicroInteractions {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: hoverColor?.withOpacity(0.1),
+          color: hoverColor?.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: elevation,
               offset: const Offset(0, 2),
             ),
@@ -209,8 +268,8 @@ class MicroInteractions {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false,
+      builder: (context) => PopScope(
+        canPop: false,
         child: AlertDialog(
           content: Row(
             children: [
@@ -284,7 +343,7 @@ class _AnimatedJMButtonState extends State<AnimatedJMButton>
       onTapDown: (_) {
         if (!widget.isLoading) {
           _controller.forward();
-          await HapticFeedback.lightImpact();
+          HapticFeedback.lightImpact();
         }
       },
       onTapUp: (_) {

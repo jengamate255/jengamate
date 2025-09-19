@@ -73,6 +73,8 @@ class _EngineerRegistrationScreenState
 
     await dbService.updateUser(user);
 
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Registration successful!')),
     );

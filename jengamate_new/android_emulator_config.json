@@ -1,0 +1,45 @@
+{
+  "emulator_storage_strategy": "external_tmp",
+  "configurations": [
+    {
+      "name": "JengaMate_Pixel7",
+      "api_level": 34,
+      "tag": "google_apis_playstore",
+      "device": "pixel_7",
+      "architecture": "x86_64",
+      "storage_location": "/tmp/android-emulators",
+      "estimated_size": "3.5GB",
+      "description": "Primary testing emulator for JengaMate"
+    },
+    {
+      "name": "JengaMate_Pixel6a",
+      "api_level": 34,
+      "tag": "google_apis_playstore",
+      "device": "pixel_6a",
+      "architecture": "x86_64",
+      "storage_location": "/tmp/android-emulators",
+      "estimated_size": "3.5GB",
+      "description": "Secondary testing emulator"
+    }
+  ],
+  "storage_management": {
+    "primary_location": "/tmp/android-emulators",
+    "fallback_location": "/workspaces/.android-emulators",
+    "cleanup_on_restart": true,
+    "compress_unused": true
+  },
+  "performance_optimization": {
+    "gpu_acceleration": "swiftshader_indirect",
+    "memory_allocation": "2048MB",
+    "cpu_cores": 2,
+    "headless_mode": true,
+    "no_audio": true,
+    "no_boot_animation": true
+  },
+  "networking": {
+    "use_proxy": false,
+    "download_mirror": "https://dl.google.com/android/repository/",
+    "retry_attempts": 3,
+    "timeout_seconds": 300
+  }
+}

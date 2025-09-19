@@ -5,9 +5,9 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    // Google Services and Crashlytics temporarily disabled for APK build
-    // id("com.google.gms.google-services")
-    // id("com.google.firebase.crashlytics")
+    // Google Services and Crashlytics enabled
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {

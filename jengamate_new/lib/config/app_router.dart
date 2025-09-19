@@ -44,7 +44,6 @@ import 'package:jengamate/screens/admin/user_details_screen.dart';
 import 'package:jengamate/screens/admin/audit_log_screen.dart';
 import 'package:jengamate/models/enhanced_user.dart';
 import 'package:provider/provider.dart';
-import 'package:jengamate/models/user_model.dart';
 import 'package:jengamate/screens/admin/product_management_screen.dart';
 import 'package:jengamate/screens/admin/category_management_screen.dart';
 import 'package:jengamate/screens/admin/analytics_screen.dart' as admin_analytics;

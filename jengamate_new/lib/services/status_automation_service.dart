@@ -5,6 +5,7 @@ import 'package:jengamate/services/invoice_service.dart';
 import 'package:jengamate/services/notification_service.dart';
 import 'package:jengamate/services/email_service.dart';
 import 'package:jengamate/models/email_template.dart';
+import 'package:jengamate/models/email_template_type.dart';
 import 'package:jengamate/models/enums/payment_enums.dart';
 import '../utils/logger.dart' as utils_logger;
 

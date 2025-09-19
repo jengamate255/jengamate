@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jengamate/services/auth_service.dart';
@@ -23,74 +21,63 @@ import 'config/app_router.dart';
 import 'config/app_theme.dart';
 
 Future<void> main() async {
-  // Wrap the entire application in a guarded zone to catch all errors.
-  runZonedGuarded<Future<void>>(
-    () async {
-      // Ensure Flutter bindings are initialized first.
-      WidgetsFlutterBinding.ensureInitialized();
+  // Ensure Flutter bindings are initialized first.
+  WidgetsFlutterBinding.ensureInitialized();
 
-      // Initialize Supabase.
-      try {
-        debugPrint('🚀 Initializing Supabase...');
-        await SupabaseService.instance.initialize();
+  // Initialize Supabase.
+  try {
+    debugPrint('🚀 Initializing Supabase...');
+    await SupabaseService.instance.initialize();
 
-        // Initialize Firebase
-        debugPrint('🔥 Initializing Firebase...');
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
-        debugPrint('✅ Firebase initialized successfully');
+    // Initialize Firebase
+    debugPrint('🔥 Initializing Firebase...');
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('✅ Firebase initialized successfully');
 
-        // Initialize payment approval service for automated workflow
-        PaymentApprovalService();
+    // Initialize payment approval service for automated workflow
+    PaymentApprovalService();
 
-        // Initialize bulk operations service
-        BulkOperationsService();
+    // Initialize bulk operations service
+    BulkOperationsService();
 
-        // Load dynamic app configurations
-        final appConfigService = AppConfigService();
-        final dynamicConfigs = await appConfigService.getAllConfigs();
-        Logger.log('Dynamic App Configurations: $dynamicConfigs');
+    // Load dynamic app configurations
+    final appConfigService = AppConfigService();
+    final dynamicConfigs = await appConfigService.getAllConfigs();
+    Logger.log('Dynamic App Configurations: $dynamicConfigs');
 
-        // TODO: Integrate dynamicConfigs into a Provider or equivalent for app-wide access.
+    // TODO: Integrate dynamicConfigs into a Provider or equivalent for app-wide access.
 
-        debugPrint('✅ Supabase, Payment Approval, and Bulk Operations Services initialized successfully');
+    debugPrint('✅ Supabase, Payment Approval, and Bulk Operations Services initialized successfully');
 
-        // Set up global error handlers.
-        FlutterError.onError = (FlutterErrorDetails details) {
-          FlutterError.presentError(details);
-          // Consider logging to a Supabase-based error tracking if needed
-        };
-
-        PlatformDispatcher.instance.onError =
-            (Object error, StackTrace stack) {
-          // Consider logging to a Supabase-based error tracking if needed
-          return true; // Error handled.
-        };
-
-        // Run the app.
-        runApp(const MyApp());
-      } catch (e, stackTrace) {
-        debugPrint('❌ Initialization failed: $e');
-        debugPrint('Stack trace: $stackTrace');
-        runApp(
-          MaterialApp(
-            home: Scaffold(
-              body: Center(
-                child: Text('Initialization Error: $e'),
-              ),
-            ),
-          ),
-        );
-      }
-    },
-    (error, stack) {
-      // Errors caught by the zone are reported.
-      debugPrint('Unhandled error in runZonedGuarded: $error');
-      debugPrint('Stack trace: $stack');
+    // Set up global error handlers.
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
       // Consider logging to a Supabase-based error tracking if needed
-    },
-  );
+    };
+
+    PlatformDispatcher.instance.onError =
+        (Object error, StackTrace stack) {
+      // Consider logging to a Supabase-based error tracking if needed
+      return true; // Error handled.
+    };
+
+    // Run the app.
+    runApp(const MyApp());
+  } catch (e, stackTrace) {
+    debugPrint('❌ Initialization failed: $e');
+    debugPrint('Stack trace: $stackTrace');
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('Initialization Error: $e'),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {

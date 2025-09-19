@@ -68,6 +68,7 @@ class _PhoneRegistrationScreenState extends State<PhoneRegistrationScreen> {
       await authService.sendOTP(
         formattedPhone,
         (verificationId) {
+          if (!mounted) return;
           setState(() => _isLoading = false);
           context.go(
             AppRouteBuilders.otpVerificationPath(verificationId),
@@ -81,6 +82,7 @@ class _PhoneRegistrationScreenState extends State<PhoneRegistrationScreen> {
         },
       );
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: ${e.toString()}')),
