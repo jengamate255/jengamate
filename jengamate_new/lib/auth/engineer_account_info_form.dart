@@ -34,10 +34,14 @@ class EngineerAccountInfoForm extends StatelessWidget {
             registrationData.password = value;
           },
           obscureText: true,
+          autocorrect: false,
+          enableSuggestions: false,
         ),
         TextFormField(
           decoration: const InputDecoration(labelText: 'Confirm Password'),
           obscureText: true,
+          autocorrect: false,
+          enableSuggestions: false,
         ),
         TextFormField(
           decoration: const InputDecoration(labelText: 'Referral Code (Optional)'),
