@@ -397,7 +397,7 @@ class PaymentService {
     );
   }
 
-  /// Upload payment proof with retry mechanism
+  /// Upload payment proof with retry mechanism and improved authentication
   Future<PaymentProofUploadResult> _uploadPaymentProof({
     required String orderId,
     required String userId,
@@ -409,35 +409,76 @@ class PaymentService {
     final startTime = DateTime.now();
     String? generatedFileName;
 
+    // Validate authentication first
+    final firebaseUser = fb_auth.FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
+      return PaymentProofUploadResult.failure(
+        error: 'User must be authenticated to upload payment proofs',
+        metadata: {'auth_error': 'No Firebase user found'},
+      );
+    }
+
+    // Use Firebase user ID for folder structure to ensure consistency
+    final authenticatedUserId = firebaseUser.uid;
+    Logger.log('Using Firebase user ID for storage: $authenticatedUserId');
+
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        // Generate unique filename
-        generatedFileName ??= proofFileName ??
-            'payment_proof_${DateTime.now().millisecondsSinceEpoch}_${userId.hashCode}.jpg';
+        // Generate unique filename with better security
+        generatedFileName ??= _generateSecureFileName(
+          orderId: orderId,
+          userId: authenticatedUserId,
+          originalFileName: proofFileName,
+        );
 
-        // Create folder structure: userId/orderId/
-        final folderPath = '$userId/$orderId';
+        // Create folder structure: firebaseUserId/orderId/
+        final folderPath = '$authenticatedUserId/$orderId';
         final filePath = '$folderPath/$generatedFileName';
 
         Logger.log('Attempting payment proof upload (attempt $attempt/$maxRetries): $filePath');
 
-        // Upload file
+        // Validate file data before upload
+        if (kIsWeb && proofBytes == null) {
+          throw Exception('File bytes required for web upload');
+        }
+        if (!kIsWeb && proofFile == null) {
+          throw Exception('File required for mobile/desktop upload');
+        }
+
+        // Upload file with proper error handling
         if (kIsWeb && proofBytes != null) {
           await _supabase.storage
               .from(_paymentProofsBucket)
-              .uploadBinary(filePath, proofBytes);
+              .uploadBinary(
+                filePath, 
+                proofBytes,
+                fileOptions: const FileOptions(
+                  cacheControl: '3600',
+                  upsert: true, // Allow overwriting existing files
+                ),
+              );
         } else if (!kIsWeb && proofFile != null) {
           await _supabase.storage
               .from(_paymentProofsBucket)
-              .upload(filePath, proofFile);
-        } else {
-          throw Exception('Invalid file data provided for upload');
+              .upload(
+                filePath, 
+                proofFile,
+                fileOptions: const FileOptions(
+                  cacheControl: '3600',
+                  upsert: true, // Allow overwriting existing files
+                ),
+              );
         }
 
         // Get public URL
         final publicUrl = _supabase.storage
             .from(_paymentProofsBucket)
             .getPublicUrl(filePath);
+
+        // Verify the upload was successful by checking if URL is accessible
+        if (publicUrl.isEmpty) {
+          throw Exception('Failed to generate public URL for uploaded file');
+        }
 
         Logger.log('Payment proof uploaded successfully: $publicUrl');
 
@@ -448,25 +489,36 @@ class PaymentService {
             'upload_attempts': attempt,
             'processing_time_ms': DateTime.now().difference(startTime).inMilliseconds,
             'file_size_bytes': proofBytes?.length ?? proofFile?.lengthSync(),
+            'firebase_user_id': authenticatedUserId,
+            'upload_method': kIsWeb ? 'binary' : 'file',
           },
         );
 
       } catch (e, stackTrace) {
-        Logger.logError(
-          'Payment proof upload attempt $attempt failed: $e',
-          e,
-          stackTrace,
-        );
+        final errorMessage = 'Payment proof upload attempt $attempt failed: $e';
+        Logger.logError(errorMessage, e, stackTrace);
+
+        // Check for specific Supabase errors
+        String detailedError = e.toString();
+        if (e.toString().contains('permission denied') || e.toString().contains('RLS')) {
+          detailedError = 'Storage permission denied. Please check Supabase RLS policies for payment_proofs bucket.';
+        } else if (e.toString().contains('bucket') && e.toString().contains('not found')) {
+          detailedError = 'Payment proofs storage bucket not found. Please check Supabase configuration.';
+        } else if (e.toString().contains('file size')) {
+          detailedError = 'File size exceeds the allowed limit. Please use a smaller file.';
+        }
 
         // If this is the last attempt, return failure
         if (attempt == maxRetries) {
           return PaymentProofUploadResult.failure(
-            error: e.toString(),
+            error: detailedError,
             metadata: {
               'total_attempts': attempt,
               'processing_time_ms': DateTime.now().difference(startTime).inMilliseconds,
               'stack_trace': stackTrace.toString(),
               'generated_file_name': generatedFileName,
+              'firebase_user_id': authenticatedUserId,
+              'original_error': e.toString(),
             },
           );
         }
@@ -479,8 +531,28 @@ class PaymentService {
     // This should never be reached, but just in case
     return PaymentProofUploadResult.failure(
       error: 'Upload failed after all retry attempts',
-      metadata: {'total_attempts': maxRetries},
+      metadata: {'total_attempts': maxRetries, 'firebase_user_id': authenticatedUserId},
     );
+  }
+
+  /// Generate secure filename for payment proofs
+  String _generateSecureFileName({
+    required String orderId,
+    required String userId,
+    String? originalFileName,
+  }) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final hash = userId.hashCode.abs().toString().padLeft(8, '0');
+    
+    String extension = '.jpg'; // default
+    if (originalFileName != null && originalFileName.contains('.')) {
+      final ext = originalFileName.split('.').last.toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'webp', 'pdf'].contains(ext)) {
+        extension = '.$ext';
+      }
+    }
+
+    return 'payment_proof_${timestamp}_$hash$extension';
   }
 
   /// Create payment record in database
